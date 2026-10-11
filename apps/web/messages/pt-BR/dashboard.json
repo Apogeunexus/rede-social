@@ -1,0 +1,49 @@
+{
+  "dashboard": {
+    "preview": {
+      "title": "Painéis por nível de acesso",
+      "intro": "Simulação do painel que cada um dos 7 níveis vê na rede social white label. Escolha um nível para ver a tela dele.",
+      "notice": "Dados de exemplo",
+      "noticeBody": "Todos os números, nomes e clientes desta página são fictícios. As ações ficam desativadas na pré-visualização."
+    },
+    "levels": {
+      "dono-da-plataforma": { "name": "Dono da plataforma" },
+      "admin-da-plataforma": { "name": "Admin da plataforma" },
+      "suporte-da-plataforma": { "name": "Suporte da plataforma" },
+      "dono-do-cliente": { "name": "Dono do cliente" },
+      "admin-do-cliente": { "name": "Admin do cliente" },
+      "equipe-do-cliente": { "name": "Equipe do cliente" },
+      "membro": { "name": "Membro" }
+    },
+    "delta": {
+      "previous_month": "{amount} vs. mês anterior",
+      "previous_30_days": "{amount} vs. 30 dias antes",
+      "previous_24h": "{amount} vs. 24h anteriores",
+      "yesterday": "{amount} vs. ontem",
+      "last_7_days": "{amount} em 7 dias",
+      "none": "{amount}"
+    },
+    "amount": {
+      "points": "{value} p.p.",
+      "minutes": "{value} min"
+    },
+    "sentiment": {
+      "good": "melhorou",
+      "bad": "piorou"
+    },
+    "notMeasured": "Ainda não medido",
+    "platformOwner": {
+      "kpi": {
+        "activeClients": "Clientes ativos",
+        "newClients": "Novos clientes",
+        "members": "Membros na base",
+        "membersNote": "{percent} interagiram em 30 dias",
+        "storage": "Armazenamento",
+        "storageUnit": "de {total} GB",
+        "storageNote": "{minutes} min de vídeo",
+        "revenue": "Receita mensal",
+        "revenueReason": "Precisa do faturamento por cliente"
+      }
+    }
+  }
+}

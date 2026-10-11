@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { type NextRequest, NextResponse } from 'next/server';
 import { CONTINUE_COOKIE, CONTINUE_MAX_AGE_S, isContinuablePath } from '@/lib/continue-path';
 import { CSP_REPORT_PATH, cspFor, cspHeaderName, NONCE_HEADER, newNonce } from '@/lib/csp';
+import { DASHBOARD_PREVIEW_PATH, dashboardPreviewEnabled } from '@/lib/dashboard-preview';
 import { env } from '@/lib/env';
 import { sessionCookieOptions } from '@/lib/supabase/cookie-options';
 import {
@@ -21,6 +22,8 @@ import {
  * Phase 2 entries: `/comunidade-indisponivel` (D-32, 02-08); `/aceitar-convite` + `/convite-expirado`
  * (02-10) and the manifest, `/serwist/*`, `/~offline` (02-11) are pre-registered here because those
  * plans share a wave and neither may edit this file — a public path that does not exist yet just 404s.
+ * Not listed here on purpose: `/painel-preview/*` (quick 261011-jqy) is public ONLY outside production,
+ * through the `dashboardPreviewEnabled()` check in step 4.
  */
 const PUBLIC = [
   /^\/entrar(?:\/|$)/,
@@ -255,7 +258,10 @@ export async function proxy(request: NextRequest) {
   }
 
   // 4. Private routes require a verified session.
-  if (!authenticated && !PUBLIC.some((re) => re.test(path))) {
+  const isPublic =
+    PUBLIC.some((re) => re.test(path)) ||
+    (dashboardPreviewEnabled() && DASHBOARD_PREVIEW_PATH.test(path));
+  if (!authenticated && !isPublic) {
     const target = url.clone();
     target.pathname = '/entrar';
     target.search = '';
