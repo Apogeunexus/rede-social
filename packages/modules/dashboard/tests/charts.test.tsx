@@ -11,7 +11,9 @@ import { barPercent } from '../ui/scale';
 afterEach(cleanup);
 
 function fillWidths(container: HTMLElement): string[] {
-  return [...container.querySelectorAll<HTMLElement>('[data-bar-fill]')].map((el) => el.style.width);
+  return [...container.querySelectorAll<HTMLElement>('[data-bar-fill]')].map(
+    (el) => el.style.width,
+  );
 }
 
 describe('BarList', () => {
@@ -26,12 +28,16 @@ describe('BarList', () => {
   });
 
   it('uses the caller max when given', () => {
-    const { container } = render(<BarList rows={rows.map((r) => ({ ...r, value: 50 }))} max={100} />);
+    const { container } = render(
+      <BarList rows={rows.map((r) => ({ ...r, value: 50 }))} max={100} />,
+    );
     expect(fillWidths(container)).toEqual(['50%', '50%']);
   });
 
   it('prints the caller value label and the optional rate', () => {
-    render(<BarList rows={[{ id: 'a', label: 'L', value: 1, display: 'D', rate: 'rate-sentinel' }]} />);
+    render(
+      <BarList rows={[{ id: 'a', label: 'L', value: 1, display: 'D', rate: 'rate-sentinel' }]} />,
+    );
     expect(screen.getByText('D')).toBeInTheDocument();
     expect(screen.getByText('rate-sentinel')).toBeInTheDocument();
   });

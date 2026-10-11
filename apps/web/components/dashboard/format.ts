@@ -1,6 +1,7 @@
-import type { Delta } from '@rede-social/module-dashboard/fixtures';
+import type { Delta, KpiHint, RelativeMoment } from '@rede-social/module-dashboard/fixtures';
 import type { KpiDelta } from '@rede-social/module-dashboard/ui';
-import type { getTranslations } from 'next-intl/server';
+import { getTranslations } from 'next-intl/server';
+import { moduleLabelResolver } from '@/lib/registry';
 
 /** The `dashboard` namespace translator (untyped catalog, as every `lib/*-view` module takes it). */
 export type DashboardT = Awaited<ReturnType<typeof getTranslations>>;
@@ -22,6 +23,20 @@ export function formatPercent(value: number): string {
 /** A 0–1 ratio -> `62,5%` (one decimal at most). */
 export function formatRatio(ratio: number): string {
   return PERCENT_1.format(ratio);
+}
+
+const MEGABYTES = new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'megabyte' });
+
+/** `41` -> `41 MB`. */
+export function formatMegabytes(value: number): string {
+  return MEGABYTES.format(value);
+}
+
+const LIST = new Intl.ListFormat('pt-BR', { style: 'long', type: 'conjunction' });
+
+/** `['Feed', 'Loja']` -> `Feed e Loja`. */
+export function formatList(items: readonly string[]): string {
+  return LIST.format(items);
 }
 
 /** `0.84` -> `0,84` (two decimals). */
@@ -95,5 +110,27 @@ export function kpiDelta(t: DashboardT, delta: Delta): KpiDelta {
     ...(delta.good === null
       ? {}
       : { sentiment: t(delta.good ? 'sentiment.good' : 'sentiment.bad') }),
+  };
+}
+
+/** A KPI with no comparison (or a should-stay-zero target): the hint, with the flat dash. */
+export function hintDelta(t: DashboardT, hint: KpiHint): KpiDelta {
+  return { text: t(`hint.${hint}`), direction: 'flat', tone: 'neutral' };
+}
+
+/** `{ daysAgo: 0, time: '09:12' }` -> `hoje 09:12`; 1 -> `ontem …`; more -> `há 14 dias`. */
+export function momentText(t: DashboardT, moment: RelativeMoment): string {
+  return t('moment', { days: moment.daysAgo, time: moment.time ?? '' });
+}
+
+/**
+ * Module key -> its name: the app's own tab label (`<key>.nav`, through `moduleLabelResolver`) when
+ * the module has one, else the dashboard catalog's name for it.
+ */
+export async function moduleNamer(t: DashboardT): Promise<(key: string) => string> {
+  const resolve = moduleLabelResolver(await getTranslations());
+  return (key) => {
+    const fallback = t(`modules.${key}`);
+    return resolve(key, fallback) ?? fallback;
   };
 }

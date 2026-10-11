@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { barPercent, funnelRates, linearPoints, niceBounds, pathFrom } from '../ui/scale';
+import {
+  barPercent,
+  funnelRates,
+  largestDrop,
+  linearPoints,
+  niceBounds,
+  pathFrom,
+} from '../ui/scale';
 
 describe('linearPoints', () => {
   it('spaces x evenly and inverts y (the max sits at the top)', () => {
@@ -71,5 +78,17 @@ describe('funnelRates', () => {
 
   it('a step after an empty one has no rate', () => {
     expect(funnelRates([0, 0])).toEqual([null, null]);
+  });
+});
+
+describe('largestDrop', () => {
+  it('finds the step that loses the most clients', () => {
+    expect(largestDrop([8, 5, 4, 4, 3])).toEqual({ index: 1, drop: 3 });
+  });
+
+  it('keeps the first step on a tie and is null when nothing drops', () => {
+    expect(largestDrop([6, 4, 2])).toEqual({ index: 1, drop: 2 });
+    expect(largestDrop([3, 3, 4])).toBeNull();
+    expect(largestDrop([])).toBeNull();
   });
 });

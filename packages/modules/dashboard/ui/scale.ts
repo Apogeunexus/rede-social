@@ -67,3 +67,27 @@ export function barPercent(value: number, max: number): number {
   if (!(max > 0)) return 0;
   return Math.min(100, Math.max(0, (value / max) * 100));
 }
+
+/**
+ * A funnel's step-over-step rates (0–1): `null` for the first step and after an empty one. The UI
+ * formats them, so the rate always matches the counts drawn next to it.
+ */
+export function funnelRates(values: readonly number[]): (number | null)[] {
+  return values.map((value, i) => {
+    const before = i === 0 ? undefined : values[i - 1];
+    return before ? value / before : null;
+  });
+}
+
+/**
+ * The funnel step that loses the most (the drop from the step before it): `{ index, drop }`, the
+ * first such step on a tie, or `null` when no step loses anything.
+ */
+export function largestDrop(values: readonly number[]): { index: number; drop: number } | null {
+  let best: { index: number; drop: number } | null = null;
+  for (let i = 1; i < values.length; i += 1) {
+    const drop = (values[i - 1] ?? 0) - (values[i] ?? 0);
+    if (drop > 0 && (best === null || drop > best.drop)) best = { index: i, drop };
+  }
+  return best;
+}
