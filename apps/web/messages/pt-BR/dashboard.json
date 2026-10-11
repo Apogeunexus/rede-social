@@ -102,7 +102,6 @@
         "revenueReason": "Precisa do faturamento por cliente"
       },
       "attention": {
-        "title": "Atenção",
         "storage": {
           "title": "Armazenamento perto do limite do plano",
           "detail": "Acima de {limit} os envios de mídia começam a falhar"
@@ -147,8 +146,6 @@
         "subtitle": "Agora"
       },
       "pending": {
-        "title": "Pendências ({count})",
-        "action": "Ver todas",
         "domain_expired": {
           "tag": "Expirado",
           "title": "{name}: domínio",

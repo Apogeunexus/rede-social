@@ -4,7 +4,6 @@ import {
 } from '@rede-social/module-dashboard/fixtures';
 import {
   type AttentionItem,
-  AttentionList,
   BarList,
   KpiCard,
   KpiGrid,
@@ -51,8 +50,8 @@ function attentionItem(t: DashboardT, item: PlatformOwnerAttention): AttentionIt
 
 /**
  * Level 1, "Dono da plataforma": is the client base growing and using the product, and does the
- * infrastructure cost fit the plan? KPIs, what needs attention, the 12-month trend, where the members
- * are, module adoption and the clients, worst first.
+ * infrastructure cost fit the plan? KPIs, the 12-month trend, where the members are, module adoption
+ * and the clients, worst first; what needs attention sits behind the header bell.
  */
 export async function PlatformOwnerPanel() {
   const t = await getTranslations('dashboard');
@@ -74,6 +73,7 @@ export async function PlatformOwnerPanel() {
         title={t('platformOwner.header.title')}
         subtitle={t('platformOwner.header.subtitle')}
         period={t('platformOwner.header.period')}
+        alerts={attention.map((item) => attentionItem(t, item))}
       />
 
       <KpiGrid>
@@ -112,10 +112,6 @@ export async function PlatformOwnerPanel() {
           variant="missing"
         />
       </KpiGrid>
-
-      <PanelSection title={t('platformOwner.attention.title')}>
-        <AttentionList items={attention.map((item) => attentionItem(t, item))} />
-      </PanelSection>
 
       <div className="grid gap-6 @3xl:grid-cols-2">
         <PanelSection title={t('platformOwner.activeChart.title')}>

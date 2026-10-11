@@ -4,7 +4,6 @@ import {
 } from '@rede-social/module-dashboard/fixtures';
 import {
   type AttentionItem,
-  AttentionList,
   BarList,
   funnelRates,
   KpiCard,
@@ -65,8 +64,8 @@ function pendingItem(t: DashboardT, item: PlatformAdminPending): AttentionItem {
 
 /**
  * Level 2, "Admin da plataforma": which client is stuck in activation or broken right now? The
- * deadlines come FIRST, then the KPIs, the activation funnel (each step's rate computed from the
- * counts) and the last 24 h of failures per client.
+ * deadlines sit behind the header bell; the KPIs come first, then the activation funnel (each step's
+ * rate computed from the counts) and the last 24 h of failures per client.
  */
 export async function PlatformAdminPanel() {
   const t = await getTranslations('dashboard');
@@ -82,14 +81,8 @@ export async function PlatformAdminPanel() {
       <PanelHeader
         title={t('platformAdmin.header.title')}
         subtitle={t('platformAdmin.header.subtitle')}
+        alerts={pending.map((item) => pendingItem(t, item))}
       />
-
-      <PanelSection
-        title={t('platformAdmin.pending.title', { count: pending.length })}
-        action={t('platformAdmin.pending.action')}
-      >
-        <AttentionList items={pending.map((item) => pendingItem(t, item))} />
-      </PanelSection>
 
       <KpiGrid>
         <KpiCard
