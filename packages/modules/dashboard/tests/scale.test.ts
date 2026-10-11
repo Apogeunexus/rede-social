@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barPercent, linearPoints, niceBounds, pathFrom } from '../ui/scale';
+import { barPercent, funnelRates, linearPoints, niceBounds, pathFrom } from '../ui/scale';
 
 describe('linearPoints', () => {
   it('spaces x evenly and inverts y (the max sits at the top)', () => {
@@ -61,5 +61,15 @@ describe('barPercent', () => {
 
   it('is 0 when max is 0', () => {
     expect(barPercent(3, 0)).toBe(0);
+  });
+});
+
+describe('funnelRates', () => {
+  it('is each step over the previous one, null for the first', () => {
+    expect(funnelRates([8, 5, 4, 4, 3])).toEqual([null, 0.625, 0.8, 1, 0.75]);
+  });
+
+  it('a step after an empty one has no rate', () => {
+    expect(funnelRates([0, 0])).toEqual([null, null]);
   });
 });
