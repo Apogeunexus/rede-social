@@ -70,7 +70,10 @@ async function frameBottom(page: Page) {
   return page.locator('[data-phone-frame]').evaluate((el) => el.getBoundingClientRect().bottom);
 }
 
-/** The stacked card of a client row (it carries the column labels; the "Atenção" row does not). */
+/**
+ * The stacked card of a client row (it carries the column labels). The client's alert row lives in
+ * the header bell's panel, hidden while it is closed, so role queries skip it.
+ */
 function cardOfClient(scope: Page | Locator) {
   return scope
     .getByRole('listitem')
@@ -288,8 +291,11 @@ test('an unknown level is a 404', async ({ page }) => {
  * the bell names the count, and its panel opens under the header inside the phone screen.
  */
 const ALERT_LEVELS = [
+  { level: 'dono-da-plataforma', count: 2, onlyOnce: 'Armazenamento perto do limite do plano' },
+  { level: 'admin-da-plataforma', count: 4, onlyOnce: 'Escola Horizonte: domínio' },
   { level: 'admin-do-cliente', count: 3, onlyOnce: 'Fixe nos destaques se quiser manter' },
 ];
+const NO_ALERT_LEVELS = ['suporte-da-plataforma', 'dono-do-cliente', 'equipe-do-cliente', 'membro'];
 const ALERT_VIEWPORTS = [
   { name: '1440x900', width: 1440, height: 900, framed: true },
   { name: '390px', width: 390, height: 844, framed: false },
@@ -362,3 +368,12 @@ for (const { level, count, onlyOnce } of ALERT_LEVELS) {
     });
   }
 }
+
+test('levels without alerts show no bell', async ({ page }) => {
+  for (const level of NO_ALERT_LEVELS) {
+    await page.goto(`/painel-preview/${level}`);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    await expect(page.locator('[data-alerts-bell]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Alertas/ })).toHaveCount(0);
+  }
+});
