@@ -282,3 +282,83 @@ test('an unknown level is a 404', async ({ page }) => {
   const response = await page.goto('/painel-preview/nivel-inexistente');
   expect(response?.status()).toBe(404);
 });
+
+/**
+ * Levels with alerts carry them behind a header bell (quick 261011-ndw): no inline list in the body,
+ * the bell names the count, and its panel opens under the header inside the phone screen.
+ */
+const ALERT_LEVELS = [
+  { level: 'admin-do-cliente', count: 3, onlyOnce: 'Fixe nos destaques se quiser manter' },
+];
+const ALERT_VIEWPORTS = [
+  { name: '1440x900', width: 1440, height: 900, framed: true },
+  { name: '390px', width: 390, height: 844, framed: false },
+];
+
+for (const { level, count, onlyOnce } of ALERT_LEVELS) {
+  for (const viewport of ALERT_VIEWPORTS) {
+    test(`alerts bell: ${level} at ${viewport.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(`/painel-preview/${level}`);
+
+      const bell = page.getByRole('button', { name: `Alertas, ${count}`, exact: true });
+      await expect(bell).toHaveAttribute('aria-expanded', 'false');
+      await expect(bell).toContainText(String(count));
+
+      await expect(page.getByRole('heading', { name: /^(Atenção|Pendências)/ })).toHaveCount(0);
+      const only = page.getByText(onlyOnce, { exact: true });
+      await expect(only).toHaveCount(1);
+      await expect(only).toBeHidden();
+
+      const panelId = await bell.getAttribute('aria-controls');
+      expect(panelId).toBeTruthy();
+      const panel = page.locator(`[id="${panelId}"]`);
+
+      await bell.click();
+      await expect(bell).toHaveAttribute('aria-expanded', 'true');
+      await expect(panel).toBeVisible();
+      await expect(panel.getByRole('heading', { name: `Alertas (${count})` })).toBeVisible();
+      await expect(panel.getByRole('listitem')).toHaveCount(count);
+      await expect(only).toBeVisible();
+
+      const box = await panel.boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) return;
+      if (viewport.framed) {
+        const screen = page.locator('[data-phone-screen]');
+        const screenBox = await screen.boundingBox();
+        expect(screenBox).not.toBeNull();
+        if (!screenBox) return;
+        expect(box.x).toBeGreaterThanOrEqual(screenBox.x - 1);
+        expect(box.y).toBeGreaterThanOrEqual(screenBox.y - 1);
+        expect(box.x + box.width).toBeLessThanOrEqual(screenBox.x + screenBox.width + 1);
+        expect(box.y + box.height).toBeLessThanOrEqual(screenBox.y + screenBox.height + 1);
+        const metrics = await screenMetrics(page);
+        expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+      } else {
+        expect(box.x).toBeGreaterThanOrEqual(0);
+        expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
+      }
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+
+      await page.keyboard.press('Escape');
+      await expect(bell).toHaveAttribute('aria-expanded', 'false');
+      await expect(panel).toBeHidden();
+      await expect(bell).toBeFocused();
+      expect(await bell.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+
+      await page.keyboard.press('Enter');
+      await expect(panel).toBeVisible();
+      await page.getByRole('heading', { level: 1 }).click();
+      await expect(bell).toHaveAttribute('aria-expanded', 'false');
+      await expect(panel).toBeHidden();
+
+      await bell.click();
+      await expect(panel).toBeVisible();
+      await bell.click();
+      await expect(bell).toHaveAttribute('aria-expanded', 'false');
+      await expect(panel).toBeHidden();
+    });
+  }
+}

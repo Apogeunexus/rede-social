@@ -5,7 +5,6 @@ import {
 } from '@rede-social/module-dashboard/fixtures';
 import {
   type AttentionItem,
-  AttentionList,
   BarList,
   Collapsible,
   KpiCard,
@@ -61,8 +60,8 @@ function attentionItem(t: DashboardT, item: TenantAdminAttention): AttentionItem
 
 /**
  * Level 5, "Admin do cliente": what needs me today, and what worked this week? What needs attention
- * comes FIRST, then six KPIs, the posts that performed best, and four closed sections (events,
- * communities, store, moderation).
+ * sits behind the header bell; the KPIs come first, then the posts that performed best, and four
+ * closed sections (events, communities, store, moderation).
  */
 export async function TenantAdminPanel() {
   const t = await getTranslations('dashboard');
@@ -80,11 +79,8 @@ export async function TenantAdminPanel() {
         title={previewTenant.displayName}
         subtitle={t('tenantAdmin.header.subtitle')}
         period={t('tenantAdmin.header.period')}
+        alerts={attention.map((item) => attentionItem(t, item))}
       />
-
-      <PanelSection title={t('tenantAdmin.attention.title', { count: attention.length })}>
-        <AttentionList items={attention.map((item) => attentionItem(t, item))} />
-      </PanelSection>
 
       <KpiGrid>
         <KpiCard

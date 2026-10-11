@@ -9,6 +9,10 @@
         "screenLabel": "Tela do celular"
       }
     },
+    "alerts": {
+      "button": "Alertas, {count}",
+      "title": "Alertas ({count})"
+    },
     "chrome": {
       "navLabel": "Níveis de acesso",
       "groups": {
@@ -309,7 +313,6 @@
         "period": "7 dias"
       },
       "attention": {
-        "title": "Atenção ({count})",
         "support_waiting": {
           "tag": "{hours}h",
           "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
