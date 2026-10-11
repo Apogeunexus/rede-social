@@ -6,7 +6,7 @@ status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
 last_updated: "2026-10-09T13:28:29.451Z"
 last_activity: 2026-10-11
-last_activity_desc: Completed quick task 261011-jqy (dev-only access-level dashboards preview)
+last_activity_desc: Completed quick task 261011-l72 (iPhone 17 Pro Max mockup in the dashboards preview)
 state_head: e572b716129ffa5c8903e124fffc296c12d96c04
 progress:
   total_phases: 17
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-25)
 Phase: 08.1 — Multi-Tenant Identity (INSERTED)
 Plan: 08.1-08 pending (contract release)
 Status: Release 1 pending merge, push and production deploy
-Last activity: 2026-10-11 - Completed quick task 261011-jqy: dev-only preview of the access-level dashboards
+Last activity: 2026-10-11 - Completed quick task 261011-l72: iPhone 17 Pro Max mockup in the dashboards preview
 
 Progress: [█░░░░░░░░░] 6%
 
@@ -693,6 +693,7 @@ None yet.
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261011-l72 | Mockup iPhone 17 Pro Max na pré-visualização dos painéis e remoção das notas | 2026-10-11 | d56be575 | complete | [261011-l72-mockup-iphone-17-pro-max-na-pre-visualiz](./quick/261011-l72-mockup-iphone-17-pro-max-na-pre-visualiz/) |
 | 261011-jqy | Pré-visualização dos painéis por nível de acesso (módulo dashboard, dados de exemplo, dev-only) | 2026-10-11 | 6fca804 | complete | [261011-jqy-criar-pre-visualizacao-dos-paineis-de-mo](./quick/261011-jqy-criar-pre-visualizacao-dos-paineis-de-mo/) |
 | 261009-h4q | Fix CI lane guard: quote the memberships role column in data-api-not-exposed.test.ts | 2026-10-09 | f8cde4c | complete | [261009-h4q-fix-ci-lane-guard-quote-the-memberships-](./quick/261009-h4q-fix-ci-lane-guard-quote-the-memberships-/) |
 | 260914-mfk | Route bootstrap 401/403 to redirects through one requireBootstrap()/requirePlatformTenants() helper so concurrently rendered segments no longer log a false ApiClientError | 2026-09-14 | 43db3cd | — | [260914-mfk-move-the-bootstrap-error-to-redirect-map](./quick/260914-mfk-move-the-bootstrap-error-to-redirect-map/) |
