@@ -1,0 +1,501 @@
+{
+  "dashboard": {
+    "preview": {
+      "title": "Painéis por nível de acesso",
+      "intro": "Simulação do painel que cada um dos 7 níveis vê na rede social white label. Escolha um nível para ver a tela dele.",
+      "notice": "Dados de exemplo",
+      "noticeBody": "Todos os números, nomes e clientes desta página são fictícios. As ações ficam desativadas na pré-visualização."
+    },
+    "chrome": {
+      "navLabel": "Níveis de acesso",
+      "groups": {
+        "platform": "Plataforma (white label)",
+        "tenant": "Cliente (tenant)"
+      },
+      "role": "{number} · {role}",
+      "question": "Pergunta:",
+      "missing": "O que falta no app:"
+    },
+    "availability": {
+      "ready": "Dá para fazer hoje",
+      "partial": "Parcial",
+      "needs_levels": "Depende dos níveis novos",
+      "blocked": "Bloqueado"
+    },
+    "levels": {
+      "dono-da-plataforma": {
+        "name": "Dono da plataforma",
+        "question": "A base de clientes está crescendo e usando o produto, e o custo de infraestrutura cabe no plano?",
+        "usage": "Mensal, no computador. Decide preço e planos, onde investir e quando trocar de plano no Supabase.",
+        "missing": {
+          "1": "Faturamento por cliente (o card de receita mensal fica de fora)",
+          "2": "Histórico diário por cliente (a linha de 12 meses começa vazia)",
+          "3": "Os níveis novos de plataforma no banco"
+        }
+      },
+      "admin-da-plataforma": {
+        "name": "Admin da plataforma",
+        "question": "Qual cliente está travado na ativação ou quebrado agora, e o que eu destravo hoje?",
+        "usage": "Diário. Reenviar convite, orientar o DNS, ligar módulo, suspender ou escalar uma falha.",
+        "missing": {
+          "1": "Falhas de tarefas automáticas por cliente ainda precisam ser confirmadas no código"
+        }
+      },
+      "suporte-da-plataforma": {
+        "name": "Suporte da plataforma",
+        "question": "O que está acontecendo com este cliente, sem eu ver o conteúdo dos membros?",
+        "usage": "Sob demanda, por chamado. Só consulta: para mudar algo, escala para o admin da plataforma.",
+        "missing": {
+          "1": "Registro de cada acesso a um cliente, com motivo (condição para o nível existir)",
+          "2": "O nível de suporte da plataforma no banco"
+        }
+      },
+      "dono-do-cliente": {
+        "name": "Dono do cliente",
+        "question": "Minha comunidade está crescendo, retendo os membros e dando retorno?",
+        "usage": "Semanal ou mensal. Decide onde investir (conteúdo, eventos ou produtos), o tamanho da equipe e o plano.",
+        "missing": {
+          "1": "O nível “dono do cliente” no banco",
+          "2": "Cerca de 8 semanas de dados para a tendência ficar confiável",
+          "3": "Membros que só leem não aparecem: o app não registra quem abriu"
+        }
+      },
+      "admin-do-cliente": {
+        "name": "Admin do cliente",
+        "question": "O que precisa de mim hoje, e o que funcionou nesta semana?",
+        "usage": "Diário, no celular. Responder o suporte, preparar o check-in, repetir o formato de post que rendeu e moderar.",
+        "missing": {
+          "1": "Alcance dos posts (quantos viram) não existe e fica de fora"
+        }
+      },
+      "equipe-do-cliente": {
+        "name": "Equipe do cliente",
+        "question": "O que da minha função está esperando por mim agora?",
+        "usage": "Por turno, no celular. Cada pessoa vê só os blocos das funções que recebeu.",
+        "missing": {
+          "1": "O nível “equipe” e as funções no banco (hoje só existe o atendimento)",
+          "2": "Denúncias de membros só chegam na fase 11"
+        }
+      },
+      "membro": {
+        "name": "Membro",
+        "question": "O que tem para mim agora que eu não posso perder?",
+        "usage": "Quando abre o app. Não é uma página nova: é um bloco “Para você” no topo do perfil.",
+        "missing": {
+          "1": "“Posts novos desde a sua última visita” precisa registrar visitas"
+        }
+      }
+    },
+    "delta": {
+      "previous_month": "{amount} vs. mês anterior",
+      "previous_30_days": "{amount} vs. 30 dias antes",
+      "previous_24h": "{amount} vs. 24h anteriores",
+      "yesterday": "{amount} vs. ontem",
+      "last_7_days": "{amount} em 7 dias",
+      "none": "{amount}"
+    },
+    "hint": {
+      "no_comparison_yet": "sem comparação ainda",
+      "should_stay_zero": "deve ficar em 0"
+    },
+    "amount": {
+      "points": "{value} p.p.",
+      "minutes": "{value} min"
+    },
+    "sentiment": {
+      "good": "melhorou",
+      "bad": "piorou"
+    },
+    "notMeasured": "Ainda não medido",
+    "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
+    "daysAgo": "há {days, plural, one {# dia} other {# dias}}",
+    "plans": {
+      "pilot": "Pilot",
+      "pro": "Pro"
+    },
+    "clientStatus": {
+      "active": "Ativo",
+      "at_risk": "Em risco"
+    },
+    "modules": {
+      "feed": "Feed",
+      "communities": "Comunidades",
+      "stories": "Stories",
+      "events": "Eventos",
+      "chat": "Chat de suporte",
+      "store": "Loja",
+      "notifications": "Notificações",
+      "reels": "Reels"
+    },
+    "platformOwner": {
+      "header": {
+        "title": "Painel da plataforma",
+        "subtitle": "Últimos 30 dias",
+        "period": "30 dias"
+      },
+      "kpi": {
+        "activeClients": "Clientes ativos",
+        "newClients": "Novos clientes",
+        "members": "Membros na base",
+        "membersNote": "{percent} interagiram em 30 dias",
+        "storage": "Armazenamento",
+        "storageUnit": "de {total} GB",
+        "storageNote": "{minutes} min de vídeo",
+        "revenue": "Receita mensal",
+        "revenueReason": "Precisa do faturamento por cliente"
+      },
+      "attention": {
+        "title": "Atenção",
+        "storage": {
+          "title": "Armazenamento perto do limite do plano",
+          "detail": "Acima de {limit} os envios de mídia começam a falhar"
+        },
+        "atRisk": {
+          "tag": "{count, plural, one {# cliente} other {# clientes}}",
+          "title": "{name} está em risco",
+          "detail": "{days, plural, one {# dia} other {# dias}} sem publicação da equipe"
+        }
+      },
+      "activeChart": {
+        "title": "Clientes ativos, 12 meses",
+        "label": "Clientes ativos por mês"
+      },
+      "membersByClient": {
+        "title": "Membros por cliente",
+        "others": "{count, plural, one {Outro cliente} other {Outros #}}",
+        "concentration": "O maior cliente concentra {percent} dos membros.",
+        "action": "Ver todos"
+      },
+      "adoption": {
+        "title": "Adoção de módulos",
+        "footnote": "% dos clientes ativos com o módulo ligado."
+      },
+      "clients": {
+        "title": "Clientes (piores primeiro)",
+        "action": "Ver todos",
+        "columns": {
+          "client": "Cliente",
+          "plan": "Plano",
+          "status": "Status",
+          "members": "Membros",
+          "interacted": "Interagiu 30d",
+          "posts": "Posts 30d",
+          "media": "Mídia"
+        }
+      }
+    },
+    "platformAdmin": {
+      "header": {
+        "title": "Operação",
+        "subtitle": "Agora",
+        "period": "Filtros"
+      },
+      "pending": {
+        "title": "Pendências ({count})",
+        "action": "Ver todas",
+        "domain_expired": {
+          "tag": "Expirado",
+          "title": "{name}: domínio",
+          "detail": "DNS não encontrado para {host}"
+        },
+        "domain_deadline": {
+          "tag": "{hours}h",
+          "title": "{name}: domínio",
+          "detail": "Prazo de verificação termina em {hours} horas"
+        },
+        "invite_pending": {
+          "tag": "{days, plural, one {# dia} other {# dias}}",
+          "title": "{name}: convite do admin",
+          "detail": "Enviado há {days, plural, one {# dia} other {# dias}} e ainda não aceito"
+        },
+        "media_failures": {
+          "tag": "{count, plural, one {# falha} other {# falhas}}",
+          "title": "{name}: mídia",
+          "detail": "{count, plural, one {# vídeo falhou} other {# vídeos falharam}} no processamento nas últimas 24h"
+        }
+      },
+      "kpi": {
+        "unverifiedDomains": "Domínios não verificados",
+        "pendingInvites": "Convites sem aceite",
+        "clientsWithoutOwner": "Clientes sem dono",
+        "mediaFailures24h": "Falhas de mídia 24h",
+        "pushFailures": "Push com falha"
+      },
+      "activation": {
+        "title": "Ativação dos clientes",
+        "action": "Ver clientes parados",
+        "stuck": "Etapa com mais clientes parados: {step} ({count})",
+        "steps": {
+          "client_created": "Cliente criado",
+          "domain_verified": "Domínio verificado",
+          "invite_accepted": "Convite aceito",
+          "first_post": "1ª publicação",
+          "ten_members": "10+ membros"
+        }
+      },
+      "failures": {
+        "title": "Falhas nas últimas 24h",
+        "columns": {
+          "client": "Cliente",
+          "media": "Mídia",
+          "push": "Push",
+          "lastPost": "Última publicação",
+          "status": "Status"
+        }
+      }
+    },
+    "platformSupport": {
+      "header": {
+        "title": "Suporte",
+        "subtitle": "Consulta de clientes"
+      },
+      "searchLabel": "Buscar cliente",
+      "access": "Acesso registrado às {time} · motivo: “{reason}”",
+      "kpi": {
+        "primaryDomain": "Domínio principal",
+        "domainStatus": {
+          "failed": "Falhou",
+          "verified": "Verificado"
+        },
+        "domainReason": {
+          "dns_not_found": "DNS não encontrado"
+        },
+        "members": "Membros",
+        "membersUnit": "/ {blocked} bloq.",
+        "errors24h": "Erros 24h",
+        "lastActivity": "Última atividade",
+        "lastActivityNote": "publicação da equipe"
+      },
+      "configuration": {
+        "title": "Configuração",
+        "summary": "{count, plural, one {# módulo ligado} other {# módulos ligados}}",
+        "enabled": "Ligados: {list}",
+        "disabled": "Desligados: {list}",
+        "admins": "Admins: {count} ({emails})"
+      },
+      "errors": {
+        "title": "Erros nas últimas 24h",
+        "summary": "{shown} mais recentes de {total}",
+        "kinds": {
+          "dns": "DNS",
+          "push": "Push",
+          "media": "Mídia"
+        },
+        "details": {
+          "cname_not_found": "Verificação do domínio: registro CNAME não encontrado",
+          "devices_refused": "{count, plural, one {# aparelho recusou} other {# aparelhos recusaram}} a notificação",
+          "unsupported_format": "Vídeo rejeitado: formato não suportado"
+        }
+      },
+      "actions": {
+        "escalate": "Escalar para admin",
+        "myAccesses": "Meus acessos registrados"
+      }
+    },
+    "duration": "{hours}h{minutes}",
+    "postTypes": {
+      "video": "Vídeo",
+      "gallery": "Galeria",
+      "text": "Texto",
+      "link": "Link"
+    },
+    "tenantOwner": {
+      "header": {
+        "subtitle": "Visão do dono",
+        "period": "30 dias"
+      },
+      "kpi": {
+        "members": "Membros",
+        "membersNote": "+{count} novos",
+        "interacting": "Membros que interagiram",
+        "retention": "Retenção de novos",
+        "retentionNote": "entraram em {joined}, voltaram em {returned}",
+        "attendance": "Comparecimento em eventos",
+        "attendanceNote": "check-in ÷ confirmados",
+        "orderValue": "Valor de pedidos",
+        "orderValueNote": "valor registrado, sem pagamento real"
+      },
+      "weekly": {
+        "title": "Membros que interagiram por semana",
+        "label": "Membros que interagiram por semana: as últimas 12 semanas e as 12 anteriores",
+        "week": "S{week}",
+        "current": "Últimas 12 semanas",
+        "previous": "12 semanas anteriores"
+      },
+      "channels": {
+        "title": "Onde os membros interagem",
+        "likes": "Curtidas",
+        "comments": "Comentários",
+        "attendance": "Presenças",
+        "orders": "Pedidos",
+        "support": "Suporte"
+      },
+      "retention": {
+        "title": "Retenção por mês de entrada",
+        "footnote": "% que interagiu em cada mês depois de entrar.",
+        "corner": "Entrada",
+        "column": "M{n}",
+        "phoneLabel": "Retenção no 1º mês",
+        "phoneNote": "de quem entrou em {month}"
+      },
+      "account": {
+        "title": "Conta",
+        "plan": "Plano {plan}",
+        "domainStatus": {
+          "verified": "Domínio verificado",
+          "pending": "Domínio pendente"
+        },
+        "domain": "Domínio: {domain}",
+        "team": "Admins: {admins} · Equipe: {staff}",
+        "billing": "Cobrança: em breve"
+      },
+      "adminLink": "Ver operação do dia (painel do admin)"
+    },
+    "tenantAdmin": {
+      "header": {
+        "subtitle": "Painel do admin",
+        "period": "7 dias"
+      },
+      "attention": {
+        "title": "Atenção ({count})",
+        "support_waiting": {
+          "tag": "{hours}h",
+          "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
+          "detail": "A mais antiga é da {name}, há {hours} horas"
+        },
+        "event_today": {
+          "tag": "Hoje {hour}h",
+          "title": "{event}: {confirmed} de {capacity} vagas",
+          "detail": "Deixe o código de check-in pronto"
+        },
+        "story_expiring": {
+          "tag": "{hours}h",
+          "title": "{count, plural, one {# story expira} other {# stories expiram}} em {hours} horas",
+          "detail": "Fixe nos destaques se quiser manter"
+        }
+      },
+      "kpi": {
+        "awaiting": "Aguardando resposta",
+        "awaitingNote": "mais antiga: {hours}h",
+        "firstResponse": "1ª resposta (mediana)",
+        "interacting": "Membros que interagiram",
+        "newMembers": "Novos membros",
+        "perPost": "Interações por post",
+        "orders": "Pedidos",
+        "ordersNote": "+{count} acessos liberados à mão"
+      },
+      "topPosts": {
+        "title": "Posts que mais renderam (14 dias)",
+        "action": "Ver todos",
+        "columns": {
+          "date": "Data",
+          "type": "Tipo",
+          "community": "Comunidade",
+          "likes": "Curtidas",
+          "comments": "Coment."
+        }
+      },
+      "events": {
+        "title": "Eventos",
+        "summary": "comparecimento {percent}",
+        "footnote": "Check-in ÷ confirmados. +{count} pessoas sem confirmação no {event}."
+      },
+      "communities": {
+        "title": "Comunidades",
+        "summary": "a que mais engaja: {name}",
+        "exclusive": "{name} (exclusiva)"
+      },
+      "store": {
+        "title": "Loja",
+        "summary": "{count, plural, one {# pedido} other {# pedidos}}"
+      },
+      "moderation": {
+        "title": "Moderação",
+        "summary": "{count, plural, one {# ação} other {# ações}} em 30 dias",
+        "removed": "Comentários removidos",
+        "blocks": "Bloqueios",
+        "unblocks": "Desbloqueios",
+        "roleChanges": "Funções trocadas"
+      }
+    },
+    "tenantStaff": {
+      "header": {
+        "subtitle": "Meu turno"
+      },
+      "simulator": {
+        "legend": "Simular funções desta pessoa",
+        "submit": "Simular"
+      },
+      "functions": {
+        "atendimento": "Atendimento",
+        "moderacao": "Moderação",
+        "conteudo": "Conteúdo",
+        "loja": "Loja"
+      },
+      "tabsLabel": "Funções desta pessoa",
+      "empty": {
+        "title": "Nenhuma função marcada",
+        "body": "Sem função, o painel não aparece no menu de configurações dessa pessoa."
+      },
+      "support": {
+        "waiting": "Aguardando",
+        "oldest": "Espera mais antiga",
+        "answered": "Respondidas por mim",
+        "queue": "Fila",
+        "queueAction": "Ir para Suporte",
+        "hours": "{hours}h"
+      },
+      "moderation": {
+        "newComments": "Comentários novos 24h",
+        "removed": "Removidos 7d",
+        "blocks": "Bloqueios 7d",
+        "recent": "Comentários recentes",
+        "remove": "Remover"
+      },
+      "content": {
+        "posts": "Publicações 7d",
+        "stories": "Stories ativos",
+        "storiesNote": "{count, plural, one {# expira} other {# expiram}} em menos de {hours}h",
+        "recent": "Últimas publicações (48h)",
+        "columns": {
+          "when": "Quando",
+          "type": "Tipo",
+          "likes": "Curtidas",
+          "comments": "Coment."
+        }
+      },
+      "store": {
+        "orders": "Pedidos 7d",
+        "noOrders": "Produtos sem pedido 30d",
+        "recent": "Compras recentes",
+        "source": {
+          "purchase": "compra",
+          "manual_grant": "liberado à mão"
+        },
+        "noAmount": "sem valor"
+      }
+    },
+    "member": {
+      "header": {
+        "subtitle": "Perfil"
+      },
+      "memberSince": "Membro desde {date}",
+      "forYou": {
+        "title": "Para você",
+        "event": {
+          "title": "{title} · hoje {hour}h",
+          "startsIn": "Começa em {minutes} min",
+          "checkIn": "Fazer check-in"
+        },
+        "support": {
+          "title": "O suporte respondeu",
+          "detail": "“{preview}”",
+          "unread": "não lida"
+        },
+        "community": {
+          "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"
+        }
+      }
+    }
+  }
+}

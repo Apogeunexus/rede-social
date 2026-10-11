@@ -1,0 +1,110 @@
+/**
+ * The access-level panels preview (`/painel-preview/<nivel>`, quick 261011-jqy): fictional data in the
+ * Igor Alves brand, reachable without a session in development and absent from production.
+ *
+ * Two independent locks keep it out of production: `proxy.ts` treats the prefix as public only when
+ * `dashboardPreviewEnabled()`, and the preview layout and pages call `notFound()` when it is false.
+ * `NODE_ENV` is read per call (tests flip it with `vi.stubEnv`); Next inlines it in a build, so in a
+ * production bundle this is the constant `false`.
+ */
+export function dashboardPreviewEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production';
+}
+
+/** The preview prefix, anchored: `/painel-previewx` and `/painel-preview-foo` do not match. */
+export const DASHBOARD_PREVIEW_PATH = /^\/painel-preview(?:\/|$)/;
+
+export const DASHBOARD_PREVIEW_ROOT = '/painel-preview';
+
+export type PreviewRole =
+  | 'platform_owner'
+  | 'platform_admin'
+  | 'platform_support'
+  | 'tenant_owner'
+  | 'tenant_admin'
+  | 'tenant_staff'
+  | 'member';
+
+export type PreviewGroup = 'platform' | 'tenant';
+
+/** How much of the panel the app can feed today (the reference's status pill). */
+export type PreviewAvailability = 'ready' | 'partial' | 'needs_levels' | 'blocked';
+
+export interface PreviewLevel {
+  slug: string;
+  role: PreviewRole;
+  group: PreviewGroup;
+  availability: PreviewAvailability;
+}
+
+/** The 7 levels, in the reference's order (the level number is the index + 1). */
+export const PREVIEW_LEVELS = [
+  {
+    slug: 'dono-da-plataforma',
+    role: 'platform_owner',
+    group: 'platform',
+    availability: 'partial',
+  },
+  { slug: 'admin-da-plataforma', role: 'platform_admin', group: 'platform', availability: 'ready' },
+  {
+    slug: 'suporte-da-plataforma',
+    role: 'platform_support',
+    group: 'platform',
+    availability: 'blocked',
+  },
+  { slug: 'dono-do-cliente', role: 'tenant_owner', group: 'tenant', availability: 'needs_levels' },
+  { slug: 'admin-do-cliente', role: 'tenant_admin', group: 'tenant', availability: 'ready' },
+  { slug: 'equipe-do-cliente', role: 'tenant_staff', group: 'tenant', availability: 'partial' },
+  { slug: 'membro', role: 'member', group: 'tenant', availability: 'ready' },
+] as const satisfies readonly PreviewLevel[];
+
+export type PreviewSlug = (typeof PREVIEW_LEVELS)[number]['slug'];
+
+/** The allow-listed level for a path segment, or null (the page then 404s). */
+export function previewLevel(slug: string): (typeof PREVIEW_LEVELS)[number] | null {
+  return PREVIEW_LEVELS.find((level) => level.slug === slug) ?? null;
+}
+
+export function previewLevelPath(slug: PreviewSlug): string {
+  return `${DASHBOARD_PREVIEW_ROOT}/${slug}`;
+}
+
+/** The "Dados de exemplo" note's id: every disabled action in a panel points at it (aria-describedby). */
+export const PREVIEW_NOTE_ID = 'dashboard-preview-note';
+
+/** The staff functions the level-6 simulator can grant, in canonical (tab) order. */
+export const STAFF_FUNCTIONS = ['atendimento', 'moderacao', 'conteudo', 'loja'] as const;
+export type StaffFunction = (typeof STAFF_FUNCTIONS)[number];
+
+/** The reference's default person: support and moderation. */
+const DEFAULT_STAFF_FUNCTIONS: readonly StaffFunction[] = ['atendimento', 'moderacao'];
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function isStaffFunction(value: unknown): value is StaffFunction {
+  return (STAFF_FUNCTIONS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The simulator state from the query (untrusted): without `simular` the reference default; with
+ * `simular=1` exactly the allow-listed `funcoes` (a string or a repeated param), in canonical order,
+ * unknown ids dropped. The active tab is `aba` when it is a single granted id, else the first granted
+ * function, else null. Only these ids ever reach markup or URLs.
+ */
+export function parseStaffFunctions(params: SearchParams): {
+  functions: StaffFunction[];
+  active: StaffFunction | null;
+} {
+  const simulated = params.simular === '1';
+  const raw = params.funcoes;
+  const requested = typeof raw === 'string' ? [raw] : (raw ?? []);
+  const functions = simulated
+    ? STAFF_FUNCTIONS.filter((id) => requested.includes(id))
+    : [...DEFAULT_STAFF_FUNCTIONS];
+  const tab = params.aba;
+  const active =
+    typeof tab === 'string' && isStaffFunction(tab) && functions.includes(tab)
+      ? tab
+      : (functions[0] ?? null);
+  return { functions, active };
+}

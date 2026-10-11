@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveHostTenant } from './lib/tenant-host';
 import { proxy } from './proxy';
 
@@ -244,6 +244,42 @@ describe('proxy.ts — PWA PUBLIC entries (02-11, T-02-77)', () => {
     );
     expect(upper.status).toBe(307);
     expect(upper.headers.get('location')).toBe('http://primary.example/entrar');
+  });
+});
+
+describe('proxy.ts — the access-level panels preview is public only outside production (quick 261011-jqy)', () => {
+  beforeEach(() => {
+    resolve.mockReset();
+    resolve.mockResolvedValue({ mode: 'generic', host: 'localhost' });
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const anonymous = (path: string) =>
+    proxy(request(`http://localhost:3000${path}`, { host: 'localhost:3000' }));
+
+  it('development: an anonymous request to a preview level is served (200, no Location)', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const res = await anonymous('/painel-preview/dono-da-plataforma');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+  });
+
+  it('production: the same request 307s to /entrar', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const res = await anonymous('/painel-preview/dono-da-plataforma');
+    expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/entrar');
+  });
+
+  it('development: a look-alike prefix and every other private path still 307 to /entrar', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    for (const path of ['/painel-previewx', '/painel-preview-foo', '/inicio']) {
+      const res = await anonymous(path);
+      expect(res.status, path).toBe(307);
+      expect(res.headers.get('location'), path).toBe('http://localhost:3000/entrar');
+    }
   });
 });
 
