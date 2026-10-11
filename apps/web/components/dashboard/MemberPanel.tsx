@@ -66,7 +66,6 @@ export async function MemberPanel() {
                 title={t('member.forYou.support.title')}
                 detail={t('member.forYou.support.detail', { preview: supportReply.preview })}
                 {...(supportReply.unread ? { unreadLabel: t('member.forYou.support.unread') } : {})}
-                navigable
               />
             ) : null}
             {unlockedCommunity ? (
@@ -74,7 +73,6 @@ export async function MemberPanel() {
                 icon={Lock}
                 title={unlockedCommunity.name}
                 detail={t('member.forYou.community.detail', { count: unlockedCommunity.posts })}
-                navigable
               />
             ) : null}
           </div>

@@ -1,4 +1,4 @@
-import { Chip } from '@rede-social/ui';
+import { StatusPill } from '@rede-social/ui';
 
 export interface PanelHeaderProps {
   title: string;
@@ -26,7 +26,7 @@ export function PanelHeader({ title, subtitle, period }: PanelHeaderProps) {
           {subtitle ? <p className="text-xs text-text-secondary">{subtitle}</p> : null}
         </div>
       </div>
-      {period ? <Chip className="shrink-0">{period}</Chip> : null}
+      {period ? <StatusPill className="shrink-0">{period}</StatusPill> : null}
     </div>
   );
 }

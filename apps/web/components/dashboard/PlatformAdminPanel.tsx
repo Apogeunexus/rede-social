@@ -82,7 +82,6 @@ export async function PlatformAdminPanel() {
       <PanelHeader
         title={t('platformAdmin.header.title')}
         subtitle={t('platformAdmin.header.subtitle')}
-        period={t('platformAdmin.header.period')}
       />
 
       <PanelSection

@@ -1,5 +1,5 @@
 import { Card } from '@rede-social/ui';
-import { ChevronRight, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { type LabelTone, ToneLabel } from './ToneLabel';
 
@@ -13,8 +13,6 @@ export interface ActionCardProps {
   action?: ReactNode;
   /** When set, the unread dot shows and this word is read to screen readers ("não lida"). */
   unreadLabel?: string;
-  /** Draws the trailing chevron of a row that leads somewhere. */
-  navigable?: boolean;
 }
 
 /**
@@ -28,7 +26,6 @@ export function ActionCard({
   pill,
   action,
   unreadLabel,
-  navigable = false,
 }: ActionCardProps) {
   return (
     <Card className="flex flex-col gap-3 p-4">
@@ -49,9 +46,6 @@ export function ActionCard({
             />
             <span className="sr-only">{unreadLabel}</span>
           </>
-        ) : null}
-        {navigable ? (
-          <ChevronRight aria-hidden size={18} className="shrink-0 text-text-tertiary" />
         ) : null}
       </div>
       {pill || action ? (

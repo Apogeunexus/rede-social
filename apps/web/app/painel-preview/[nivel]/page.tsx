@@ -26,6 +26,7 @@ type Props = {
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  if (!dashboardPreviewEnabled()) return {};
   const { nivel } = await params;
   const level = previewLevel(nivel);
   if (!level) return {};

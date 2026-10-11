@@ -187,8 +187,7 @@
     "platformAdmin": {
       "header": {
         "title": "Operação",
-        "subtitle": "Agora",
-        "period": "Filtros"
+        "subtitle": "Agora"
       },
       "pending": {
         "title": "Pendências ({count})",

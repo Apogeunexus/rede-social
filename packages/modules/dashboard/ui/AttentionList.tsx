@@ -1,5 +1,4 @@
 import { Card } from '@rede-social/ui';
-import { ChevronRight } from 'lucide-react';
 import { type LabelTone, ToneLabel } from './ToneLabel';
 
 export interface AttentionItem {
@@ -34,7 +33,6 @@ export function AttentionList({ items }: AttentionListProps) {
                 <span className="text-xs text-text-secondary">{item.detail}</span>
               ) : null}
             </div>
-            <ChevronRight aria-hidden size={18} className="mt-0.5 shrink-0 text-text-tertiary" />
           </li>
         ))}
       </ul>

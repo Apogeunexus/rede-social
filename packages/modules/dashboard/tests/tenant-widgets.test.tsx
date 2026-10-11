@@ -68,24 +68,16 @@ describe('ActionCard', () => {
     expect(container.querySelector('svg.lucide-triangle-alert')).not.toBeNull();
   });
 
-  it('shows the unread dot with the caller label, and a chevron when navigable', () => {
+  it('shows the unread dot with the caller label', () => {
     const { container } = render(
-      <ActionCard
-        icon={CalendarDays}
-        title="t"
-        detail="d"
-        unreadLabel="unread-sentinel"
-        navigable
-      />,
+      <ActionCard icon={CalendarDays} title="t" detail="d" unreadLabel="unread-sentinel" />,
     );
     expect(screen.getByText('unread-sentinel')).toHaveClass('sr-only');
     expect(container.querySelector('[data-unread-dot]')).not.toBeNull();
-    expect(container.querySelector('svg.lucide-chevron-right')).not.toBeNull();
   });
 
-  it('has neither dot nor chevron by default', () => {
+  it('has no unread dot by default', () => {
     const { container } = render(<ActionCard icon={CalendarDays} title="t" detail="d" />);
     expect(container.querySelector('[data-unread-dot]')).toBeNull();
-    expect(container.querySelector('svg.lucide-chevron-right')).toBeNull();
   });
 });

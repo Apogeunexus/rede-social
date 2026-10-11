@@ -274,7 +274,12 @@ export async function TenantStaffPanel({ functions, active }: TenantStaffPanelPr
         </form>
       </Card>
 
-      <PanelHeader title={previewTenant.displayName} subtitle={t('tenantStaff.header.subtitle')} />
+      {functions.length > 0 ? (
+        <PanelHeader
+          title={previewTenant.displayName}
+          subtitle={t('tenantStaff.header.subtitle')}
+        />
+      ) : null}
 
       {functions.length > 1 ? (
         <nav aria-label={t('tenantStaff.tabsLabel')}>
