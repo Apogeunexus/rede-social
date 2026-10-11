@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { Bell, Mail } from 'lucide-react';
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import {
   Badge,
@@ -152,6 +153,21 @@ describe('IconButton', () => {
   it('renders no badge for a zero count', () => {
     render(<IconButton label="Mensagens" count={0} icon={Mail} />);
     expect(screen.queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('hands its ref the rendered button', () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(<IconButton ref={ref} label="Alertas" icon={Bell} />);
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'Alertas' }));
+  });
+
+  it('lets badgeClassName replace the danger fill', () => {
+    render(
+      <IconButton label="Alertas" count={2} icon={Bell} badgeClassName="bg-brand text-on-brand" />,
+    );
+    const badge = screen.getByText('2');
+    expect(badge.classList.contains('bg-brand')).toBe(true);
+    expect(badge.classList.contains('bg-danger')).toBe(false);
   });
 });
 
