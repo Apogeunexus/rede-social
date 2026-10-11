@@ -5,8 +5,8 @@ current_phase_name: Multi-Tenant Identity (INSERTED)
 status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
 last_updated: "2026-10-09T13:28:29.451Z"
-last_activity: 2026-10-09
-last_activity_desc: Phase 08.2 complete (UAT 7/7, security 54/54), pointer set to Phase 08.1 by hand
+last_activity: 2026-10-11
+last_activity_desc: Completed quick task 261011-jqy (dev-only access-level dashboards preview)
 state_head: e572b716129ffa5c8903e124fffc296c12d96c04
 progress:
   total_phases: 17
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-25)
 Phase: 08.1 — Multi-Tenant Identity (INSERTED)
 Plan: 08.1-08 pending (contract release)
 Status: Release 1 pending merge, push and production deploy
-Last activity: 2026-10-09 — Phase 08.2 complete (UAT 7/7, security 54/54); pointer moved to 08.1 by hand
+Last activity: 2026-10-11 - Completed quick task 261011-jqy: dev-only preview of the access-level dashboards
 
 Progress: [█░░░░░░░░░] 6%
 
@@ -693,6 +693,7 @@ None yet.
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261011-jqy | Pré-visualização dos painéis por nível de acesso (módulo dashboard, dados de exemplo, dev-only) | 2026-10-11 | 6fca804 | complete | [261011-jqy-criar-pre-visualizacao-dos-paineis-de-mo](./quick/261011-jqy-criar-pre-visualizacao-dos-paineis-de-mo/) |
 | 261009-h4q | Fix CI lane guard: quote the memberships role column in data-api-not-exposed.test.ts | 2026-10-09 | f8cde4c | complete | [261009-h4q-fix-ci-lane-guard-quote-the-memberships-](./quick/261009-h4q-fix-ci-lane-guard-quote-the-memberships-/) |
 | 260914-mfk | Route bootstrap 401/403 to redirects through one requireBootstrap()/requirePlatformTenants() helper so concurrently rendered segments no longer log a false ApiClientError | 2026-09-14 | 43db3cd | — | [260914-mfk-move-the-bootstrap-error-to-redirect-map](./quick/260914-mfk-move-the-bootstrap-error-to-redirect-map/) |
 | 260924-fwv | Corrigir os dois defeitos introduzidos pela gap closure da Fase 5: CR-01 (updateCommunity revalida a capa armazenada em todo PATCH) e CR-02 (bindPlay nao chaveado por story id) | 2026-09-24 | e1631da | Verified | [260924-fwv-corrigir-os-dois-defeitos-introduzidos-p](./quick/260924-fwv-corrigir-os-dois-defeitos-introduzidos-p/) |
