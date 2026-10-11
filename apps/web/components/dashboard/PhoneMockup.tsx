@@ -33,9 +33,12 @@ export async function PhoneMockup({ children }: { children: ReactNode }) {
       style={{ '--phone-scale': 'min(1, tan(atan2(100dvh - 4rem, 980px)))' } as CSSProperties}
     >
       <div className="lg:h-[980px] lg:w-[464px] lg:origin-top-left lg:[transform:scale(var(--phone-scale))] lg:rounded-[67px] lg:bg-[var(--device-bezel)] lg:p-3 lg:shadow-[var(--device-shadow),0_0_0_1px_var(--device-rim)]">
-        <div
+        <section
           data-phone-screen
-          className="lg:relative lg:flex lg:h-[956px] lg:w-[440px] lg:flex-col lg:overflow-y-auto lg:overscroll-contain lg:rounded-[55px] lg:bg-bg lg:scrollbar-none"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: a scroll container must take focus so keyboard users can scroll it (Safari does not make scroll containers focusable).
+          tabIndex={0}
+          aria-label={t('phone.screenLabel')}
+          className="outline-none focus-visible:ring-2 focus-visible:ring-brand lg:relative lg:flex lg:h-[956px] lg:w-[440px] lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-contain lg:rounded-[55px] lg:bg-bg lg:scrollbar-none"
         >
           <div
             aria-hidden
@@ -60,7 +63,7 @@ export async function PhoneMockup({ children }: { children: ReactNode }) {
           >
             <span className="h-[5px] w-[140px] rounded-full bg-text opacity-30" />
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

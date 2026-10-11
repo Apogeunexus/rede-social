@@ -30,7 +30,7 @@ export async function PreviewChrome({ slug }: PreviewChromeProps) {
       <header className="flex flex-col gap-3">
         <h1 className="text-2xl font-extrabold leading-tight">{t('preview.title')}</h1>
         <div id={PREVIEW_NOTE_ID} role="note" className="flex">
-          <StatusPill tone="warning" className="gap-1">
+          <StatusPill tone="warning" className="gap-1" title={t('preview.noticeDescription')}>
             <TriangleAlert aria-hidden size={14} className="shrink-0" />
             <span aria-hidden>{t('preview.notice')}</span>
             <span className="sr-only">{t('preview.noticeDescription')}</span>

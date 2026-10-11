@@ -5,7 +5,8 @@
       "notice": "Dados de exemplo",
       "noticeDescription": "Dados de exemplo: números, nomes e clientes são fictícios e as ações estão desativadas.",
       "phone": {
-        "time": "9:41"
+        "time": "9:41",
+        "screenLabel": "Tela do celular"
       }
     },
     "chrome": {
