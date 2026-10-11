@@ -1,0 +1,543 @@
+<title>Painéis por Nível</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: seletor de nível no topo, faixa de contexto (pergunta + o que falta), e a tela simulada do app num "aparelho" (celular 390px ou computador). Tokens copiados de packages/ui/src/styles/tokens.css. */
+:root {
+  --bg: #f5f7fb; --surface: #ffffff; --tertiary: #e9eef7; --input: #eef2f9;
+  --text: #16233b; --text-2: #51617c; --text-3: #8595ad;
+  --border: rgba(22,35,59,.1); --border-2: rgba(22,35,59,.16); --divider: rgba(22,35,59,.06);
+  --brand: #2e6fd0; --brand-soft: #e3edfb; --on-brand: #ffffff;
+  --success: #16a34a; --warning: #d97706; --danger: #ef4444;
+  --success-soft: rgba(22,163,74,.1); --warning-soft: rgba(217,119,6,.12); --danger-soft: rgba(239,68,68,.1);
+  --stage: #e6ebf3; --device-rim: #c9d3e2;
+  --font: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1118; --surface: #181c26; --tertiary: #232937; --input: #232937;
+  --text: #f2f5fa; --text-2: #a6b1c4; --text-3: #64718a;
+  --border: rgba(255,255,255,.08); --border-2: rgba(255,255,255,.12); --divider: rgba(255,255,255,.05);
+  --brand: #5b9cf8; --brand-soft: #1c2a42; --on-brand: #0f1118;
+  --success: #22c55e; --warning: #f59e0b; --danger: #f87171;
+  --success-soft: rgba(34,197,94,.14); --warning-soft: rgba(245,158,11,.14); --danger-soft: rgba(248,113,113,.14);
+  --stage: #0a0c12; --device-rim: #2a3142; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1118; --surface: #181c26; --tertiary: #232937; --input: #232937;
+  --text: #f2f5fa; --text-2: #a6b1c4; --text-3: #64718a;
+  --border: rgba(255,255,255,.08); --border-2: rgba(255,255,255,.12); --divider: rgba(255,255,255,.05);
+  --brand: #5b9cf8; --brand-soft: #1c2a42; --on-brand: #0f1118;
+  --success: #22c55e; --warning: #f59e0b; --danger: #f87171;
+  --success-soft: rgba(34,197,94,.14); --warning-soft: rgba(245,158,11,.14); --danger-soft: rgba(248,113,113,.14);
+  --stage: #0a0c12; --device-rim: #2a3142; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--stage); color: var(--text); font-family: var(--font); font-size: 14px; line-height: 1.45; padding-inline: 16px; padding-block: 24px 48px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* ---------- topo ---------- */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.top h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.top p { color: var(--text-2); max-width: 60ch; margin-top: 4px; }
+.fict { font-size: 12px; color: var(--text-3); }
+.seg { display: inline-flex; background: var(--tertiary); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* ---------- seletor de nível ---------- */
+.levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.lvl-group { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lvl-group h2 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+.lvl-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.lvl { border: 1px solid var(--border-2); background: var(--surface); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.lvl .n { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
+.lvl[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.lvl[aria-pressed="true"] .n { color: inherit; opacity: .75; }
+
+/* ---------- faixa de contexto ---------- */
+.ctx { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 760px) { .ctx { grid-template-columns: 1fr; } }
+.ctx .role { font-family: var(--mono); font-size: 12px; color: var(--text-3); }
+.ctx h2 { font-size: 20px; font-weight: 800; letter-spacing: -.01em; margin-top: 2px; }
+.ctx .q { margin-top: 6px; font-size: 15px; }
+.ctx .q b { font-weight: 700; }
+.ctx .meta { display: flex; flex-direction: column; gap: 8px; }
+.ctx .meta ul { margin: 0; padding-left: 18px; color: var(--text-2); display: flex; flex-direction: column; gap: 2px; }
+.small { font-size: 12px; color: var(--text-2); }
+
+/* ---------- pills ---------- */
+.pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pill.ok { background: var(--success-soft); color: var(--success); }
+.pill.warn { background: var(--warning-soft); color: var(--warning); }
+.pill.bad { background: var(--danger-soft); color: var(--danger); }
+.pill.neu { background: var(--tertiary); color: var(--text-2); }
+.pill.brand { background: var(--brand-soft); color: var(--brand); }
+.pill svg { width: 12px; height: 12px; flex: none; }
+
+/* ---------- aparelho ---------- */
+.stage { display: flex; justify-content: center; }
+.device { width: 100%; background: var(--bg); border: 1px solid var(--device-rim); border-radius: 18px; overflow: hidden; transition: max-width .25s ease; }
+.device.phone { max-width: 400px; border-radius: 34px; border-width: 8px; }
+.device.desk.wide { max-width: 1080px; }
+.device.desk.narrow { max-width: 920px; }
+@media (prefers-reduced-motion: reduce) { .device { transition: none; } }
+.appbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.appbar .ttl { font-weight: 800; font-size: 16px; }
+.appbar .sub { font-size: 12px; color: var(--text-3); }
+.brandmark { display: inline-flex; align-items: center; gap: 8px; }
+.logo { width: 26px; height: 26px; border-radius: 8px; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; font-weight: 800; font-size: 13px; flex: none; }
+.screen { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.desk.narrow .screen { max-width: 680px; margin: 0 auto; }
+.chipbtn { border: 1px solid var(--border-2); background: var(--surface); border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--text-2); display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+
+/* ---------- blocos ---------- */
+.sec-t { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sec-t a, .link { color: var(--brand); text-decoration: none; font-weight: 700; letter-spacing: 0; text-transform: none; font-size: 12px; cursor: pointer; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; }
+.stack { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.kpis { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.phone .kpis { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+.phone .kpis .kpi { flex: 0 0 42%; scroll-snap-align: start; }
+.kpi { display: flex; flex-direction: column; gap: 4px; }
+.kpi .l { font-size: 12px; color: var(--text-2); font-weight: 600; }
+.kpi .v { font-size: 24px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.kpi .v small { font-size: 13px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+.kpi .d { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.kpi .d.up { color: var(--success); } .kpi .d.down { color: var(--danger); } .kpi .d.flat { color: var(--text-3); }
+.kpi .s { font-size: 12px; color: var(--text-3); }
+.kpi.missing { border-style: dashed; background: transparent; }
+.kpi.missing .v { font-size: 15px; color: var(--text-3); }
+.grid2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.phone .grid2 { grid-template-columns: 1fr; }
+
+/* lista de atenção */
+.alerts { display: flex; flex-direction: column; }
+.alerts .it { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--divider); min-width: 0; }
+.alerts .it:first-child { border-top: 0; padding-top: 2px; }
+.alerts .it .tx { flex: 1; min-width: 0; }
+.alerts .it .tx b { display: block; font-weight: 700; }
+.alerts .it .tx span { color: var(--text-2); font-size: 12px; }
+.chev { color: var(--text-3); flex: none; }
+
+/* barras */
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.bar .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-2); }
+.bar .tr { height: 10px; background: var(--tertiary); border-radius: 999px; overflow: hidden; }
+.bar .fl { height: 100%; background: var(--text-3); border-radius: 999px; }
+.bar.hi .fl { background: var(--brand); }
+.bar .vl { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 3.5em; text-align: right; }
+.bar .vl small { font-weight: 600; color: var(--text-3); }
+
+/* tabela */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); padding: 0 8px 8px; white-space: nowrap; }
+td { padding: 9px 8px; border-top: 1px solid var(--divider); white-space: nowrap; }
+td.num, th.num { text-align: right; }
+.phone .hide-phone { display: none; }
+.desk .only-phone { display: none; }
+
+/* gráficos */
+svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+svg.chart text { fill: var(--text-3); font-family: var(--font); font-size: 11px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--brand); vertical-align: middle; margin-right: 5px; }
+.legend i.prev { border-top: 2px dashed var(--text-3); }
+
+/* coorte */
+.heat { display: grid; gap: 3px; font-size: 11px; font-variant-numeric: tabular-nums; }
+.heat div { padding: 6px 4px; text-align: center; border-radius: 4px; }
+.heat .h { color: var(--text-3); font-weight: 700; background: transparent; }
+
+/* chat / feed linhas */
+.row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--divider); min-width: 0; }
+.row:first-child { border-top: 0; padding-top: 0; }
+.av { width: 32px; height: 32px; border-radius: 50%; background: var(--tertiary); color: var(--text-2); display: grid; place-items: center; font-weight: 800; font-size: 12px; flex: none; }
+.row .tx { flex: 1; min-width: 0; }
+.row .tx b { display: block; }
+.row .tx span { display: block; color: var(--text-2); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btn { border: 0; background: var(--brand); color: var(--on-brand); border-radius: 10px; padding: 9px 14px; font-weight: 700; cursor: pointer; }
+.btn.ghost { background: var(--tertiary); color: var(--text); }
+.btn.sm { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+/* acordeões */
+details.card summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+details.card summary::-webkit-details-marker { display: none; }
+details.card summary::after { content: "▸"; color: var(--text-3); transition: transform .15s; }
+details.card[open] summary::after { transform: rotate(90deg); }
+details.card[open] summary { margin-bottom: 12px; }
+details.card summary .small { font-weight: 500; }
+
+/* busca, abas, funções */
+.search { display: flex; align-items: center; gap: 8px; background: var(--input); border-radius: 10px; padding: 9px 12px; color: var(--text-3); }
+.tabs { display: flex; gap: 6px; overflow-x: auto; }
+.tab { border: 0; background: var(--tertiary); border-radius: 999px; padding: 7px 12px; font-weight: 700; font-size: 13px; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tab[aria-selected="true"] { background: var(--brand); color: var(--on-brand); }
+.badge { background: var(--danger); color: #fff; border-radius: 999px; font-size: 10px; padding: 1px 6px; font-weight: 800; }
+.funcs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.funcs label { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border-2); border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: 13px; cursor: pointer; }
+.funcs input { accent-color: var(--brand); }
+
+/* perfil do membro */
+.profile-head { display: flex; align-items: center; gap: 12px; }
+.profile-head .av { width: 56px; height: 56px; font-size: 18px; }
+.foryou { display: flex; align-items: center; gap: 12px; }
+.foryou .ic { width: 40px; height: 40px; border-radius: 12px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex: none; }
+.foryou .ic svg { width: 20px; height: 20px; }
+.foryou .tx { flex: 1; min-width: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); flex: none; }
+.ghost-post { height: 120px; border-radius: 10px; background: var(--tertiary); }
+.nav { display: flex; justify-content: space-around; padding: 10px 8px; background: var(--surface); border-top: 1px solid var(--border); color: var(--text-3); font-size: 11px; font-weight: 600; }
+.nav span { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.nav span.on { color: var(--brand); }
+.desk .nav { display: none; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Painéis por nível de acesso</h1>
+      <p>Simulação do painel que cada um dos 7 níveis vê na rede social white label. Escolha um nível para ver a tela dele.</p>
+      <p class="fict">Todos os números, nomes e clientes desta página são fictícios.</p>
+    </div>
+    <div class="seg" role="group" aria-label="Formato da tela">
+      <button type="button" id="v-phone" aria-pressed="true">Celular</button>
+      <button type="button" id="v-desk" aria-pressed="false">Computador</button>
+    </div>
+  </header>
+
+  <nav class="levels" aria-label="Níveis de acesso">
+    <div class="lvl-group"><h2>Plataforma (white label)</h2><div class="lvl-row" id="g-plat"></div></div>
+    <div class="lvl-group"><h2>Cliente (tenant)</h2><div class="lvl-row" id="g-ten"></div></div>
+  </nav>
+
+  <section class="ctx" id="ctx" aria-live="polite"></section>
+  <div id="extra"></div>
+  <div class="stage"><div class="device phone" id="device"></div></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const nf = (n) => n.toLocaleString("pt-BR");
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const ICON = {
+    ok: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 8.5l3 3 7-7"/></svg>',
+    warn: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 2.5l6 11H2z"/><path d="M8 7v3"/></svg>',
+    bad: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="8" r="6"/><path d="M8 5v4M8 11h.01"/></svg>',
+    neu: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="8" cy="8" r="6"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+    chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H9l-5 4z"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.5-2"/></svg>',
+    search: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+  };
+  const pill = (tone, text) => `<span class="pill ${tone}">${ICON[tone] || ""}${esc(text)}</span>`;
+  const chev = '<span class="chev" aria-hidden="true">›</span>';
+
+  // delta: [texto, "up"|"down"|"flat"]; arrows encode direction, color encodes good/bad
+  function kpi(l, v, d, s) {
+    const dd = d ? `<span class="d ${d[1]}">${esc(d[0])}</span>` : "";
+    return `<div class="card kpi"><span class="l">${esc(l)}</span><span class="v">${v}</span>${dd}${s ? `<span class="s">${s}</span>` : ""}</div>`;
+  }
+  const kpiMissing = (l, why) => `<div class="card kpi missing"><span class="l">${esc(l)}</span><span class="v">Ainda não medido</span><span class="s">${esc(why)}</span></div>`;
+  const section = (title, body, link) => `<div class="stack"><div class="sec-t"><span>${esc(title)}</span>${link ? `<a class="link">${esc(link)}</a>` : ""}</div>${body}</div>`;
+  const alerts = (items) => `<div class="card alerts">${items.map(([tone, tag, t, s]) => `<div class="it">${pill(tone, tag)}<div class="tx"><b>${esc(t)}</b>${s ? `<span>${esc(s)}</span>` : ""}</div>${chev}</div>`).join("")}</div>`;
+
+  function bars(rows, opts = {}) {
+    const max = opts.max ?? Math.max(...rows.map((r) => r[1]));
+    return `<div class="card bars">${rows.map(([n, v, label, hi]) => `<div class="bar${hi ? " hi" : ""}"><span class="nm">${esc(n)}</span><span class="tr"><span class="fl" style="display:block;width:${(v / max) * 100}%"></span></span><span class="vl">${label ?? nf(v)}</span></div>`).join("")}</div>`;
+  }
+
+  function table(cols, rows) {
+    const th = cols.map((c) => `<th class="${c.num ? "num" : ""} ${c.hide ? "hide-phone" : ""}">${esc(c.t)}</th>`).join("");
+    const tr = rows.map((r) => `<tr>${r.map((cell, i) => `<td class="${cols[i].num ? "num" : ""} ${cols[i].hide ? "hide-phone" : ""}">${cell}</td>`).join("")}</tr>`).join("");
+    return `<div class="card tbl-wrap"><table><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table></div>`;
+  }
+
+  // line chart on one shared y-scale; labels only for values the axis actually reaches
+  function lineChart(cur, prev, xl, opts = {}) {
+    const W = 600, H = 190, L = 34, R = 12, T = 12, B = 26;
+    const all = cur.concat(prev || []);
+    const step = opts.step || 10;
+    const lo = Math.floor(Math.min(...all) / step) * step, hi = Math.ceil(Math.max(...all) / step) * step;
+    const x = (i) => L + (i * (W - L - R)) / (cur.length - 1);
+    const y = (v) => T + (H - T - B) * (1 - (v - lo) / (hi - lo || 1));
+    const path = (arr) => arr.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+    const ticks = [lo, (lo + hi) / 2, hi];
+    const grid = ticks.map((t) => `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--divider)" stroke-width="1"/><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${opts.fmt ? opts.fmt(t) : nf(t)}</text>`).join("");
+    const xs = xl.map((lb, i) => (lb ? `<text x="${x(i)}" y="${H - 6}" text-anchor="middle">${lb}</text>` : "")).join("");
+    const area = `${path(cur)}L${x(cur.length - 1)},${y(lo)}L${x(0)},${y(lo)}Z`;
+    const last = cur.length - 1;
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || "gráfico")}">${grid}
+      <path d="${area}" fill="var(--brand)" fill-opacity=".08" stroke="none"/>
+      ${prev ? `<path d="${path(prev)}" fill="none" stroke="var(--text-3)" stroke-width="2" stroke-dasharray="5 5"/>` : ""}
+      <path d="${path(cur)}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="${x(last)}" cy="${y(cur[last])}" r="4.5" fill="var(--brand)" stroke="var(--surface)" stroke-width="2"/>${xs}</svg>`;
+  }
+
+  function spark(vals) {
+    const W = 120, H = 28, lo = Math.min(...vals), hi = Math.max(...vals);
+    const p = vals.map((v, i) => `${i ? "L" : "M"}${((i * W) / (vals.length - 1)).toFixed(1)},${(H - 3 - ((v - lo) / (hi - lo || 1)) * (H - 6)).toFixed(1)}`).join("");
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="28" aria-hidden="true"><path d="${p}" fill="none" stroke="var(--brand)" stroke-width="2"/></svg>`;
+  }
+
+  const appbar = (title, sub, right = "") => `<div class="appbar"><div class="brandmark"><span class="logo">${esc(title[0])}</span><div><div class="ttl">${esc(title)}</div>${sub ? `<div class="sub">${esc(sub)}</div>` : ""}</div></div>${right}</div>`;
+  const filt = (t) => `<button type="button" class="chipbtn">${esc(t)} ▾</button>`;
+  const bottomNav = (on) => `<div class="nav">${["Início", "Comunidades", "Eventos", "Suporte", "Perfil"].map((n) => `<span class="${n === on ? "on" : ""}">●<br>${n}</span>`).join("")}</div>`;
+
+  /* =================== os 7 painéis =================== */
+  const PANELS = [
+    {
+      id: "p1", n: 1, group: "plat", name: "Dono da plataforma", role: "platform_owner", wide: true,
+      q: "A base de clientes está crescendo e usando o produto, e o custo de infraestrutura cabe no plano?",
+      use: "Mensal, no computador. Decide preço e planos, onde investir e quando trocar de plano no Supabase.",
+      status: ["warn", "Parcial"], missing: ["Faturamento por cliente (o card de receita mensal fica de fora)", "Histórico diário por cliente (a linha de 12 meses começa vazia)", "Os níveis novos de plataforma no banco"],
+      render: () => appbar("Painel da plataforma", "Últimos 30 dias", filt("30 dias")) + `<div class="screen">
+        <div class="kpis">
+          ${kpi("Clientes ativos", "12", ["▲ 2 vs. mês anterior", "up"], spark([6, 7, 7, 8, 8, 9, 9, 10, 10, 10, 11, 12]))}
+          ${kpi("Novos clientes", "3", ["▲ 1 vs. mês anterior", "up"])}
+          ${kpi("Membros na base", "8.430", ["▲ 6% vs. mês anterior", "up"], "41% interagiram em 30 dias")}
+          ${kpi("Armazenamento", "0,84 <small>de 1 GB</small>", ["▲ 9% vs. mês anterior", "down"], "312 min de vídeo")}
+          ${kpiMissing("Receita mensal", "Precisa do faturamento por cliente")}
+        </div>
+        ${section("Atenção", alerts([
+          ["warn", "84%", "Armazenamento perto do limite do plano", "Acima de 95% os envios de mídia começam a falhar"],
+          ["warn", "1 cliente", "Clube Corrida Sul está em risco", "14 dias sem publicação da equipe"],
+        ]))}
+        <div class="grid2">
+          ${section("Clientes ativos, 12 meses", `<div class="card">${lineChart([6, 7, 7, 8, 8, 9, 9, 10, 10, 10, 11, 12], null, ["nov", "", "jan", "", "mar", "", "mai", "", "jul", "", "set", "out"], { step: 2, label: "Clientes ativos por mês" })}</div>`)}
+          ${section("Membros por cliente", bars([["Rede Demo", 5230, "62%", true], ["Instituto Aurora", 1520, "18%"], ["Rede Lab", 760, "9%"], ["Escola Horizonte", 510, "6%"], ["Outros 8", 410, "5%"]]) + `<p class="small">O maior cliente concentra 62% dos membros.</p>`, "Ver todos")}
+        </div>
+        ${section("Adoção de módulos", bars([["Feed", 100, "100%"], ["Comunidades", 92, "92%"], ["Stories", 83, "83%"], ["Eventos", 67, "67%"], ["Chat de suporte", 58, "58%"], ["Loja", 17, "17%"]], { max: 100 }) + `<p class="small">% dos clientes ativos com o módulo ligado.</p>`)}
+        ${section("Clientes (piores primeiro)", table(
+          [{ t: "Cliente" }, { t: "Plano", hide: true }, { t: "Status" }, { t: "Membros", num: true }, { t: "Interagiu 30d", num: true }, { t: "Posts 30d", num: true, hide: true }, { t: "Mídia", num: true, hide: true }],
+          [["Clube Corrida Sul", "Pilot", pill("warn", "Em risco"), "310", "12%", "0", "41 MB"],
+           ["Escola Horizonte", "Pilot", pill("ok", "Ativo"), "510", "27%", "6", "88 MB"],
+           ["Rede Lab", "Pilot", pill("ok", "Ativo"), "760", "35%", "14", "120 MB"],
+           ["Instituto Aurora", "Pro", pill("ok", "Ativo"), "1.520", "44%", "22", "190 MB"],
+           ["Rede Demo", "Pro", pill("ok", "Ativo"), "5.230", "46%", "61", "402 MB"]]
+        ), "Ver todos")}
+      </div>`,
+    },
+    {
+      id: "p2", n: 2, group: "plat", name: "Admin da plataforma", role: "platform_admin", wide: true,
+      q: "Qual cliente está travado na ativação ou quebrado agora, e o que eu destravo hoje?",
+      use: "Diário. Reenviar convite, orientar o DNS, ligar módulo, suspender ou escalar uma falha.",
+      status: ["ok", "Dá para fazer hoje"], missing: ["Falhas de tarefas automáticas por cliente ainda precisam ser confirmadas no código"],
+      render: () => appbar("Operação", "Agora", filt("Filtros")) + `<div class="screen">
+        ${section("Pendências (4)", alerts([
+          ["bad", "Expirado", "Clube Corrida Sul: domínio", "DNS não encontrado para comunidade.corridasul.com.br"],
+          ["warn", "36h", "Escola Horizonte: domínio", "Prazo de verificação termina em 36 horas"],
+          ["warn", "4 dias", "Instituto Aurora: convite do admin", "Enviado há 4 dias e ainda não aceito"],
+          ["warn", "7 falhas", "Rede Lab: mídia", "7 vídeos falharam no processamento nas últimas 24h"],
+        ]), "Ver todas")}
+        <div class="kpis">
+          ${kpi("Domínios não verificados", "3", ["sem comparação ainda", "flat"])}
+          ${kpi("Convites sem aceite", "2", ["sem comparação ainda", "flat"])}
+          ${kpi("Clientes sem dono", "0", ["deve ficar em 0", "flat"])}
+          ${kpi("Falhas de mídia 24h", "9", ["▲ 6 vs. 24h anteriores", "down"])}
+          ${kpi("Push com falha", "14", ["▼ 3 vs. ontem", "up"])}
+        </div>
+        <div class="grid2">
+          ${section("Ativação dos clientes", bars([["Cliente criado", 8, "8"], ["Domínio verificado", 5, "5 <small>62%</small>"], ["Convite aceito", 4, "4 <small>80%</small>"], ["1ª publicação", 4, "4 <small>100%</small>"], ["10+ membros", 3, "3 <small>75%</small>"]], { max: 8 }) + `<p class="small">Etapa com mais clientes parados: <b>Domínio verificado (3)</b>.</p>`, "Ver clientes parados")}
+          ${section("Falhas nas últimas 24h", table(
+            [{ t: "Cliente" }, { t: "Mídia", num: true }, { t: "Push", num: true }, { t: "Última publicação", hide: true }, { t: "Status" }],
+            [["Rede Lab", "7", "2", "hoje 09:12", pill("ok", "Ativo")],
+             ["Rede Demo", "2", "9", "hoje 11:40", pill("ok", "Ativo")],
+             ["Clube Corrida Sul", "0", "3", "há 14 dias", pill("warn", "Em risco")]]
+          ))}
+        </div>
+      </div>`,
+    },
+    {
+      id: "p3", n: 3, group: "plat", name: "Suporte da plataforma", role: "platform_support", wide: true,
+      q: "O que está acontecendo com este cliente, sem eu ver o conteúdo dos membros?",
+      use: "Sob demanda, por chamado. Só consulta: para mudar algo, escala para o admin da plataforma.",
+      status: ["bad", "Bloqueado"], missing: ["Registro de cada acesso a um cliente, com motivo (condição para o nível existir)", "O nível de suporte da plataforma no banco"],
+      render: () => appbar("Suporte", "Consulta de clientes") + `<div class="screen">
+        <div class="search">${ICON.search}<span>Clube Corrida Sul</span></div>
+        <div class="card stack">
+          <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><b style="font-size:16px">Clube Corrida Sul</b><span>${pill("neu", "Pilot")} ${pill("ok", "Ativo")}</span></div>
+          <p class="small">Acesso registrado às 14:02 · motivo: “Chamado #128: membros não conseguem entrar”</p>
+        </div>
+        <div class="kpis">
+          ${kpi("Domínio principal", pill("bad", "Falhou"), null, "DNS não encontrado")}
+          ${kpi("Membros", "310 <small>/ 2 bloq.</small>", ["▲ 14 em 7 dias", "up"])}
+          ${kpi("Erros 24h", "9", ["▲ 6 vs. ontem", "down"])}
+          ${kpi("Última atividade", "há 14 dias", null, "publicação da equipe")}
+        </div>
+        <details class="card"><summary>Configuração <span class="small">6 módulos ligados</span></summary>
+          <div class="stack small"><span>Ligados: Feed · Comunidades · Stories · Eventos · Chat de suporte · Notificações</span><span>Desligados: Loja · Reels</span><span>Admins: 1 (ana@corridasul.com.br)</span></div></details>
+        <details class="card" open><summary>Erros nas últimas 24h <span class="small">9</span></summary>
+          <div class="stack small">
+            <div class="row"><span class="pill bad">${ICON.bad}DNS</span><div class="tx"><b>13:50</b><span>Verificação do domínio: registro CNAME não encontrado</span></div></div>
+            <div class="row"><span class="pill warn">${ICON.warn}Push</span><div class="tx"><b>11:21</b><span>3 aparelhos recusaram a notificação</span></div></div>
+            <div class="row"><span class="pill warn">${ICON.warn}Mídia</span><div class="tx"><b>08:04</b><span>Vídeo rejeitado: formato não suportado</span></div></div>
+          </div></details>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn">Escalar para admin</button><button type="button" class="btn ghost">Meus acessos registrados</button></div>
+      </div>`,
+    },
+    {
+      id: "p4", n: 4, group: "ten", name: "Dono do cliente", role: "tenant_owner",
+      q: "Minha comunidade está crescendo, retendo os membros e dando retorno?",
+      use: "Semanal ou mensal. Decide onde investir (conteúdo, eventos ou produtos), o tamanho da equipe e o plano.",
+      status: ["warn", "Depende dos níveis novos"], missing: ["O nível “dono do cliente” no banco", "Cerca de 8 semanas de dados para a tendência ficar confiável", "Membros que só leem não aparecem: o app não registra quem abriu"],
+      render: () => appbar("Rede Demo", "Visão do dono", filt("30 dias")) + `<div class="screen">
+        <div class="kpis">
+          ${kpi("Membros", "1.240", ["▲ 8% vs. 30 dias antes", "up"], "+96 novos")}
+          ${kpi("Membros que interagiram", "38%", ["▼ 3 p.p.", "down"], spark([31, 33, 36, 35, 39, 41, 40, 42, 41, 39, 37, 38]))}
+          ${kpi("Retenção de novos", "41%", ["▲ 4 p.p.", "up"], "entraram em set., voltaram em out.")}
+          ${kpi("Comparecimento em eventos", "72%", ["▲ 5 p.p.", "up"], "check-in ÷ confirmados")}
+          ${kpi("Valor de pedidos", "R$ 8.940", ["▲ 12%", "up"], "valor registrado, sem pagamento real")}
+        </div>
+        ${section("Membros que interagiram por semana", `<div class="card stack">${lineChart([310, 330, 360, 352, 391, 410, 402, 425, 418, 396, 372, 380], [280, 290, 300, 310, 305, 330, 340, 335, 350, 345, 360, 355], ["", "", "", "S4", "", "", "", "S8", "", "", "", "S12"], { step: 50, label: "Membros que interagiram por semana" })}<div class="legend"><span><i></i>Últimas 12 semanas</span><span><i class="prev"></i>12 semanas anteriores</span></div></div>`)}
+        <div class="grid2">
+          ${section("Onde os membros interagem", bars([["Curtidas", 3100, "3.100", true], ["Comentários", 840], ["Presenças", 310], ["Pedidos", 96], ["Suporte", 74]]))}
+          ${section("Retenção por mês de entrada", `<div class="card stack">${heat()}<p class="small">% que interagiu em cada mês depois de entrar.</p></div>`)}
+        </div>
+        <details class="card"><summary>Conta <span class="small">Plano Pro · ${pill("ok", "Domínio verificado")}</span></summary>
+          <div class="stack small"><span>Domínio: comunidade.redemo.com.br</span><span>Admins: 2 · Equipe: 3</span><span>Cobrança: em breve</span></div></details>
+        <a class="link">Ver operação do dia (painel do admin) ›</a>
+      </div>` + bottomNav("Perfil"),
+    },
+    {
+      id: "p5", n: 5, group: "ten", name: "Admin do cliente", role: "tenant_admin",
+      q: "O que precisa de mim hoje, e o que funcionou nesta semana?",
+      use: "Diário, no celular. Responder o suporte, preparar o check-in, repetir o formato de post que rendeu e moderar.",
+      status: ["ok", "Dá para fazer hoje"], missing: ["Alcance dos posts (quantos viram) não existe e fica de fora"],
+      render: () => appbar("Rede Demo", "Painel do admin", filt("7 dias")) + `<div class="screen">
+        ${section("Atenção (3)", alerts([
+          ["bad", "26h", "2 conversas aguardando resposta", "A mais antiga é da Ana, há 26 horas"],
+          ["warn", "Hoje 19h", "Encontro mensal: 92 de 100 vagas", "Deixe o código de check-in pronto"],
+          ["warn", "5h", "1 story expira em 5 horas", "Fixe nos destaques se quiser manter"],
+        ]))}
+        <div class="kpis">
+          ${kpi("Aguardando resposta", "2", null, "mais antiga: 26h")}
+          ${kpi("1ª resposta (mediana)", "1h40", ["▼ 20 min, melhorou", "up"])}
+          ${kpi("Membros que interagiram", "412", ["▲ 7%", "up"])}
+          ${kpi("Novos membros", "28", ["▲ 5", "up"])}
+          ${kpi("Interações por post", "64", ["▲ 11", "up"])}
+          ${kpi("Pedidos", "14", ["▼ 2", "down"], "+3 acessos liberados à mão")}
+        </div>
+        ${section("Posts que mais renderam (14 dias)", table(
+          [{ t: "Data" }, { t: "Tipo" }, { t: "Comunidade", hide: true }, { t: "Curtidas", num: true }, { t: "Coment.", num: true }],
+          [["08/10", "Vídeo", "Geral", "96", "31"], ["06/10", "Galeria", "VIP", "70", "12"], ["04/10", "Texto", "Geral", "40", "20"], ["02/10", "Link", "Iniciantes", "22", "4"]]
+        ), "Ver todos")}
+        <details class="card"><summary>Eventos <span class="small">comparecimento 64%</span></summary>${bars([["Encontro set.", 82, "82%", true], ["Live de dúvidas", 58, "58%"], ["Workshop", 64, "64%"], ["Aula aberta", 49, "49%"]], { max: 100 })}<p class="small" style="margin-top:8px">Check-in ÷ confirmados. +6 pessoas sem confirmação no Encontro.</p></details>
+        <details class="card"><summary>Comunidades <span class="small">a que mais engaja: VIP</span></summary>${bars([["VIP (exclusiva)", 1240, "1.240", true], ["Geral", 980], ["Iniciantes", 410], ["Eventos", 220]])}</details>
+        <details class="card"><summary>Loja <span class="small">14 pedidos</span></summary>${bars([["Mentoria em grupo", 6], ["Comunidade VIP", 5], ["E-book", 3], ["Workshop gravado", 0, "0"]])}</details>
+        <details class="card"><summary>Moderação <span class="small">3 ações em 30 dias</span></summary><div class="kpis">${kpi("Comentários removidos", "2")}${kpi("Bloqueios", "1")}${kpi("Desbloqueios", "0")}${kpi("Funções trocadas", "1")}</div></details>
+      </div>` + bottomNav("Perfil"),
+    },
+    {
+      id: "p6", n: 6, group: "ten", name: "Equipe do cliente", role: "tenant_staff",
+      q: "O que da minha função está esperando por mim agora?",
+      use: "Por turno, no celular. Cada pessoa vê só os blocos das funções que recebeu.",
+      status: ["warn", "Parcial"], missing: ["O nível “equipe” e as funções no banco (hoje só existe o atendimento)", "Denúncias de membros só chegam na fase 11"],
+      render: () => staffScreen(),
+    },
+    {
+      id: "p7", n: 7, group: "ten", name: "Membro", role: "member",
+      q: "O que tem para mim agora que eu não posso perder?",
+      use: "Quando abre o app. Não é uma página nova: é um bloco “Para você” no topo do perfil.",
+      status: ["ok", "Dá para fazer hoje"], missing: ["“Posts novos desde a sua última visita” precisa registrar visitas"],
+      render: () => appbar("Rede Demo", "Perfil") + `<div class="screen">
+        <div class="profile-head"><span class="av">AS</span><div><b style="font-size:17px">Ana Souza</b><p class="small">Membro desde mar. 2026</p></div></div>
+        ${section("Para você", `
+          <div class="card stack"><div class="foryou"><span class="ic">${ICON.cal}</span><div class="tx"><b>Encontro mensal · hoje 19h</b><p class="small">Espaço Aurora, sala 2</p></div></div>${pill("warn", "Começa em 40 min")}<button type="button" class="btn">Fazer check-in</button></div>
+          <div class="card"><div class="foryou"><span class="ic">${ICON.chat}</span><div class="tx"><b>O suporte respondeu</b><p class="small">“Oi, Ana! Seu acesso à VIP já foi liberado.”</p></div><span class="dot" aria-label="não lida"></span>${chev}</div></div>
+          <div class="card"><div class="foryou"><span class="ic">${ICON.lock}</span><div class="tx"><b>Comunidade VIP</b><p class="small">Liberada pela sua compra · 42 publicações</p></div>${chev}</div></div>`)}
+        <div class="sec-t"><span>Publicações</span></div>
+        <div class="grid2"><div class="ghost-post"></div></div>
+      </div>` + bottomNav("Perfil"),
+    },
+  ];
+
+  function heat() {
+    const rows = [["jun", [100, 58, 46, 41, 38]], ["jul", [100, 55, 44, 40]], ["ago", [100, 61, 47]], ["set", [100, 41]]];
+    const head = ["", "M0", "M1", "M2", "M3", "M4"];
+    let h = `<div class="heat" style="grid-template-columns:repeat(6,minmax(0,1fr))">` + head.map((t) => `<div class="h">${t}</div>`).join("");
+    rows.forEach(([m, vals]) => {
+      h += `<div class="h">${m}</div>`;
+      for (let i = 0; i < 5; i++) {
+        const v = vals[i];
+        h += v == null ? "<div></div>" : `<div style="background:color-mix(in oklch, var(--brand) ${Math.round(v * 0.75)}%, var(--surface));color:${v >= 90 ? "var(--on-brand)" : "var(--text)"}">${v}%</div>`;
+      }
+    });
+    return h + "</div>";
+  }
+
+  /* equipe: blocos dependem das funções marcadas */
+  const STAFF = { support: true, moderation: true, content: false, store: false };
+  let staffTab = "support";
+  const FUNCS = [
+    ["support", "Atendimento", 2], ["moderation", "Moderação", 0], ["content", "Conteúdo", 1], ["store", "Loja", 0],
+  ];
+  function staffBlock(k) {
+    if (k === "support") return `<div class="kpis">${kpi("Aguardando", "2")}${kpi("Espera mais antiga", pill("bad", "26h"))}${kpi("Respondidas por mim", "5", ["▲ 1 vs. ontem", "up"])}</div>
+      ${section("Fila", `<div class="card">${[["AS", "Ana Souza", "Não consigo entrar na comunidade VIP…", ["bad", "26h"]], ["RM", "Rui Matos", "Oi, o evento de hoje vai ter transmissão?", ["warn", "3h"]]].map(([a, n, m, p]) => `<div class="row"><span class="av">${a}</span><div class="tx"><b>${n}</b><span>${m}</span></div>${pill(p[0], p[1])}</div>`).join("")}</div>`, "Ir para Suporte")}`;
+    if (k === "moderation") return `<div class="kpis">${kpi("Comentários novos 24h", "48", ["▲ 12", "down"])}${kpi("Removidos 7d", "2")}${kpi("Bloqueios 7d", "1")}</div>
+      ${section("Comentários recentes", `<div class="card">${[["JP", "João P.", "Alguém tem o link da aula de ontem?"], ["LC", "Lia C.", "Esse conteúdo mudou minha semana, obrigada!"], ["MV", "M. Vieira", "Compre seguidores baratos em…"]].map(([a, n, m]) => `<div class="row"><span class="av">${a}</span><div class="tx"><b>${n}</b><span>${m}</span></div><button type="button" class="btn ghost sm">Remover</button></div>`).join("")}</div>`)}`;
+    if (k === "content") return `<div class="kpis">${kpi("Publicações 7d", "9", ["▲ 2", "up"])}${kpi("Stories ativos", "4", null, "1 expira em menos de 6h")}</div>
+      ${section("Últimas publicações (48h)", table([{ t: "Quando" }, { t: "Tipo" }, { t: "Curtidas", num: true }, { t: "Coment.", num: true }], [["ontem 18h", "Vídeo", "96", "31"], ["ontem 09h", "Texto", "40", "20"], ["hoje 08h", "Galeria", "12", "3"]]))}`;
+    return `<div class="kpis">${kpi("Pedidos 7d", "14", ["▼ 2", "down"])}${kpi("Produtos sem pedido 30d", "1", null, "Workshop gravado")}</div>
+      ${section("Compras recentes", `<div class="card">${[["Comunidade VIP", "R$ 197", "compra"], ["Mentoria em grupo", "R$ 490", "compra"], ["Comunidade VIP", "—", "liberado à mão"]].map(([p, v, t]) => `<div class="row"><div class="tx"><b>${p}</b><span>${t}</span></div><b>${v}</b></div>`).join("")}</div>`)}`;
+  }
+  function staffScreen() {
+    const on = FUNCS.filter(([k]) => STAFF[k]);
+    if (!on.find(([k]) => k === staffTab)) staffTab = on[0] ? on[0][0] : null;
+    let body;
+    if (!on.length) body = `<div class="card stack" style="text-align:center;padding:28px"><b>Nenhuma função marcada</b><p class="small">Sem função, o painel não aparece no menu de configurações dessa pessoa.</p></div>`;
+    else {
+      const tabs = on.length > 1 ? `<div class="tabs" role="tablist">${on.map(([k, n, c]) => `<button type="button" class="tab" role="tab" data-tab="${k}" aria-selected="${k === staffTab}">${n}${c ? `<span class="badge">${c}</span>` : ""}</button>`).join("")}</div>` : "";
+      body = tabs + staffBlock(staffTab);
+    }
+    return appbar("Rede Demo", "Meu turno") + `<div class="screen">${body}</div>` + bottomNav("Suporte");
+  }
+
+  /* =================== montagem =================== */
+  let current = "p5";
+  let view = "phone";
+  try { const s = localStorage.getItem("paineis-nivel"); if (s && PANELS.some((p) => p.id === s)) current = s; } catch (e) { /* storage bloqueado: abre no painel padrão */ }
+
+  function renderLevels() {
+    const btn = (p) => `<button type="button" class="lvl" data-id="${p.id}" aria-pressed="${p.id === current}"><span class="n">${p.n}</span>${esc(p.name)}</button>`;
+    $("#g-plat").innerHTML = PANELS.filter((p) => p.group === "plat").map(btn).join("");
+    $("#g-ten").innerHTML = PANELS.filter((p) => p.group === "ten").map(btn).join("");
+  }
+  function render() {
+    const p = PANELS.find((x) => x.id === current);
+    renderLevels();
+    $("#ctx").innerHTML = `<div><span class="role">${p.n} · ${p.role}</span><h2>${esc(p.name)}</h2><p class="q"><b>Pergunta:</b> ${esc(p.q)}</p><p class="small" style="margin-top:6px">${esc(p.use)}</p></div>
+      <div class="meta"><div>${pill(p.status[0], p.status[1])}</div><span class="small"><b>O que falta no app:</b></span><ul class="small">${p.missing.map((m) => `<li>${esc(m)}</li>`).join("")}</ul></div>`;
+    $("#extra").innerHTML = p.id === "p6" ? `<div class="funcs"><span class="small"><b>Simular funções desta pessoa:</b></span>${FUNCS.map(([k, n]) => `<label><input type="checkbox" id="f-${k}" data-f="${k}" ${STAFF[k] ? "checked" : ""}>${n}</label>`).join("")}</div>` : "";
+    const d = $("#device");
+    d.className = "device " + (view === "phone" ? "phone" : "desk " + (p.wide ? "wide" : "narrow"));
+    d.innerHTML = p.render();
+  }
+
+  document.addEventListener("click", (e) => {
+    const l = e.target.closest(".lvl");
+    if (l) { current = l.dataset.id; try { localStorage.setItem("paineis-nivel", current); } catch (err) { /* só conveniência */ } render(); return; }
+    const t = e.target.closest(".tab");
+    if (t) { staffTab = t.dataset.tab; render(); }
+  });
+  document.addEventListener("change", (e) => {
+    const f = e.target.dataset && e.target.dataset.f;
+    if (f) { STAFF[f] = e.target.checked; render(); }
+  });
+  $("#v-phone").addEventListener("click", () => { view = "phone"; $("#v-phone").setAttribute("aria-pressed", "true"); $("#v-desk").setAttribute("aria-pressed", "false"); render(); });
+  $("#v-desk").addEventListener("click", () => { view = "desk"; $("#v-desk").setAttribute("aria-pressed", "true"); $("#v-phone").setAttribute("aria-pressed", "false"); render(); });
+
+  render();
+})();
+</script>
