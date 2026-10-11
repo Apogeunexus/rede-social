@@ -119,7 +119,7 @@ export async function PlatformAdminPanel() {
         />
       </KpiGrid>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 @3xl:grid-cols-2">
         <PanelSection
           title={t('platformAdmin.activation.title')}
           action={t('platformAdmin.activation.action')}

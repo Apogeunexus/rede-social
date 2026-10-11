@@ -23,7 +23,8 @@ href and formatted value is a prop decided by the web tier (`apps/web/components
 `apps/web/messages/pt-BR/dashboard.json`). Colours only through token utilities and `currentColor`;
 every status is an icon plus text; charts are plain SVG drawn to scale (series in brand, previous
 period dashed in the tertiary text token); nothing scrolls sideways (KPI rows wrap, tables become
-stacked cards below `md`).
+stacked cards below a 48rem container — an `@3xl` container query, so the host must wrap a panel in
+an `@container`; the preview's `PhoneMockup` does this, and without one the cards layout stays).
 
 ## Events emitted
 
@@ -74,8 +75,9 @@ The route exists only outside production: `proxy.ts` treats `/painel-preview/*` 
 layout and pages call `notFound()` in production. All data is fictional and the page says so
 ("Dados de exemplo"); every action is a disabled button.
 
-The no-horizontal-scroll check (all 7 levels at 360/390/430 px, table vs cards, the staff simulator)
-runs with the installed Google Chrome and starts the dev server itself:
+The preview check runs with the installed Google Chrome and starts the dev server itself. It covers
+every level inside the iPhone 17 Pro Max frame at 1440x900 (and the fit at 1024x768), the absence of
+the frame and of horizontal scroll at 360/390/430 px, table vs cards, and the staff simulator:
 
 ```bash
 pnpm --filter @rede-social/web exec playwright test --config playwright.preview.config.ts

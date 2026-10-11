@@ -1,8 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 
 /**
- * The access-level panels preview (quick 261011-jqy) on phone widths: every level shows the
- * "Dados de exemplo" note and never scrolls sideways (vertical scroll only, D-03).
+ * The access-level panels preview (quicks 261011-jqy and 261011-l72). From 1024 px up every level
+ * renders inside an iPhone 17 Pro Max frame (a 440x956 screen that scrolls on its own, scaled to fit
+ * the window); below that there is no frame and the panel is full width. Never a sideways scroll, and
+ * a single "Dados de exemplo" tag describes every disabled action.
  */
 
 const LEVELS = [
@@ -15,49 +17,39 @@ const LEVELS = [
   'membro',
 ];
 const PHONE_WIDTHS = [360, 390, 430];
+const SCREEN_RATIO = 440 / 956;
+const NOTICE_DESCRIPTION =
+  'Dados de exemplo: números, nomes e clientes são fictícios e as ações estão desativadas.';
+const REMOVED_NOTES = [
+  'Simulação do painel',
+  'Todos os números',
+  'Pergunta:',
+  'O que falta no app',
+  'Dá para fazer hoje',
+  'platform_owner',
+];
 
-async function horizontalOverflow(page: import('@playwright/test').Page) {
+async function horizontalOverflow(page: Page) {
   return page.evaluate(() => {
     const root = document.documentElement;
     return { scrollWidth: root.scrollWidth, clientWidth: root.clientWidth };
   });
 }
 
-test('/painel-preview lands on the first level', async ({ page }) => {
-  await page.goto('/painel-preview');
-  await expect(page).toHaveURL(/\/painel-preview\/dono-da-plataforma$/);
-});
-
-for (const level of LEVELS) {
-  for (const width of PHONE_WIDTHS) {
-    test(`${level} at ${width}px: example-data note visible, no horizontal scroll`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 844 });
-      await page.goto(`/painel-preview/${level}`);
-      await expect(page.getByText('Dados de exemplo', { exact: true })).toBeVisible();
-      await expect(page.getByRole('navigation', { name: 'Níveis de acesso' })).toBeVisible();
-      const overflow = await horizontalOverflow(page);
-      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
-    });
-  }
+async function pageOverflow(page: Page) {
+  return page.evaluate(() => {
+    const root = document.documentElement;
+    return {
+      scrollWidth: root.scrollWidth,
+      clientWidth: root.clientWidth,
+      scrollHeight: root.scrollHeight,
+      clientHeight: root.clientHeight,
+    };
+  });
 }
 
-/** The stacked card of a client row (it carries the column labels; the "Atenção" row does not). */
-function cardOfClient(scope: import('@playwright/test').Page | import('@playwright/test').Locator) {
-  return scope
-    .getByRole('listitem')
-    .filter({ hasText: 'Clube Corrida Sul' })
-    .filter({ hasText: 'Interagiu 30d' });
-}
-
-test('iPhone 17 Pro Max frame at 1440x900: dono-da-plataforma', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/painel-preview/dono-da-plataforma');
-  const screen = page.locator('[data-phone-screen]');
-  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
-
-  const metrics = await screen.evaluate((el) => {
+async function screenMetrics(page: Page) {
+  return page.locator('[data-phone-screen]').evaluate((el) => {
     const style = getComputedStyle(el);
     const rect = el.getBoundingClientRect();
     return {
@@ -72,6 +64,129 @@ test('iPhone 17 Pro Max frame at 1440x900: dono-da-plataforma', async ({ page })
       ratio: rect.width / rect.height,
     };
   });
+}
+
+async function frameBottom(page: Page) {
+  return page.locator('[data-phone-frame]').evaluate((el) => el.getBoundingClientRect().bottom);
+}
+
+/** The stacked card of a client row (it carries the column labels; the "Atenção" row does not). */
+function cardOfClient(scope: Page | Locator) {
+  return scope
+    .getByRole('listitem')
+    .filter({ hasText: 'Clube Corrida Sul' })
+    .filter({ hasText: 'Interagiu 30d' });
+}
+
+test('/painel-preview lands on the first level', async ({ page }) => {
+  await page.goto('/painel-preview');
+  await expect(page).toHaveURL(/\/painel-preview\/dono-da-plataforma$/);
+});
+
+for (const level of LEVELS) {
+  test(`${level} at 1440x900: inside the iPhone 17 Pro Max frame`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/painel-preview/${level}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+
+    const metrics = await screenMetrics(page);
+    expect(metrics).toMatchObject({
+      width: '440px',
+      height: '956px',
+      overflowY: 'auto',
+      radius: '55px',
+    });
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+    expect(Math.abs(metrics.ratio - SCREEN_RATIO)).toBeLessThanOrEqual(0.005);
+    expect(await frameBottom(page)).toBeLessThanOrEqual(900);
+
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+
+    const screen = page.locator('[data-phone-screen]');
+    await expect(screen.locator('table:visible')).toHaveCount(0);
+
+    // The home indicator sits on the screen's bottom edge, also on panels shorter than the screen.
+    const edges = await screen.evaluate((el) => {
+      const indicator = el.querySelector('[data-phone-home-indicator]');
+      return {
+        screen: el.getBoundingClientRect().bottom,
+        indicator: indicator?.getBoundingClientRect().bottom ?? Number.NaN,
+      };
+    });
+    expect(Math.abs(edges.indicator - edges.screen)).toBeLessThanOrEqual(1);
+
+    if (metrics.scrollHeight > metrics.clientHeight) {
+      const scrolled = await screen.evaluate((el) => {
+        el.scrollBy(0, 300);
+        return { screen: el.scrollTop, window: window.scrollY };
+      });
+      expect(scrolled.screen).toBeGreaterThan(0);
+      expect(scrolled.window).toBe(0);
+    } else {
+      testInfo.annotations.push({ type: 'fits-screen', description: level });
+    }
+  });
+}
+
+test('the frame fits a 1024x768 window', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto('/painel-preview/dono-da-plataforma');
+  await expect(page.locator('[data-phone-frame]')).toBeVisible();
+  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+  expect(await frameBottom(page)).toBeLessThanOrEqual(768);
+  const overflow = await pageOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+  expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+});
+
+for (const level of LEVELS) {
+  for (const width of PHONE_WIDTHS) {
+    test(`${level} at ${width}px: no phone frame, tag visible, no horizontal scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/painel-preview/${level}`);
+      await expect(page.getByText('Dados de exemplo', { exact: true })).toBeVisible();
+      await expect(page.getByRole('navigation', { name: 'Níveis de acesso' })).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+
+      await expect(page.getByText('9:41', { exact: true })).toBeHidden();
+      const metrics = await screenMetrics(page);
+      expect(metrics.overflowY).toBe('visible');
+      expect(metrics.radius).toBe('0px');
+
+      await expect(page.locator('#dashboard-preview-note')).toHaveCount(1);
+      for (const removed of REMOVED_NOTES) {
+        await expect(page.getByText(removed)).toHaveCount(0);
+      }
+      const dangling = await page.evaluate(() =>
+        [...document.querySelectorAll('[aria-describedby]')].flatMap((el) =>
+          (el.getAttribute('aria-describedby') ?? '')
+            .split(/\s+/)
+            .filter((id) => id && !document.getElementById(id)),
+        ),
+      );
+      expect(dangling).toEqual([]);
+
+      const described = page.locator(':disabled[aria-describedby]');
+      if (level === 'dono-da-plataforma') expect(await described.count()).toBeGreaterThan(0);
+      if ((await described.count()) > 0) {
+        await expect(described.first()).toHaveAccessibleDescription(NOTICE_DESCRIPTION);
+      }
+    });
+  }
+}
+
+test('iPhone 17 Pro Max frame at 1440x900: dono-da-plataforma', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/painel-preview/dono-da-plataforma');
+  const screen = page.locator('[data-phone-screen]');
+  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+
+  const metrics = await screenMetrics(page);
   expect(metrics).toMatchObject({
     width: '440px',
     height: '956px',
@@ -80,7 +195,7 @@ test('iPhone 17 Pro Max frame at 1440x900: dono-da-plataforma', async ({ page })
   });
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
   expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
-  expect(Math.abs(metrics.ratio - 440 / 956)).toBeLessThanOrEqual(0.005);
+  expect(Math.abs(metrics.ratio - SCREEN_RATIO)).toBeLessThanOrEqual(0.005);
 
   const scrollTop = await screen.evaluate((el) => {
     el.scrollBy(0, 400);
@@ -114,9 +229,9 @@ test('the level navigation marks the current level', async ({ page }) => {
   await expect(current).toHaveAttribute('aria-current', 'page');
   await page.getByRole('link', { name: /Suporte da plataforma/ }).click();
   await expect(page).toHaveURL(/\/painel-preview\/suporte-da-plataforma$/);
-  await expect(
-    page.getByRole('heading', { level: 2, name: 'Suporte da plataforma' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Suporte da plataforma' })).toHaveCount(
+    1,
+  );
 });
 
 test.describe('equipe-do-cliente: the function simulator', () => {

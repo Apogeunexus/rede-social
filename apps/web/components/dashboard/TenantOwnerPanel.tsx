@@ -132,7 +132,7 @@ export async function TenantOwnerPanel() {
 
       <PanelSection title={t('tenantOwner.retention.title')}>
         {latest && latestMonthOne !== undefined ? (
-          <div className="md:hidden">
+          <div className="@3xl:hidden">
             <KpiCard
               label={t('tenantOwner.retention.phoneLabel')}
               value={formatPercent(latestMonthOne)}
@@ -142,7 +142,7 @@ export async function TenantOwnerPanel() {
             />
           </div>
         ) : null}
-        <div className="hidden flex-col gap-2 md:flex">
+        <div className="hidden flex-col gap-2 @3xl:flex">
           <CohortHeatmap
             caption={t('tenantOwner.retention.title')}
             corner={t('tenantOwner.retention.corner')}

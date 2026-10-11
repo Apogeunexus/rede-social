@@ -117,7 +117,7 @@ export async function PlatformOwnerPanel() {
         <AttentionList items={attention.map((item) => attentionItem(t, item))} />
       </PanelSection>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 @3xl:grid-cols-2">
         <PanelSection title={t('platformOwner.activeChart.title')}>
           <Card className="p-4">
             <LineChart
