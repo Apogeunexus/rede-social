@@ -291,6 +291,211 @@
         "escalate": "Escalar para admin",
         "myAccesses": "Meus acessos registrados"
       }
+    },
+    "duration": "{hours}h{minutes}",
+    "postTypes": {
+      "video": "Vídeo",
+      "gallery": "Galeria",
+      "text": "Texto",
+      "link": "Link"
+    },
+    "tenantOwner": {
+      "header": {
+        "subtitle": "Visão do dono",
+        "period": "30 dias"
+      },
+      "kpi": {
+        "members": "Membros",
+        "membersNote": "+{count} novos",
+        "interacting": "Membros que interagiram",
+        "retention": "Retenção de novos",
+        "retentionNote": "entraram em {joined}, voltaram em {returned}",
+        "attendance": "Comparecimento em eventos",
+        "attendanceNote": "check-in ÷ confirmados",
+        "orderValue": "Valor de pedidos",
+        "orderValueNote": "valor registrado, sem pagamento real"
+      },
+      "weekly": {
+        "title": "Membros que interagiram por semana",
+        "label": "Membros que interagiram por semana: as últimas 12 semanas e as 12 anteriores",
+        "week": "S{week}",
+        "current": "Últimas 12 semanas",
+        "previous": "12 semanas anteriores"
+      },
+      "channels": {
+        "title": "Onde os membros interagem",
+        "likes": "Curtidas",
+        "comments": "Comentários",
+        "attendance": "Presenças",
+        "orders": "Pedidos",
+        "support": "Suporte"
+      },
+      "retention": {
+        "title": "Retenção por mês de entrada",
+        "footnote": "% que interagiu em cada mês depois de entrar.",
+        "corner": "Entrada",
+        "column": "M{n}",
+        "phoneLabel": "Retenção no 1º mês",
+        "phoneNote": "de quem entrou em {month}"
+      },
+      "account": {
+        "title": "Conta",
+        "plan": "Plano {plan}",
+        "domainStatus": {
+          "verified": "Domínio verificado",
+          "pending": "Domínio pendente"
+        },
+        "domain": "Domínio: {domain}",
+        "team": "Admins: {admins} · Equipe: {staff}",
+        "billing": "Cobrança: em breve"
+      },
+      "adminLink": "Ver operação do dia (painel do admin)"
+    },
+    "tenantAdmin": {
+      "header": {
+        "subtitle": "Painel do admin",
+        "period": "7 dias"
+      },
+      "attention": {
+        "title": "Atenção ({count})",
+        "support_waiting": {
+          "tag": "{hours}h",
+          "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
+          "detail": "A mais antiga é da {name}, há {hours} horas"
+        },
+        "event_today": {
+          "tag": "Hoje {hour}h",
+          "title": "{event}: {confirmed} de {capacity} vagas",
+          "detail": "Deixe o código de check-in pronto"
+        },
+        "story_expiring": {
+          "tag": "{hours}h",
+          "title": "{count, plural, one {# story expira} other {# stories expiram}} em {hours} horas",
+          "detail": "Fixe nos destaques se quiser manter"
+        }
+      },
+      "kpi": {
+        "awaiting": "Aguardando resposta",
+        "awaitingNote": "mais antiga: {hours}h",
+        "firstResponse": "1ª resposta (mediana)",
+        "interacting": "Membros que interagiram",
+        "newMembers": "Novos membros",
+        "perPost": "Interações por post",
+        "orders": "Pedidos",
+        "ordersNote": "+{count} acessos liberados à mão"
+      },
+      "topPosts": {
+        "title": "Posts que mais renderam (14 dias)",
+        "action": "Ver todos",
+        "columns": {
+          "date": "Data",
+          "type": "Tipo",
+          "community": "Comunidade",
+          "likes": "Curtidas",
+          "comments": "Coment."
+        }
+      },
+      "events": {
+        "title": "Eventos",
+        "summary": "comparecimento {percent}",
+        "footnote": "Check-in ÷ confirmados. +{count} pessoas sem confirmação no {event}."
+      },
+      "communities": {
+        "title": "Comunidades",
+        "summary": "a que mais engaja: {name}",
+        "exclusive": "{name} (exclusiva)"
+      },
+      "store": {
+        "title": "Loja",
+        "summary": "{count, plural, one {# pedido} other {# pedidos}}"
+      },
+      "moderation": {
+        "title": "Moderação",
+        "summary": "{count, plural, one {# ação} other {# ações}} em 30 dias",
+        "removed": "Comentários removidos",
+        "blocks": "Bloqueios",
+        "unblocks": "Desbloqueios",
+        "roleChanges": "Funções trocadas"
+      }
+    },
+    "tenantStaff": {
+      "header": {
+        "subtitle": "Meu turno"
+      },
+      "simulator": {
+        "legend": "Simular funções desta pessoa",
+        "submit": "Simular"
+      },
+      "functions": {
+        "atendimento": "Atendimento",
+        "moderacao": "Moderação",
+        "conteudo": "Conteúdo",
+        "loja": "Loja"
+      },
+      "tabsLabel": "Funções desta pessoa",
+      "empty": {
+        "title": "Nenhuma função marcada",
+        "body": "Sem função, o painel não aparece no menu de configurações dessa pessoa."
+      },
+      "support": {
+        "waiting": "Aguardando",
+        "oldest": "Espera mais antiga",
+        "answered": "Respondidas por mim",
+        "queue": "Fila",
+        "queueAction": "Ir para Suporte",
+        "hours": "{hours}h"
+      },
+      "moderation": {
+        "newComments": "Comentários novos 24h",
+        "removed": "Removidos 7d",
+        "blocks": "Bloqueios 7d",
+        "recent": "Comentários recentes",
+        "remove": "Remover"
+      },
+      "content": {
+        "posts": "Publicações 7d",
+        "stories": "Stories ativos",
+        "storiesNote": "{count, plural, one {# expira} other {# expiram}} em menos de {hours}h",
+        "recent": "Últimas publicações (48h)",
+        "columns": {
+          "when": "Quando",
+          "type": "Tipo",
+          "likes": "Curtidas",
+          "comments": "Coment."
+        }
+      },
+      "store": {
+        "orders": "Pedidos 7d",
+        "noOrders": "Produtos sem pedido 30d",
+        "recent": "Compras recentes",
+        "source": {
+          "purchase": "compra",
+          "manual_grant": "liberado à mão"
+        },
+        "noAmount": "sem valor"
+      }
+    },
+    "member": {
+      "header": {
+        "subtitle": "Perfil"
+      },
+      "memberSince": "Membro desde {date}",
+      "forYou": {
+        "title": "Para você",
+        "event": {
+          "title": "{title} · hoje {hour}h",
+          "startsIn": "Começa em {minutes} min",
+          "checkIn": "Fazer check-in"
+        },
+        "support": {
+          "title": "O suporte respondeu",
+          "detail": "“{preview}”",
+          "unread": "não lida"
+        },
+        "community": {
+          "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"
+        }
+      }
     }
   }
 }

@@ -71,3 +71,40 @@ export function previewLevelPath(slug: PreviewSlug): string {
 
 /** The "Dados de exemplo" note's id: every disabled action in a panel points at it (aria-describedby). */
 export const PREVIEW_NOTE_ID = 'dashboard-preview-note';
+
+/** The staff functions the level-6 simulator can grant, in canonical (tab) order. */
+export const STAFF_FUNCTIONS = ['atendimento', 'moderacao', 'conteudo', 'loja'] as const;
+export type StaffFunction = (typeof STAFF_FUNCTIONS)[number];
+
+/** The reference's default person: support and moderation. */
+const DEFAULT_STAFF_FUNCTIONS: readonly StaffFunction[] = ['atendimento', 'moderacao'];
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function isStaffFunction(value: unknown): value is StaffFunction {
+  return (STAFF_FUNCTIONS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The simulator state from the query (untrusted): without `simular` the reference default; with
+ * `simular=1` exactly the allow-listed `funcoes` (a string or a repeated param), in canonical order,
+ * unknown ids dropped. The active tab is `aba` when it is a single granted id, else the first granted
+ * function, else null. Only these ids ever reach markup or URLs.
+ */
+export function parseStaffFunctions(params: SearchParams): {
+  functions: StaffFunction[];
+  active: StaffFunction | null;
+} {
+  const simulated = params.simular === '1';
+  const raw = params.funcoes;
+  const requested = typeof raw === 'string' ? [raw] : (raw ?? []);
+  const functions = simulated
+    ? STAFF_FUNCTIONS.filter((id) => requested.includes(id))
+    : [...DEFAULT_STAFF_FUNCTIONS];
+  const tab = params.aba;
+  const active =
+    typeof tab === 'string' && isStaffFunction(tab) && functions.includes(tab)
+      ? tab
+      : (functions[0] ?? null);
+  return { functions, active };
+}

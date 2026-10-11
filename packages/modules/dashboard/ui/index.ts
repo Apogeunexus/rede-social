@@ -1,5 +1,7 @@
+export { ActionCard, type ActionCardProps } from './ActionCard';
 export { type AttentionItem, AttentionList, type AttentionListProps } from './AttentionList';
 export { BarList, type BarListProps, type BarRow } from './BarList';
+export { CohortHeatmap, type CohortHeatmapProps, type CohortRow } from './CohortHeatmap';
 export { Collapsible, type CollapsibleProps } from './Collapsible';
 export {
   KpiCard,
@@ -22,6 +24,8 @@ export {
   type Bounds,
   barPercent,
   funnelRates,
+  HEAT_BUCKETS,
+  heatBucket,
   largestDrop,
   linearPoints,
   niceBounds,

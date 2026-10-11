@@ -91,3 +91,24 @@ export function largestDrop(values: readonly number[]): { index: number; drop: n
   }
   return best;
 }
+
+/**
+ * The cohort heatmap's fixed set of brand tints, weakest first (static class strings, so Tailwind
+ * generates them). Only the strongest switches to the on-brand ink; every cell also prints its value.
+ */
+export const HEAT_BUCKETS = [
+  'bg-brand/5 text-text',
+  'bg-brand/15 text-text',
+  'bg-brand/25 text-text',
+  'bg-brand/40 text-text',
+  'bg-brand/55 text-text',
+  'bg-brand text-on-brand',
+] as const;
+
+const HEAT_THRESHOLDS = [20, 40, 50, 60, 90];
+
+/** A 0–100 percent -> its bucket; monotonic (a higher percent never gets a lighter tint). */
+export function heatBucket(percent: number): (typeof HEAT_BUCKETS)[number] {
+  const index = HEAT_THRESHOLDS.filter((threshold) => percent >= threshold).length;
+  return HEAT_BUCKETS[index] ?? HEAT_BUCKETS[0];
+}

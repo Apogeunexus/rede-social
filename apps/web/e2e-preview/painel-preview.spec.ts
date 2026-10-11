@@ -5,7 +5,15 @@ import { expect, test } from '@playwright/test';
  * "Dados de exemplo" note and never scrolls sideways (vertical scroll only, D-03).
  */
 
-const LEVELS = ['dono-da-plataforma', 'admin-da-plataforma', 'suporte-da-plataforma'];
+const LEVELS = [
+  'dono-da-plataforma',
+  'admin-da-plataforma',
+  'suporte-da-plataforma',
+  'dono-do-cliente',
+  'admin-do-cliente',
+  'equipe-do-cliente',
+  'membro',
+];
 const PHONE_WIDTHS = [360, 390, 430];
 
 async function horizontalOverflow(page: import('@playwright/test').Page) {
@@ -62,4 +70,53 @@ test('the level navigation marks the current level', async ({ page }) => {
   await expect(
     page.getByRole('heading', { level: 2, name: 'Suporte da plataforma' }),
   ).toBeVisible();
+});
+
+test.describe('equipe-do-cliente: the function simulator', () => {
+  const tabs = (page: import('@playwright/test').Page) =>
+    page.getByRole('navigation', { name: 'Funções desta pessoa' });
+
+  test('the default person has two functions: a tab row, support open', async ({ page }) => {
+    await page.goto('/painel-preview/equipe-do-cliente');
+    await expect(tabs(page).getByRole('link')).toHaveCount(2);
+    await expect(tabs(page).getByRole('link', { name: /Atendimento/ })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(page.getByRole('heading', { name: 'Fila' })).toBeVisible();
+  });
+
+  test('one function: no tab row, its block alone', async ({ page }) => {
+    await page.goto('/painel-preview/equipe-do-cliente?simular=1&funcoes=atendimento');
+    await expect(tabs(page)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Fila' })).toBeVisible();
+  });
+
+  test('no function: the empty state', async ({ page }) => {
+    await page.goto('/painel-preview/equipe-do-cliente?simular=1');
+    await expect(tabs(page)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Nenhuma função marcada' })).toBeVisible();
+  });
+
+  test('the form submits the checked functions and a tab switches the block', async ({ page }) => {
+    await page.goto('/painel-preview/equipe-do-cliente?simular=1');
+    await page.getByRole('checkbox', { name: 'Conteúdo' }).check();
+    await page.getByRole('checkbox', { name: 'Loja' }).check();
+    await page.getByRole('button', { name: 'Simular' }).click();
+    await expect(tabs(page).getByRole('link')).toHaveCount(2);
+    await expect(page.getByRole('heading', { name: 'Últimas publicações (48h)' })).toBeVisible();
+    await tabs(page).getByRole('link', { name: /Loja/ }).click();
+    await expect(page.getByRole('heading', { name: 'Compras recentes' })).toBeVisible();
+  });
+
+  test('unknown ids in the query are dropped', async ({ page }) => {
+    await page.goto('/painel-preview/equipe-do-cliente?simular=1&funcoes=x&funcoes=loja&aba=x');
+    await expect(tabs(page)).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Compras recentes' })).toBeVisible();
+  });
+});
+
+test('an unknown level is a 404', async ({ page }) => {
+  const response = await page.goto('/painel-preview/nivel-inexistente');
+  expect(response?.status()).toBe(404);
 });

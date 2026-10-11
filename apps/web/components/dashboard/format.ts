@@ -118,6 +118,27 @@ export function hintDelta(t: DashboardT, hint: KpiHint): KpiDelta {
   return { text: t(`hint.${hint}`), direction: 'flat', tone: 'neutral' };
 }
 
+/** `2026-09` -> `set.` (the abbreviation as pt-BR writes it in a sentence). */
+export function formatMonthAbbrev(isoMonth: string): string {
+  return MONTH_SHORT.format(new Date(`${isoMonth}-01T00:00:00Z`));
+}
+
+/** `100` minutes -> `1h40`. */
+export function formatDuration(t: DashboardT, minutes: number): string {
+  return t('duration', {
+    hours: Math.floor(minutes / 60),
+    minutes: String(minutes % 60).padStart(2, '0'),
+  });
+}
+
+/** `Ana Souza` -> `AS`, `M. Vieira` -> `MV`: the first letter of the first and last words. */
+export function initials(name: string): string {
+  const words = name.split(/\s+/).filter(Boolean);
+  const first = words[0]?.charAt(0) ?? '';
+  const last = words.length > 1 ? (words.at(-1)?.charAt(0) ?? '') : '';
+  return `${first}${last}`.toUpperCase();
+}
+
 /** `{ daysAgo: 0, time: '09:12' }` -> `hoje 09:12`; 1 -> `ontem …`; more -> `há 14 dias`. */
 export function momentText(t: DashboardT, moment: RelativeMoment): string {
   return t('moment', { days: moment.daysAgo, time: moment.time ?? '' });
