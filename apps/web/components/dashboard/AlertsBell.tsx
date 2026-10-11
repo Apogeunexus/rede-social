@@ -1,14 +1,16 @@
 'use client';
 
 import { IconButton } from '@rede-social/ui';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing, X } from 'lucide-react';
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 
 export interface AlertsBellProps {
-  /** Accessible name with the count ("Alertas, 3"). */
+  /** Accessible name with the count and, when urgent, how many are urgent ("Alertas, 3, 1 urgente"). */
   label: string;
+  /** Accessible name of the panel's close button ("Fechar alertas"). */
+  closeLabel: string;
   count: number;
-  /** Any alert is danger: the badge keeps the danger fill; otherwise it is brand-filled. */
+  /** Any alert is danger: a ringing bell and the danger badge (shape too, never colour alone); otherwise a plain bell, brand-filled. */
   urgent: boolean;
   /** The server-rendered alert list shown when open. */
   children: ReactNode;
@@ -18,7 +20,7 @@ export interface AlertsBellProps {
  * The header's alerts disclosure: a bell with a count that shows the alert list under the header.
  * Closes on Escape (focus back to the bell), on a press outside and on a second press of the bell.
  */
-export function AlertsBell({ label, count, urgent, children }: AlertsBellProps) {
+export function AlertsBell({ label, closeLabel, count, urgent, children }: AlertsBellProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -50,7 +52,7 @@ export function AlertsBell({ label, count, urgent, children }: AlertsBellProps) 
     <div ref={rootRef}>
       <IconButton
         ref={buttonRef}
-        icon={Bell}
+        icon={urgent ? BellRing : Bell}
         label={label}
         count={count}
         badgeClassName={urgent ? undefined : 'bg-brand text-on-brand'}
@@ -66,6 +68,16 @@ export function AlertsBell({ label, count, urgent, children }: AlertsBellProps) 
         hidden={!open}
         className="absolute inset-x-0 top-full z-5 mt-2 max-h-96 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-bg-secondary p-3 shadow-lg"
       >
+        <IconButton
+          icon={X}
+          label={closeLabel}
+          className="absolute top-1 right-1"
+          data-alerts-close
+          onClick={() => {
+            setOpen(false);
+            buttonRef.current?.focus();
+          }}
+        />
         {children}
       </div>
     </div>

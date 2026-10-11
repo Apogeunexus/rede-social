@@ -20,6 +20,7 @@ export interface PanelHeaderProps {
 export async function PanelHeader({ title, subtitle, period, alerts }: PanelHeaderProps) {
   const t = await getTranslations('dashboard.alerts');
   const count = alerts?.length ?? 0;
+  const urgentCount = alerts?.filter((item) => item.tone === 'danger').length ?? 0;
 
   return (
     <div className="relative flex items-center justify-between gap-3">
@@ -39,9 +40,14 @@ export async function PanelHeader({ title, subtitle, period, alerts }: PanelHead
         {period ? <StatusPill className="shrink-0">{period}</StatusPill> : null}
         {alerts && count > 0 ? (
           <AlertsBell
-            label={t('button', { count })}
+            label={
+              urgentCount > 0
+                ? t('buttonUrgent', { count, urgent: urgentCount })
+                : t('button', { count })
+            }
+            closeLabel={t('close')}
             count={count}
-            urgent={alerts.some((item) => item.tone === 'danger')}
+            urgent={urgentCount > 0}
           >
             <div className="flex flex-col gap-3">
               <SectionTitle as="h3" variant="group">

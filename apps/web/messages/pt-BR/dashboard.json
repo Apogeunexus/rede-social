@@ -11,7 +11,9 @@
     },
     "alerts": {
       "button": "Alertas, {count}",
-      "title": "Alertas ({count})"
+      "buttonUrgent": "Alertas, {count}, {urgent, plural, one {# urgente} other {# urgentes}}",
+      "title": "Alertas ({count})",
+      "close": "Fechar alertas"
     },
     "chrome": {
       "navLabel": "Níveis de acesso",

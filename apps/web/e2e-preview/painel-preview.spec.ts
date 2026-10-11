@@ -291,9 +291,24 @@ test('an unknown level is a 404', async ({ page }) => {
  * the bell names the count, and its panel opens under the header inside the phone screen.
  */
 const ALERT_LEVELS = [
-  { level: 'dono-da-plataforma', count: 2, onlyOnce: 'Armazenamento perto do limite do plano' },
-  { level: 'admin-da-plataforma', count: 4, onlyOnce: 'Escola Horizonte: domínio' },
-  { level: 'admin-do-cliente', count: 3, onlyOnce: 'Fixe nos destaques se quiser manter' },
+  {
+    level: 'dono-da-plataforma',
+    count: 2,
+    name: 'Alertas, 2',
+    onlyOnce: 'Armazenamento perto do limite do plano',
+  },
+  {
+    level: 'admin-da-plataforma',
+    count: 4,
+    name: 'Alertas, 4, 1 urgente',
+    onlyOnce: 'Escola Horizonte: domínio',
+  },
+  {
+    level: 'admin-do-cliente',
+    count: 3,
+    name: 'Alertas, 3, 1 urgente',
+    onlyOnce: 'Fixe nos destaques se quiser manter',
+  },
 ];
 const NO_ALERT_LEVELS = ['suporte-da-plataforma', 'dono-do-cliente', 'equipe-do-cliente', 'membro'];
 const ALERT_VIEWPORTS = [
@@ -301,13 +316,13 @@ const ALERT_VIEWPORTS = [
   { name: '390px', width: 390, height: 844, framed: false },
 ];
 
-for (const { level, count, onlyOnce } of ALERT_LEVELS) {
+for (const { level, count, name, onlyOnce } of ALERT_LEVELS) {
   for (const viewport of ALERT_VIEWPORTS) {
     test(`alerts bell: ${level} at ${viewport.name}`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto(`/painel-preview/${level}`);
 
-      const bell = page.getByRole('button', { name: `Alertas, ${count}`, exact: true });
+      const bell = page.getByRole('button', { name, exact: true });
       await expect(bell).toHaveAttribute('aria-expanded', 'false');
       await expect(bell).toContainText(String(count));
 

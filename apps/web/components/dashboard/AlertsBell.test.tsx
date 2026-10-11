@@ -15,7 +15,7 @@ function renderBell(urgent = true) {
   render(
     <>
       <button type="button">Fora</button>
-      <AlertsBell label="Alertas, 3" count={3} urgent={urgent}>
+      <AlertsBell label="Alertas, 3" closeLabel="Fechar alertas" count={3} urgent={urgent}>
         <p>Alerta de teste</p>
       </AlertsBell>
     </>,
@@ -90,5 +90,21 @@ describe('AlertsBell', () => {
     outside.focus();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.activeElement).toBe(outside);
+  });
+  it('closes from the close button inside the panel and moves focus back to the bell', () => {
+    const { bell, panel } = renderBell();
+    fireEvent.click(bell);
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar alertas' }));
+    expect(panel.hasAttribute('hidden')).toBe(true);
+    expect(bell.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(bell);
+  });
+
+  it('rings the bell only when an alert is urgent, so urgency is not colour alone', () => {
+    const { bell } = renderBell(true);
+    expect(bell.querySelector('svg.lucide-bell-ring')).not.toBeNull();
+    cleanup();
+    const plain = renderBell(false);
+    expect(plain.bell.querySelector('svg.lucide-bell-ring')).toBeNull();
   });
 });
