@@ -1,21 +1,18 @@
 import { resolveBranding } from '@rede-social/contracts/branding';
 import { previewTenant } from '@rede-social/module-dashboard/fixtures';
-import { StatusPill } from '@rede-social/ui';
-import { TriangleAlert } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
-import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { TitleFontSheet } from '@/components/brand/TitleFontSheet';
 import { brandScope } from '@/lib/brand-scope';
-import { dashboardPreviewEnabled, PREVIEW_NOTE_ID } from '@/lib/dashboard-preview';
+import { dashboardPreviewEnabled } from '@/lib/dashboard-preview';
 
 /**
  * The access-level panels preview (quick 261011-jqy): every level renders inside the Igor Alves
  * brand, applied through the app's own mechanism — the fixture tenant record goes through
  * `resolveBranding` -> `brandScope` onto a `[data-brand-root]` element, exactly as `(app)/layout.tsx`
- * feeds AppShell. No session, no API: the data is fictional, and the "Dados de exemplo" note stays on
- * every level.
+ * feeds AppShell. No session, no API: the data is fictional, and PreviewChrome shows the
+ * "Dados de exemplo" tag on every level.
  *
  * Production never serves it: `connection()` keeps the route request-time (a build-time `notFound()`
  * must never be frozen into a static 404), then the guard 404s; `proxy.ts` already keeps the prefix
@@ -25,7 +22,6 @@ export default async function PanelPreviewLayout({ children }: { children: React
   await connection();
   if (!dashboardPreviewEnabled()) notFound();
 
-  const t = await getTranslations('dashboard.preview');
   const scope = brandScope(resolveBranding(previewTenant.branding));
 
   return (
@@ -35,20 +31,7 @@ export default async function PanelPreviewLayout({ children }: { children: React
       style={scope.style}
       className="min-h-[var(--screen-h)] bg-bg text-text"
     >
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">
-        <header className="flex flex-col gap-3">
-          <h1 className="text-2xl font-extrabold leading-tight">{t('title')}</h1>
-          <p className="text-sm text-text-secondary">{t('intro')}</p>
-          <div id={PREVIEW_NOTE_ID} role="note" className="flex flex-wrap items-center gap-2">
-            <StatusPill tone="warning" className="gap-1">
-              <TriangleAlert aria-hidden size={14} className="shrink-0" />
-              {t('notice')}
-            </StatusPill>
-            <span className="text-sm text-text-secondary">{t('noticeBody')}</span>
-          </div>
-        </header>
-        {children}
-      </main>
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6">{children}</main>
       {scope.titleFontHref ? <TitleFontSheet href={scope.titleFontHref} /> : null}
     </div>
   );

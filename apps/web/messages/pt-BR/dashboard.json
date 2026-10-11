@@ -2,9 +2,8 @@
   "dashboard": {
     "preview": {
       "title": "Painéis por nível de acesso",
-      "intro": "Simulação do painel que cada um dos 7 níveis vê na rede social white label. Escolha um nível para ver a tela dele.",
       "notice": "Dados de exemplo",
-      "noticeBody": "Todos os números, nomes e clientes desta página são fictícios. As ações ficam desativadas na pré-visualização.",
+      "noticeDescription": "Dados de exemplo: números, nomes e clientes são fictícios e as ações estão desativadas.",
       "phone": {
         "time": "9:41"
       }
@@ -14,79 +13,29 @@
       "groups": {
         "platform": "Plataforma (white label)",
         "tenant": "Cliente (tenant)"
-      },
-      "role": "{number} · {role}",
-      "question": "Pergunta:",
-      "missing": "O que falta no app:"
-    },
-    "availability": {
-      "ready": "Dá para fazer hoje",
-      "partial": "Parcial",
-      "needs_levels": "Depende dos níveis novos",
-      "blocked": "Bloqueado"
+      }
     },
     "levels": {
       "dono-da-plataforma": {
-        "name": "Dono da plataforma",
-        "question": "A base de clientes está crescendo e usando o produto, e o custo de infraestrutura cabe no plano?",
-        "usage": "Mensal, no computador. Decide preço e planos, onde investir e quando trocar de plano no Supabase.",
-        "missing": {
-          "1": "Faturamento por cliente (o card de receita mensal fica de fora)",
-          "2": "Histórico diário por cliente (a linha de 12 meses começa vazia)",
-          "3": "Os níveis novos de plataforma no banco"
-        }
+        "name": "Dono da plataforma"
       },
       "admin-da-plataforma": {
-        "name": "Admin da plataforma",
-        "question": "Qual cliente está travado na ativação ou quebrado agora, e o que eu destravo hoje?",
-        "usage": "Diário. Reenviar convite, orientar o DNS, ligar módulo, suspender ou escalar uma falha.",
-        "missing": {
-          "1": "Falhas de tarefas automáticas por cliente ainda precisam ser confirmadas no código"
-        }
+        "name": "Admin da plataforma"
       },
       "suporte-da-plataforma": {
-        "name": "Suporte da plataforma",
-        "question": "O que está acontecendo com este cliente, sem eu ver o conteúdo dos membros?",
-        "usage": "Sob demanda, por chamado. Só consulta: para mudar algo, escala para o admin da plataforma.",
-        "missing": {
-          "1": "Registro de cada acesso a um cliente, com motivo (condição para o nível existir)",
-          "2": "O nível de suporte da plataforma no banco"
-        }
+        "name": "Suporte da plataforma"
       },
       "dono-do-cliente": {
-        "name": "Dono do cliente",
-        "question": "Minha comunidade está crescendo, retendo os membros e dando retorno?",
-        "usage": "Semanal ou mensal. Decide onde investir (conteúdo, eventos ou produtos), o tamanho da equipe e o plano.",
-        "missing": {
-          "1": "O nível “dono do cliente” no banco",
-          "2": "Cerca de 8 semanas de dados para a tendência ficar confiável",
-          "3": "Membros que só leem não aparecem: o app não registra quem abriu"
-        }
+        "name": "Dono do cliente"
       },
       "admin-do-cliente": {
-        "name": "Admin do cliente",
-        "question": "O que precisa de mim hoje, e o que funcionou nesta semana?",
-        "usage": "Diário, no celular. Responder o suporte, preparar o check-in, repetir o formato de post que rendeu e moderar.",
-        "missing": {
-          "1": "Alcance dos posts (quantos viram) não existe e fica de fora"
-        }
+        "name": "Admin do cliente"
       },
       "equipe-do-cliente": {
-        "name": "Equipe do cliente",
-        "question": "O que da minha função está esperando por mim agora?",
-        "usage": "Por turno, no celular. Cada pessoa vê só os blocos das funções que recebeu.",
-        "missing": {
-          "1": "O nível “equipe” e as funções no banco (hoje só existe o atendimento)",
-          "2": "Denúncias de membros só chegam na fase 11"
-        }
+        "name": "Equipe do cliente"
       },
       "membro": {
-        "name": "Membro",
-        "question": "O que tem para mim agora que eu não posso perder?",
-        "usage": "Quando abre o app. Não é uma página nova: é um bloco “Para você” no topo do perfil.",
-        "missing": {
-          "1": "“Posts novos desde a sua última visita” precisa registrar visitas"
-        }
+        "name": "Membro"
       }
     },
     "delta": {

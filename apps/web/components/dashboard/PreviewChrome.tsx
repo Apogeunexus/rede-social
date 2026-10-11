@@ -1,45 +1,43 @@
-import { ToneLabel } from '@rede-social/module-dashboard/ui';
-import { Card, Chip } from '@rede-social/ui';
+import { Chip, StatusPill } from '@rede-social/ui';
+import { TriangleAlert } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { z } from 'zod';
 import {
   PREVIEW_LEVELS,
-  type PreviewAvailability,
+  PREVIEW_NOTE_ID,
   type PreviewGroup,
   type PreviewSlug,
   previewLevelPath,
 } from '@/lib/dashboard-preview';
 
-const AVAILABILITY_TONE = {
-  ready: 'success',
-  partial: 'warning',
-  needs_levels: 'warning',
-  blocked: 'danger',
-} as const satisfies Record<PreviewAvailability, 'success' | 'warning' | 'danger'>;
-
 const GROUPS: readonly PreviewGroup[] = ['platform', 'tenant'];
-
-/** The catalog stores a level's bullets as an object of numbered keys (the loader refuses arrays). */
-const bulletsSchema = z.record(z.string(), z.string());
 
 export interface PreviewChromeProps {
   slug: PreviewSlug;
 }
 
 /**
- * The preview's own chrome above each panel (never part of the panel itself): the level navigation in
- * two wrapping groups of chips, then the current level's context — number and role id, name, the
- * question the panel answers, how it is used, what the app can feed today and what is missing.
+ * The preview's own chrome beside each panel (never part of the panel itself): the page title, the
+ * single "Dados de exemplo" tag — the element every disabled action's `aria-describedby` points at,
+ * whose accessible text says the data is fictional and the actions are disabled — the level
+ * navigation in two wrapping groups of chips, and the current level's name as a visually hidden h2,
+ * the heading the panel's sections sit under.
  */
 export async function PreviewChrome({ slug }: PreviewChromeProps) {
   const t = await getTranslations('dashboard');
-  const index = PREVIEW_LEVELS.findIndex((level) => level.slug === slug);
-  const level = PREVIEW_LEVELS[index];
-  if (!level) return null;
-  const missing = Object.values(bulletsSchema.parse(t.raw(`levels.${slug}.missing`)));
 
   return (
     <>
+      <header className="flex flex-col gap-3">
+        <h1 className="text-2xl font-extrabold leading-tight">{t('preview.title')}</h1>
+        <div id={PREVIEW_NOTE_ID} role="note" className="flex">
+          <StatusPill tone="warning" className="gap-1">
+            <TriangleAlert aria-hidden size={14} className="shrink-0" />
+            <span aria-hidden>{t('preview.notice')}</span>
+            <span className="sr-only">{t('preview.noticeDescription')}</span>
+          </StatusPill>
+        </div>
+      </header>
+
       <nav aria-label={t('chrome.navLabel')} className="flex flex-col gap-3">
         {GROUPS.map((group) => (
           <div key={group} className="flex flex-col gap-2">
@@ -62,31 +60,7 @@ export async function PreviewChrome({ slug }: PreviewChromeProps) {
         ))}
       </nav>
 
-      <Card className="flex flex-col gap-4 p-4 md:flex-row md:justify-between">
-        <div className="flex min-w-0 flex-col gap-1 md:max-w-[60%]">
-          <span className="text-xs font-bold text-text-tertiary">
-            {t('chrome.role', { number: index + 1, role: level.role })}
-          </span>
-          <h2 className="text-xl font-extrabold leading-tight text-text">
-            {t(`levels.${slug}.name`)}
-          </h2>
-          <p className="text-sm text-text">
-            <strong>{t('chrome.question')}</strong> {t(`levels.${slug}.question`)}
-          </p>
-          <p className="text-xs text-text-secondary">{t(`levels.${slug}.usage`)}</p>
-        </div>
-        <div className="flex min-w-0 flex-col items-start gap-2 md:max-w-[38%]">
-          <ToneLabel tone={AVAILABILITY_TONE[level.availability]}>
-            {t(`availability.${level.availability}`)}
-          </ToneLabel>
-          <p className="text-xs font-bold text-text-secondary">{t('chrome.missing')}</p>
-          <ul className="list-disc pl-5 text-xs text-text-secondary">
-            {missing.map((bullet) => (
-              <li key={bullet}>{bullet}</li>
-            ))}
-          </ul>
-        </div>
-      </Card>
+      <h2 className="sr-only">{t(`levels.${slug}.name`)}</h2>
     </>
   );
 }

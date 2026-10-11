@@ -16,46 +16,22 @@ export const DASHBOARD_PREVIEW_PATH = /^\/painel-preview(?:\/|$)/;
 
 export const DASHBOARD_PREVIEW_ROOT = '/painel-preview';
 
-export type PreviewRole =
-  | 'platform_owner'
-  | 'platform_admin'
-  | 'platform_support'
-  | 'tenant_owner'
-  | 'tenant_admin'
-  | 'tenant_staff'
-  | 'member';
-
 export type PreviewGroup = 'platform' | 'tenant';
-
-/** How much of the panel the app can feed today (the reference's status pill). */
-export type PreviewAvailability = 'ready' | 'partial' | 'needs_levels' | 'blocked';
 
 export interface PreviewLevel {
   slug: string;
-  role: PreviewRole;
   group: PreviewGroup;
-  availability: PreviewAvailability;
 }
 
 /** The 7 levels, in the reference's order (the level number is the index + 1). */
 export const PREVIEW_LEVELS = [
-  {
-    slug: 'dono-da-plataforma',
-    role: 'platform_owner',
-    group: 'platform',
-    availability: 'partial',
-  },
-  { slug: 'admin-da-plataforma', role: 'platform_admin', group: 'platform', availability: 'ready' },
-  {
-    slug: 'suporte-da-plataforma',
-    role: 'platform_support',
-    group: 'platform',
-    availability: 'blocked',
-  },
-  { slug: 'dono-do-cliente', role: 'tenant_owner', group: 'tenant', availability: 'needs_levels' },
-  { slug: 'admin-do-cliente', role: 'tenant_admin', group: 'tenant', availability: 'ready' },
-  { slug: 'equipe-do-cliente', role: 'tenant_staff', group: 'tenant', availability: 'partial' },
-  { slug: 'membro', role: 'member', group: 'tenant', availability: 'ready' },
+  { slug: 'dono-da-plataforma', group: 'platform' },
+  { slug: 'admin-da-plataforma', group: 'platform' },
+  { slug: 'suporte-da-plataforma', group: 'platform' },
+  { slug: 'dono-do-cliente', group: 'tenant' },
+  { slug: 'admin-do-cliente', group: 'tenant' },
+  { slug: 'equipe-do-cliente', group: 'tenant' },
+  { slug: 'membro', group: 'tenant' },
 ] as const satisfies readonly PreviewLevel[];
 
 export type PreviewSlug = (typeof PREVIEW_LEVELS)[number]['slug'];
@@ -69,7 +45,7 @@ export function previewLevelPath(slug: PreviewSlug): string {
   return `${DASHBOARD_PREVIEW_ROOT}/${slug}`;
 }
 
-/** The "Dados de exemplo" note's id: every disabled action in a panel points at it (aria-describedby). */
+/** The "Dados de exemplo" tag's id: every disabled action in a panel points at it (aria-describedby). */
 export const PREVIEW_NOTE_ID = 'dashboard-preview-note';
 
 /** The staff functions the level-6 simulator can grant, in canonical (tab) order. */

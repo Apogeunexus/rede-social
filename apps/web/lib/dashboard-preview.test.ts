@@ -55,7 +55,8 @@ describe('PREVIEW_LEVELS / previewLevel', () => {
   });
 
   it('resolves an allow-listed slug and refuses anything else', () => {
-    expect(previewLevel('membro')?.role).toBe('member');
+    expect(previewLevel('membro')?.slug).toBe('membro');
+    expect(previewLevel('membro')?.group).toBe('tenant');
     expect(previewLevel('MEMBRO')).toBeNull();
     expect(previewLevel('../inicio')).toBeNull();
     expect(previewLevel('')).toBeNull();
