@@ -4,7 +4,10 @@
       "title": "Painéis por nível de acesso",
       "intro": "Simulação do painel que cada um dos 7 níveis vê na rede social white label. Escolha um nível para ver a tela dele.",
       "notice": "Dados de exemplo",
-      "noticeBody": "Todos os números, nomes e clientes desta página são fictícios. As ações ficam desativadas na pré-visualização."
+      "noticeBody": "Todos os números, nomes e clientes desta página são fictícios. As ações ficam desativadas na pré-visualização.",
+      "phone": {
+        "time": "9:41"
+      }
     },
     "chrome": {
       "navLabel": "Níveis de acesso",

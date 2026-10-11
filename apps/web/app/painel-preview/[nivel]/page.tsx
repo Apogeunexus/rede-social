@@ -4,6 +4,7 @@ import { connection } from 'next/server';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { MemberPanel } from '@/components/dashboard/MemberPanel';
+import { PhoneMockup } from '@/components/dashboard/PhoneMockup';
 import { PlatformAdminPanel } from '@/components/dashboard/PlatformAdminPanel';
 import { PlatformOwnerPanel } from '@/components/dashboard/PlatformOwnerPanel';
 import { PlatformSupportPanel } from '@/components/dashboard/PlatformSupportPanel';
@@ -55,9 +56,11 @@ export default async function PanelPreviewLevelPage({ params, searchParams }: Pr
   const query = await searchParams;
 
   return (
-    <>
-      <PreviewChrome slug={level.slug} />
-      {PANELS[level.slug](query)}
-    </>
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-center lg:gap-12">
+      <div className="flex min-w-0 flex-col gap-6 lg:max-w-sm lg:flex-1">
+        <PreviewChrome slug={level.slug} />
+      </div>
+      <PhoneMockup>{PANELS[level.slug](query)}</PhoneMockup>
+    </div>
   );
 }

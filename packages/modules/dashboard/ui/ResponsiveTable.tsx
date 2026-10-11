@@ -5,7 +5,7 @@ export interface TableColumn<K extends string> {
   key: K;
   header: string;
   numeric?: boolean;
-  /** Left out of the small-screen card (the table still shows it from md up). */
+  /** Left out of the phone card (the table layout, past the container switch, still shows it). */
   hideOnPhone?: boolean;
 }
 
@@ -22,9 +22,12 @@ export interface ResponsiveTableProps<K extends string> {
 }
 
 /**
- * A table that never scrolls sideways (the TenantTable pattern): a real table element in a card from
- * md up, and below md one card per row, with the first column as the card's title and every other
- * column not hidden on small screens as label + value. Long tokens (domains, e-mails) break anywhere.
+ * A table that never scrolls sideways (the TenantTable pattern): a real table element in a card once
+ * the nearest `@container` ancestor is at least 48rem wide (`@3xl`, the width of the viewport
+ * breakpoint it replaced, because Tailwind v4's `@md` container is only 28rem), and below that one
+ * card per row, with the first column as the card's title and every other column not hidden on phones
+ * as label + value. Without an `@container` ancestor it stays in its phone (cards) layout. Long tokens
+ * (domains, e-mails) break anywhere.
  */
 export function ResponsiveTable<K extends string>({
   caption,
@@ -36,7 +39,7 @@ export function ResponsiveTable<K extends string>({
 
   return (
     <>
-      <Card className="hidden md:block">
+      <Card className="hidden @3xl:block">
         <table className="w-full table-auto border-collapse text-left text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -76,7 +79,7 @@ export function ResponsiveTable<K extends string>({
         </table>
       </Card>
 
-      <ul className="flex flex-col gap-3 md:hidden">
+      <ul className="flex flex-col gap-3 @3xl:hidden">
         {rows.map((row) => (
           <li key={row.id}>
             <Card className="flex flex-col gap-2 p-4 [overflow-wrap:anywhere]">

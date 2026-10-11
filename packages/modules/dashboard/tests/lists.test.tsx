@@ -58,14 +58,14 @@ describe('ResponsiveTable', () => {
     { id: 'r2', cells: { name: 'name-2', plan: 'plan-2', members: '510' } },
   ];
 
-  it('is a table from md and a card list below it', () => {
+  it('is a table from a 48rem container and a card list below it', () => {
     const { container } = render(
       <ResponsiveTable caption="caption-sentinel" columns={columns} rows={rows} />,
     );
     const table = screen.getByRole('table', { name: 'caption-sentinel' });
-    expect(table.closest('.hidden.md\\:block')).not.toBeNull();
+    expect(table.closest('.hidden.\\@3xl\\:block')).not.toBeNull();
     const list = container.querySelector('ul');
-    expect(list).toHaveClass('md:hidden');
+    expect(list).toHaveClass('@3xl:hidden');
     expect(within(list as HTMLElement).getAllByRole('listitem')).toHaveLength(2);
   });
 

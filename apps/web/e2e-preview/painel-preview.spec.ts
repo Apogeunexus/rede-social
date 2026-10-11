@@ -43,22 +43,69 @@ for (const level of LEVELS) {
   }
 }
 
-test('the clients list is a table on desktop and stacked cards on a phone', async ({ page }) => {
-  const table = page.getByRole('table', { name: 'Clientes (piores primeiro)' });
-  // The stacked card of a client row (it carries the column labels; the "Atenção" row does not).
-  const cardOfClient = page
+/** The stacked card of a client row (it carries the column labels; the "Atenção" row does not). */
+function cardOfClient(scope: import('@playwright/test').Page | import('@playwright/test').Locator) {
+  return scope
     .getByRole('listitem')
     .filter({ hasText: 'Clube Corrida Sul' })
     .filter({ hasText: 'Interagiu 30d' });
+}
 
-  await page.setViewportSize({ width: 1280, height: 900 });
+test('iPhone 17 Pro Max frame at 1440x900: dono-da-plataforma', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/painel-preview/dono-da-plataforma');
+  const screen = page.locator('[data-phone-screen]');
+  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+
+  const metrics = await screen.evaluate((el) => {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return {
+      width: style.width,
+      height: style.height,
+      overflowY: style.overflowY,
+      radius: style.borderTopLeftRadius,
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+      scrollHeight: el.scrollHeight,
+      clientHeight: el.clientHeight,
+      ratio: rect.width / rect.height,
+    };
+  });
+  expect(metrics).toMatchObject({
+    width: '440px',
+    height: '956px',
+    overflowY: 'auto',
+    radius: '55px',
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  expect(Math.abs(metrics.ratio - 440 / 956)).toBeLessThanOrEqual(0.005);
+
+  const scrollTop = await screen.evaluate((el) => {
+    el.scrollBy(0, 400);
+    return el.scrollTop;
+  });
+  expect(scrollTop).toBeGreaterThan(0);
+
+  await expect(screen.getByRole('table', { name: 'Clientes (piores primeiro)' })).toBeHidden();
+  await expect(cardOfClient(screen)).toBeVisible();
+});
+
+test('the clients list: a table on an unframed 900 px window, cards on a phone', async ({
+  page,
+}) => {
+  const table = page.getByRole('table', { name: 'Clientes (piores primeiro)' });
+
+  await page.setViewportSize({ width: 900, height: 900 });
   await page.goto('/painel-preview/dono-da-plataforma');
   await expect(table).toBeVisible();
-  await expect(cardOfClient).toBeHidden();
+  await expect(cardOfClient(page)).toBeHidden();
+  await expect(page.getByText('9:41', { exact: true })).toBeHidden();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(table).toBeHidden();
-  await expect(cardOfClient).toBeVisible();
+  await expect(cardOfClient(page)).toBeVisible();
 });
 
 test('the level navigation marks the current level', async ({ page }) => {
