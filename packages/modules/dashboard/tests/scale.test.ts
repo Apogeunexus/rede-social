@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   barPercent,
   funnelRates,
+  HEAT_BUCKETS,
+  heatBucket,
   largestDrop,
   linearPoints,
   niceBounds,
@@ -90,5 +92,23 @@ describe('largestDrop', () => {
     expect(largestDrop([6, 4, 2])).toEqual({ index: 1, drop: 2 });
     expect(largestDrop([3, 3, 4])).toBeNull();
     expect(largestDrop([])).toBeNull();
+  });
+});
+
+describe('heatBucket', () => {
+  it('is monotonic: a higher percent never gets a lighter bucket', () => {
+    let previous = -1;
+    for (let v = 0; v <= 100; v += 1) {
+      const index = HEAT_BUCKETS.indexOf(heatBucket(v));
+      expect(index, String(v)).toBeGreaterThanOrEqual(previous);
+      previous = index;
+    }
+  });
+
+  it('spans the whole set and puts on-brand ink on the strongest bucket only', () => {
+    expect(heatBucket(0)).toBe(HEAT_BUCKETS[0]);
+    expect(heatBucket(100)).toBe(HEAT_BUCKETS.at(-1));
+    expect(HEAT_BUCKETS.at(-1)).toContain('text-on-brand');
+    for (const bucket of HEAT_BUCKETS.slice(0, -1)) expect(bucket).not.toContain('text-on-brand');
   });
 });
