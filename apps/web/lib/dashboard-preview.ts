@@ -89,7 +89,13 @@ export function parseStaffFunctions(params: SearchParams): {
  * The member report's drill-down lists (quick 261012-hqr), in canonical order: each slug is a
  * `?lista=` value on the level-7 page.
  */
-export const MEMBER_LISTS = ['curtidas'] as const;
+export const MEMBER_LISTS = [
+  'curtidas',
+  'comentarios',
+  'salvamentos',
+  'compartilhamentos',
+  'stories',
+] as const;
 export type MemberListSlug = (typeof MEMBER_LISTS)[number];
 
 function isMemberList(value: unknown): value is MemberListSlug {

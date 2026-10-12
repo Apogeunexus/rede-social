@@ -72,9 +72,9 @@ export async function MemberActivity() {
     list?: MemberListSlug;
   }[] = [
     { key: 'likes', metric: engagement.likes, list: 'curtidas' },
-    { key: 'comments', metric: engagement.comments },
-    { key: 'saves', metric: engagement.saves },
-    { key: 'shares', metric: engagement.shares },
+    { key: 'comments', metric: engagement.comments, list: 'comentarios' },
+    { key: 'saves', metric: engagement.saves, list: 'salvamentos' },
+    { key: 'shares', metric: engagement.shares, list: 'compartilhamentos' },
   ];
   const peakBadge = exampleBadge(t, peakHours);
   const seeList = (
@@ -165,11 +165,14 @@ export async function MemberActivity() {
               value={formatCount(seen.posts.value)}
               badge={exampleBadge(t, seen.posts)}
             />
-            <KpiCard
-              label={t('member.activity.seen.stories')}
-              value={formatCount(seen.stories.value)}
-              badge={exampleBadge(t, seen.stories)}
-            />
+            <ListLink slug="stories">
+              <KpiCard
+                label={t('member.activity.seen.stories')}
+                value={formatCount(seen.stories.value)}
+                badge={exampleBadge(t, seen.stories)}
+                footer={seeList}
+              />
+            </ListLink>
             <KpiCard
               label={t('member.activity.seen.videos')}
               value={formatCount(seen.videos.value.count)}

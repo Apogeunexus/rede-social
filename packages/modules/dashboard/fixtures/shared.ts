@@ -73,7 +73,8 @@ export type NotMeasuredReason =
   | 'needs_video_playback'
   | 'needs_product_page_views'
   | 'needs_last_visit'
-  | 'needs_usage_sessions';
+  | 'needs_usage_sessions'
+  | 'needs_story_view_time';
 
 /**
  * A metric the app does not collect yet: there is deliberately no value field, so no number can be

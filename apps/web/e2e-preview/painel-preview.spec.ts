@@ -845,10 +845,54 @@ const MEMBER_LIST_CASES: MemberListCase[] = [
     listExample: false,
     rowExamples: 0,
   },
+  {
+    slug: 'comentarios',
+    card: 'Comentários',
+    title: 'Seus comentários',
+    rows: 12,
+    count: '12 comentários',
+    listExample: false,
+    rowExamples: 0,
+  },
+  {
+    slug: 'salvamentos',
+    card: 'Salvamentos',
+    title: 'Posts que você salvou',
+    rows: 9,
+    count: '9 salvamentos',
+    listExample: true,
+    rowExamples: 0,
+  },
+  {
+    slug: 'compartilhamentos',
+    card: 'Compartilhamentos',
+    title: 'Posts que você compartilhou',
+    rows: 3,
+    count: '3 compartilhamentos',
+    listExample: true,
+    rowExamples: 0,
+    sample: 'Link copiado',
+  },
+  {
+    slug: 'stories',
+    card: 'Stories vistos',
+    title: 'Stories que você viu',
+    rows: 23,
+    count: '23 stories',
+    listExample: false,
+    rowExamples: 23,
+    sample: 'Dr. Igor Alves',
+  },
 ];
 
 /** The report cards that open a list, in report order. */
-const MEMBER_LIST_LABELS = ['Curtidas'];
+const MEMBER_LIST_LABELS = [
+  'Curtidas',
+  'Comentários',
+  'Salvamentos',
+  'Compartilhamentos',
+  'Stories vistos',
+];
 
 function memberCardLink(page: Page, label: string) {
   return kpiCard(page, label).locator('xpath=ancestor::a[1]');
@@ -875,6 +919,14 @@ for (const list of MEMBER_LIST_CASES) {
     }
     await expect(page.getByText('Precisa registrar')).toHaveCount(0);
     await expect(page.getByText('Ainda não medido')).toHaveCount(0);
+    if (list.slug === 'stories') {
+      const rows = await sectionTitled(page, list.title).getByRole('listitem').allTextContents();
+      for (const row of rows) expect(row).not.toMatch(/João|Lia|Vieira|Rui/);
+      // The list is measured; only each story's time is example data, so the pill sits on the row.
+      await expect(page.getByText('23 stories', { exact: true }).locator('..')).not.toContainText(
+        'exemplo',
+      );
+    }
 
     await page.getByRole('link', { name: 'Voltar', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`#atividade-${list.slug}$`));

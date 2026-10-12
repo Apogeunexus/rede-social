@@ -4,7 +4,11 @@ export {
   type MemberCommunity,
   memberActivityLists,
   memberPostTable,
+  type OwnComment,
   type PostRef,
+  type SavedPost,
+  type SeenStory,
+  type SharedPost,
   spreadMoments,
 } from './member-lists';
 export {

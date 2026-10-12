@@ -76,7 +76,8 @@
       "needs_video_playback": "Precisa registrar a reprodução dos vídeos",
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
       "needs_last_visit": "Precisa registrar a última visita de cada membro",
-      "needs_usage_sessions": "Precisa registrar as sessões de uso do app"
+      "needs_usage_sessions": "Precisa registrar as sessões de uso do app",
+      "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela"
     },
     "belowFloor": "menos de {floor}",
     "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
@@ -292,6 +293,7 @@
     },
     "duration": "{hours}h{minutes}",
     "durationLong": "{hours, plural, =0 {{minutes} min} other {{hours} h{minutes, plural, =0 {} other { # min}}}}",
+    "durationSeconds": "{minutes, plural, =0 {{seconds} s} other {# min{seconds, plural, =0 {} other { # s}}}}",
     "clock": "{minutes}:{seconds}",
     "actionsPerActiveMember": "{actions} ações por membro ativo",
     "bands": {
@@ -634,6 +636,31 @@
           "title": "Posts que você curtiu",
           "count": "{count, plural, one {# curtida} other {# curtidas}}",
           "line": "{community} · curtido {when}"
+        },
+        "comments": {
+          "title": "Seus comentários",
+          "count": "{count, plural, one {# comentário} other {# comentários}}",
+          "text": "“{text}”",
+          "on": "Em “{post}”",
+          "line": "{community} · {when}"
+        },
+        "saves": {
+          "title": "Posts que você salvou",
+          "count": "{count, plural, one {# salvamento} other {# salvamentos}}",
+          "line": "{community} · salvo {when}"
+        },
+        "shares": {
+          "title": "Posts que você compartilhou",
+          "count": "{count, plural, one {# compartilhamento} other {# compartilhamentos}}",
+          "line": "{via} · {when}",
+          "via": {
+            "link": "Link copiado",
+            "native": "Compartilhado pelo celular"
+          }
+        },
+        "stories": {
+          "title": "Stories que você viu",
+          "count": "{count, plural, one {# story} other {# stories}}"
         }
       }
     }

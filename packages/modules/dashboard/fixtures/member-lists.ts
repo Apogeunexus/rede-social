@@ -1,5 +1,6 @@
 import type { RelativeMoment } from './platform-panels';
-import type { ReportValue } from './shared';
+import { previewTenant } from './preview-tenant';
+import type { MeasuredValue, ReportValue } from './shared';
 
 /**
  * The drill-down lists behind the member's "Sua atividade" report (quick 261012-hqr): RAW DATA,
@@ -24,6 +25,31 @@ export interface PostRef {
 }
 
 export type LikedPost = PostRef & { when: RelativeMoment };
+
+/** One of the member's own comments. */
+export interface OwnComment {
+  id: string;
+  text: string;
+  post: PostRef;
+  when: RelativeMoment;
+}
+
+export type SavedPost = PostRef & { when: RelativeMoment };
+
+/** `link`: the link was copied; `native`: the phone's share sheet. */
+export type SharedPost = PostRef & { when: RelativeMoment; via: 'link' | 'native' };
+
+/**
+ * A story the member saw. The list is real (the member's own `story_views` rows); only the time the
+ * story stayed on screen is not collected yet, so each row's `seconds` is an example on its own.
+ */
+export interface SeenStory {
+  id: string;
+  /** The creator or a community, never another member. */
+  author: string;
+  when: RelativeMoment;
+  seconds: ReportValue<number>;
+}
 
 /** `[excerpt, community]`, in the table's order. */
 const POST_ROWS: readonly (readonly [string, MemberCommunity])[] = [
@@ -154,11 +180,95 @@ function buildLikes(): LikedPost[] {
     .map(({ post, index }) => ({ ...post, when: seenAt(index) }));
 }
 
+/**
+ * The member's 12 comments, `[post id, text]` in table order: 6 VIP, 4 Geral and 2 Eventos, each on
+ * its own post, in the member's voice.
+ */
+const COMMENTS: readonly (readonly [string, string])[] = [
+  ['p01', 'Comecei a aplicar a rotina da aula e já senti diferença'],
+  ['p02', 'O segundo hábito eu já faço, vou tentar os outros dois'],
+  ['p04', 'Foi ótimo encontrar todo mundo, já quero o próximo'],
+  ['p05', 'Adorei as respostas da live, anotei tudo sobre a manhã'],
+  ['p11', 'Topei o desafio! Meu hábito desta semana é caminhar cedo'],
+  ['p14', 'Essa pergunta era a minha também, obrigada pela resposta'],
+  ['p25', 'A planilha nova ficou bem mais fácil de preencher'],
+  ['p31', 'Preencher o mapa junto com a turma ajudou muito'],
+  ['p32', 'Para mim o melhor horário é depois das 20h'],
+  ['p34', 'Garanti minha vaga para a próxima turma'],
+  ['p45', 'Gostei da ideia de olhar o progresso toda sexta'],
+  ['p56', 'Precisava ler isso, obrigada pelo lembrete'],
+];
+
+function postAt(id: string): { post: PostRef; index: number } {
+  const index = memberPostTable.findIndex((post) => post.id === id);
+  const post = memberPostTable[index];
+  if (!post) throw new Error(`no post ${id}`);
+  return { post, index };
+}
+
+function buildComments(): OwnComment[] {
+  return COMMENTS.map(([postId, text], i) => {
+    const { post, index } = postAt(postId);
+    return { id: `c${String(i + 1).padStart(2, '0')}`, text, post, when: seenAt(index) };
+  });
+}
+
+/** Saves: the posts at table index i with i % 7 === 2 (9 posts), newest first. */
+function buildSaves(): SavedPost[] {
+  return memberPostTable
+    .map((post, index) => ({ post, index }))
+    .filter(({ index }) => index % 7 === 2)
+    .map(({ post, index }) => ({ ...post, when: seenAt(index) }));
+}
+
+/** Shares: the posts at indices 5, 25 and 45. */
+const SHARES: readonly (readonly [number, SharedPost['via']])[] = [
+  [5, 'link'],
+  [25, 'native'],
+  [45, 'link'],
+];
+
+function buildShares(): SharedPost[] {
+  return SHARES.map(([index, via]) => {
+    const post = memberPostTable[index];
+    if (!post) throw new Error(`no post at index ${index}`);
+    return { ...post, when: seenAt(index), via };
+  });
+}
+
+const STORY_COMMUNITIES: readonly MemberCommunity[] = ['Comunidade VIP', 'Geral', 'Eventos'];
+
+/**
+ * Stories: 23 rows, newest first. Every 4th story (i % 4 === 3) is a community's, the rest the
+ * creator's; the time on screen is 5..15 s, an example.
+ */
+function buildStories(): SeenStory[] {
+  return spreadMoments(23).map((when, i) => ({
+    id: `s${String(i + 1).padStart(2, '0')}`,
+    author:
+      i % 4 === 3
+        ? (STORY_COMMUNITIES[Math.floor(i / 4) % STORY_COMMUNITIES.length] ?? 'Geral')
+        : previewTenant.displayName,
+    when,
+    seconds: { example: true, reason: 'needs_story_view_time', value: 5 + ((i * 7) % 11) },
+  }));
+}
+
 export interface MemberActivityLists {
   /** The member's `feed_likes` rows in the window. */
   likes: ReportValue<LikedPost[]>;
+  /** The member's `feed_comments` rows in the window. */
+  comments: ReportValue<OwnComment[]>;
+  saves: ReportValue<SavedPost[]>;
+  shares: ReportValue<SharedPost[]>;
+  /** The member's own `story_views` rows: a measured list whose rows carry an example time. */
+  stories: MeasuredValue<SeenStory[]>;
 }
 
 export const memberActivityLists: MemberActivityLists = {
   likes: { example: false, value: buildLikes() },
+  comments: { example: false, value: buildComments() },
+  saves: { example: true, reason: 'needs_saves', value: buildSaves() },
+  shares: { example: true, reason: 'needs_shares', value: buildShares() },
+  stories: { example: false, value: buildStories() },
 };

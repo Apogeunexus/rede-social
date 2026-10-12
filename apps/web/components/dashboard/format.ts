@@ -170,6 +170,11 @@ export function formatHoursMinutes(t: DashboardT, minutes: number): string {
   return t('durationLong', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
+/** `130` seconds -> `2 min 10 s`, `252` -> `4 min 12 s`, `45` -> `45 s`, `180` -> `3 min`. */
+export function formatMinutesSeconds(t: DashboardT, seconds: number): string {
+  return t('durationSeconds', { minutes: Math.floor(seconds / 60), seconds: seconds % 60 });
+}
+
 /** `252` seconds -> `4:12` (a video's length). */
 export function formatClock(t: DashboardT, seconds: number): string {
   return t('clock', {

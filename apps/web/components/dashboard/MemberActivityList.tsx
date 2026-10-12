@@ -3,7 +3,7 @@ import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ChevronLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { MEMBER_LIST_ANCHOR, type MemberListSlug, memberReportHref } from '@/lib/dashboard-preview';
-import { type DashboardT, momentText } from './format';
+import { type DashboardT, formatMinutesSeconds, momentText } from './format';
 import { PanelSection } from './PanelSection';
 
 interface ListRow {
@@ -38,6 +38,73 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
         lines: [
           t('member.lists.likes.line', { community: row.community, when: momentText(t, row.when) }),
         ],
+      })),
+    };
+  },
+  comentarios: (t) => {
+    const list = memberActivityLists.comments;
+    return {
+      title: t('member.lists.comments.title'),
+      count: t('member.lists.comments.count', { count: list.value.length }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: t('member.lists.comments.text', { text: row.text }),
+        lines: [
+          t('member.lists.comments.on', { post: row.post.excerpt }),
+          t('member.lists.comments.line', {
+            community: row.post.community,
+            when: momentText(t, row.when),
+          }),
+        ],
+      })),
+    };
+  },
+  salvamentos: (t) => {
+    const list = memberActivityLists.saves;
+    return {
+      title: t('member.lists.saves.title'),
+      count: t('member.lists.saves.count', { count: list.value.length }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: row.excerpt,
+        lines: [
+          t('member.lists.saves.line', { community: row.community, when: momentText(t, row.when) }),
+        ],
+      })),
+    };
+  },
+  compartilhamentos: (t) => {
+    const list = memberActivityLists.shares;
+    return {
+      title: t('member.lists.shares.title'),
+      count: t('member.lists.shares.count', { count: list.value.length }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: row.excerpt,
+        lines: [
+          t('member.lists.shares.line', {
+            via: t(`member.lists.shares.via.${row.via}`),
+            when: momentText(t, row.when),
+          }),
+        ],
+      })),
+    };
+  },
+  stories: (t) => {
+    const list = memberActivityLists.stories;
+    return {
+      title: t('member.lists.stories.title'),
+      count: t('member.lists.stories.count', { count: list.value.length }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: row.author,
+        lines: [momentText(t, row.when)],
+        aside: formatMinutesSeconds(t, row.seconds.value),
+        ...(row.seconds.example ? { asideBadge: t('member.activity.example') } : {}),
       })),
     };
   },
