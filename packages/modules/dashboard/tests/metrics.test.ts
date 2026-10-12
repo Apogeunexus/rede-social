@@ -1,24 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { type EngagementBands, memberPanel } from '../fixtures';
+import type { EngagementBands } from '../fixtures';
 import {
   type BandGroup,
   bandTotal,
   dailyAverageMinutes,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
-  FOR_YOU_PRIORITY,
   interactedCount,
   interactedPercent,
   isBelowPrivacyFloor,
   isComplementBelowPrivacyFloor,
   isNewMember,
-  MAX_FOR_YOU_CARDS,
   MIN_STREAK_WEEKS,
   mergeBandsBelowFloor,
   NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,
-  selectForYouCards,
   totalMinutes,
   totalViews,
   totalWatchedSeconds,
@@ -255,50 +252,6 @@ describe('vsMedian', () => {
 describe('the weekly streak', () => {
   it('is only worth showing from 2 weeks', () => {
     expect(MIN_STREAK_WEEKS).toBe(2);
-  });
-});
-
-describe('selectForYouCards', () => {
-  const { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity } =
-    memberPanel.forYou;
-
-  it('ranks event > support reply > access expiring > news > community', () => {
-    expect(FOR_YOU_PRIORITY).toEqual(['event', 'support', 'access', 'news', 'community']);
-  });
-
-  it("keeps the member's three highest cards", () => {
-    expect(selectForYouCards(memberPanel.forYou)).toEqual(['event', 'support', 'access']);
-  });
-
-  it('gives measured news a slot when a higher card is absent', () => {
-    const news = { community: 'Comunidade VIP', posts: 3 };
-    expect(
-      selectForYouCards({
-        supportReply,
-        accessExpiring,
-        newSinceLastVisit: news,
-        unlockedCommunity,
-      }),
-    ).toEqual(['support', 'access', 'news']);
-    expect(selectForYouCards({ unlockedCommunity, newSinceLastVisit: news })).toEqual([
-      'news',
-      'community',
-    ]);
-  });
-
-  it('drops a card whose data is not measured', () => {
-    expect(selectForYouCards({ newSinceLastVisit, unlockedCommunity })).toEqual(['community']);
-    expect(selectForYouCards({ newSinceLastVisit })).toEqual([]);
-  });
-
-  it('shows nothing when there is nothing for the member', () => {
-    expect(selectForYouCards({})).toEqual([]);
-  });
-
-  it(`never shows more than ${MAX_FOR_YOU_CARDS} cards`, () => {
-    expect(MAX_FOR_YOU_CARDS).toBe(3);
-    const all = { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity };
-    expect(selectForYouCards(all).length).toBeLessThanOrEqual(MAX_FOR_YOU_CARDS);
   });
 });
 

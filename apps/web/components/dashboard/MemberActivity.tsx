@@ -55,7 +55,7 @@ function ListLink({
 /**
  * Level 7's "Sua atividade": the member's OWN activity over the last 7 days, like Instagram's, in
  * five blocks: usage time, engagement, what they saw, where they participate, and presence and
- * streak (the presence and streak live here only, not in the profile header). Own data only, never
+ * streak (the presence and streak live here only, nowhere else on the panel). Own data only, never
  * another member's and never the member's engagement band (D-01). A metric the app does not collect
  * yet shows a fictional value with the "exemplo" pill, derived from the data's `example` flag and
  * never from a position; its collection reason is never shown here (D-03). The deltas are neutral:

@@ -96,17 +96,6 @@ export function formatDayMonth(isoDate: string): string {
   return DAY_MONTH.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
-const MONTH_YEAR = new Intl.DateTimeFormat('pt-BR', {
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
-
-/** An ISO date -> `mar. de 2026`. */
-export function formatMonthYear(isoDate: string): string {
-  return MONTH_YEAR.format(new Date(`${isoDate}T00:00:00Z`));
-}
-
 const MONTH_SHORT = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: 'UTC' });
 
 /** `2026-10` -> `out` (the chart's x labels: no trailing dot). */

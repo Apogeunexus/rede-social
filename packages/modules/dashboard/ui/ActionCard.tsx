@@ -16,8 +16,8 @@ export interface ActionCardProps {
 }
 
 /**
- * One "Para você" card of the member's profile: an icon, a bold title and a detail line, then an
- * optional pill and action. The module holds no words: every string is the host's.
+ * An action card: an icon, a bold title and a detail line, then an optional pill, action and unread
+ * dot. The module holds no words: every string is the host's.
  */
 export function ActionCard({
   icon: Icon,

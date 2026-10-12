@@ -471,21 +471,10 @@ export const tenantStaffPanel: TenantStaffPanel = {
  */
 export interface MemberPanel {
   profile: {
-    name: string;
-    memberSince: string;
     /** Events with a check-in vs events the member confirmed, last 30 days. */
     attendance: { attended: number; events: number };
     /** Consecutive weeks with at least one counted action. */
     weeklyStreak: number;
-  };
-  /** Candidate cards; an absent entry is not rendered, and at most 3 show, by priority. */
-  forYou: {
-    nextEvent?: { title: string; startsAtHour: number; place: string; startsInMinutes: number };
-    supportReply?: { preview: string; unread: boolean };
-    accessExpiring?: { product: string; daysLeft: number };
-    /** A count of new posts in a community since the member's last visit, once last visits are recorded. */
-    newSinceLastVisit?: { community: string; posts: number | NotMeasured };
-    unlockedCommunity?: { name: string; posts: number };
   };
   /**
    * The "Sua atividade" report. The window is the last 7 complete São Paulo days, oldest first;
@@ -519,28 +508,8 @@ export interface MemberPanel {
 
 export const memberPanel: MemberPanel = {
   profile: {
-    name: 'Ana Souza',
-    memberSince: '2026-03-01',
     attendance: { attended: 3, events: 4 },
     weeklyStreak: 6,
-  },
-  forYou: {
-    nextEvent: {
-      title: 'Encontro mensal',
-      startsAtHour: 19,
-      place: 'Espaço Aurora, sala 2',
-      startsInMinutes: 40,
-    },
-    supportReply: {
-      preview: 'Oi, Ana! Pode levar um acompanhante no encontro de hoje.',
-      unread: true,
-    },
-    accessExpiring: { product: 'Comunidade VIP', daysLeft: 5 },
-    newSinceLastVisit: {
-      community: 'Comunidade VIP',
-      posts: { measured: false, reason: 'needs_last_visit' },
-    },
-    unlockedCommunity: { name: 'Comunidade VIP', posts: 42 },
   },
   activity: {
     usage: {

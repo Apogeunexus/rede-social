@@ -75,7 +75,6 @@
       "needs_shares": "Precisa registrar os compartilhamentos",
       "needs_video_playback": "Precisa registrar a reprodução dos vídeos",
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
-      "needs_last_visit": "Precisa registrar a última visita de cada membro",
       "needs_usage_sessions": "Precisa registrar as sessões de uso do app",
       "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela"
     },
@@ -559,34 +558,6 @@
       }
     },
     "member": {
-      "header": {
-        "subtitle": "Perfil"
-      },
-      "memberSince": "Membro desde {date}",
-      "forYou": {
-        "title": "Para você",
-        "event": {
-          "title": "{title} · hoje {hour}h",
-          "startsIn": "Começa em {minutes} min",
-          "checkIn": "Fazer check-in"
-        },
-        "support": {
-          "title": "O suporte respondeu",
-          "detail": "“{preview}”",
-          "unread": "não lida"
-        },
-        "access": {
-          "title": "Seu acesso vence em {days, plural, one {# dia} other {# dias}}",
-          "renew": "Renovar"
-        },
-        "news": {
-          "title": "Novidades em {community} desde sua última visita",
-          "detail": "{count, plural, one {# publicação nova} other {# publicações novas}}"
-        },
-        "community": {
-          "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"
-        }
-      },
       "activity": {
         "title": "Sua atividade",
         "period": "Últimos 7 dias",

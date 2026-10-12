@@ -1,5 +1,4 @@
-import type { EngagementBand, EngagementBands, NotMeasured } from '../fixtures/shared';
-import type { MemberPanel } from '../fixtures/tenant-panels';
+import type { EngagementBand, EngagementBands } from '../fixtures/shared';
 
 /**
  * Pure engagement helpers: every percent and total a panel shows is computed from the bands, never
@@ -148,39 +147,3 @@ export function totalWatchedSeconds(rows: readonly { watchedSeconds: number }[])
 
 /** A weekly streak shorter than this is not shown. */
 export const MIN_STREAK_WEEKS = 2;
-
-export type ForYouCard = 'event' | 'support' | 'access' | 'news' | 'community';
-
-/** The member's "Para você" cards, most important first. */
-export const FOR_YOU_PRIORITY: readonly ForYouCard[] = [
-  'event',
-  'support',
-  'access',
-  'news',
-  'community',
-];
-
-const FOR_YOU_FIELD: Record<ForYouCard, keyof MemberPanel['forYou']> = {
-  event: 'nextEvent',
-  support: 'supportReply',
-  access: 'accessExpiring',
-  news: 'newSinceLastVisit',
-  community: 'unlockedCommunity',
-};
-
-export const MAX_FOR_YOU_CARDS = 3;
-
-function isNotMeasured(value: unknown): value is NotMeasured {
-  return typeof value === 'object' && value !== null && 'measured' in value && !value.measured;
-}
-
-/**
- * The cards present in `forYou`, in priority order, at most `MAX_FOR_YOU_CARDS`. A card with no data,
- * or with any unmeasured value, is not a candidate: a member never sees "Ainda não medido".
- */
-export function selectForYouCards(forYou: MemberPanel['forYou']): ForYouCard[] {
-  return FOR_YOU_PRIORITY.filter((card) => {
-    const data = forYou[FOR_YOU_FIELD[card]];
-    return data !== undefined && !Object.values(data).some(isNotMeasured);
-  }).slice(0, MAX_FOR_YOU_CARDS);
-}
