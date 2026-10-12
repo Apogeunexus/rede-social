@@ -266,14 +266,25 @@ describe('selectForYouCards', () => {
     expect(selectForYouCards(memberPanel.forYou)).toEqual(['event', 'support', 'access']);
   });
 
-  it('gives news a slot when a higher card is absent', () => {
+  it('gives measured news a slot when a higher card is absent', () => {
+    const news = { community: 'Comunidade VIP', posts: 3 };
     expect(
-      selectForYouCards({ supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity }),
+      selectForYouCards({
+        supportReply,
+        accessExpiring,
+        newSinceLastVisit: news,
+        unlockedCommunity,
+      }),
     ).toEqual(['support', 'access', 'news']);
-    expect(selectForYouCards({ unlockedCommunity, newSinceLastVisit })).toEqual([
+    expect(selectForYouCards({ unlockedCommunity, newSinceLastVisit: news })).toEqual([
       'news',
       'community',
     ]);
+  });
+
+  it('drops a card whose data is not measured', () => {
+    expect(selectForYouCards({ newSinceLastVisit, unlockedCommunity })).toEqual(['community']);
+    expect(selectForYouCards({ newSinceLastVisit })).toEqual([]);
   });
 
   it('shows nothing when there is nothing for the member', () => {

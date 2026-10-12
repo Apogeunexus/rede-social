@@ -68,7 +68,7 @@ export async function MemberPanel() {
         />
       ) : null,
     news: () =>
-      newSinceLastVisit ? (
+      newSinceLastVisit && typeof newSinceLastVisit.posts !== 'number' ? (
         <ActionCard
           key="news"
           icon={Sparkles}

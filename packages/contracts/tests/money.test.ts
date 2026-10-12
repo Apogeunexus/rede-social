@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatBrl, parseBrlToCents, priceCentsSchema, STORE_MAX_PRICE_CENTS } from '../src/money';
+import {
+  formatBrl,
+  formatBrlCompact,
+  parseBrlToCents,
+  priceCentsSchema,
+  STORE_MAX_PRICE_CENTS,
+} from '../src/money';
 
 /** U+00A0, the no-break space `Intl` puts after `R$` (RESEARCH Pitfall 12). Spelled, never typed. */
 const NBSP = ' ';
@@ -16,6 +22,12 @@ describe('money (08.2 P11, STORE-02): integer cents end to end', () => {
     expect(formatBrl(STORE_MAX_PRICE_CENTS)).toBe(`R$${NBSP}100.000,00`);
     // The ASCII-space spelling is NOT what Intl emits.
     expect(formatBrl(1990)).not.toBe('R$ 19,90');
+  });
+
+  it('formatBrlCompact shortens large totals and keeps them on one line', () => {
+    expect(formatBrlCompact(1438000)).toBe(`R$${NBSP}14,4${NBSP}mil`);
+    expect(formatBrlCompact(150000000)).toBe(`R$${NBSP}1,5${NBSP}mi`);
+    expect(formatBrlCompact(99950)).toBe(formatBrl(99950));
   });
 
   it.each([

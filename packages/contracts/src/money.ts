@@ -42,6 +42,10 @@ export function formatBrl(cents: number): string {
   return BRL.format(cents / 100);
 }
 
+export function formatBrlCompact(_cents: number): string {
+  throw new Error('not implemented');
+}
+
 /**
  * Digits with optional `.` thousand groups, an optional `,` and one or two decimals, an optional
  * leading `R$`. `\s` also matches U+00A0, so a pasted `formatBrl` string parses back.

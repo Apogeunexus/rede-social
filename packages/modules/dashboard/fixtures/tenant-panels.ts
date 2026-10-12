@@ -483,8 +483,8 @@ export interface MemberPanel {
     nextEvent?: { title: string; startsAtHour: number; place: string; startsInMinutes: number };
     supportReply?: { preview: string; unread: boolean };
     accessExpiring?: { product: string; daysLeft: number };
-    /** What changed in a community since the member's last visit: last visits are not recorded yet. */
-    newSinceLastVisit?: { community: string; posts: NotMeasured };
+    /** A count of new posts in a community since the member's last visit, once last visits are recorded. */
+    newSinceLastVisit?: { community: string; posts: number | NotMeasured };
     unlockedCommunity?: { name: string; posts: number };
   };
 }
