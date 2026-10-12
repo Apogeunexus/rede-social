@@ -15,7 +15,7 @@ The package's `exports` map is the whole public surface; nothing else may be imp
 
 | Subpath | What it holds |
 |---|---|
-| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, and the member's card priority `FOR_YOU_PRIORITY` / `MAX_FOR_YOU_CARDS` / `selectForYouCards` |
+| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, and the member's card priority `FOR_YOU_PRIORITY` / `MAX_FOR_YOU_CARDS` / `selectForYouCards` |
 | `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel`, `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number |
 
 UI rules (MOD-02, PWA-03, UI-03): a component holds no route, no clock and no words — every string,
@@ -79,8 +79,11 @@ The preview check runs with the installed Google Chrome and starts the dev serve
 every level inside the iPhone 17 Pro Max frame at 1440x900 (and the fit at 1024x768), the absence of
 the frame and of horizontal scroll at 360/390/430 px (also with every collapsible open, and inside
 the phone screen), table vs cards, the staff simulator, the alerts bell, and the engagement and
-activity metrics of each level (band order, computed percents, "Ainda não medido", the "menos de 5"
-floor on platform support, the member's card priority):
+activity metrics of each level (band order, computed percents, the member's card priority). On
+platform support the floor merges any band under 5 with a neighbour (every row ≥ 5, the rows sum to
+the exact total) and hides the "nunca agiram" complement when it is under 5. An unmeasured metric
+shows as a `MissingKpi` ("Ainda não medido") when it stands alone, and as the grouped, closed
+"Métricas que dependem de coleta" list on level 5; the member only ever gets measured cards:
 
 ```bash
 pnpm --filter @rede-social/web exec playwright test --config playwright.preview.config.ts
