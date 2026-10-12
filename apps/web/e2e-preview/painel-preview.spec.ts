@@ -525,6 +525,17 @@ test.describe('dono-do-cliente without JavaScript', () => {
     await expect(ownerArea(page).getByRole('heading', { name: 'Crescimento' })).toBeVisible();
   });
 
+  test('a band opens its members with no script (native details)', async ({ page }) => {
+    await page.goto('/painel-preview/dono-do-cliente?area=membros');
+    const bands = sectionTitled(ownerArea(page), 'Faixas de engajamento');
+    const atRisk = bandDetails(bands, 'Em risco');
+    await expect(atRisk).not.toHaveAttribute('open');
+    await atRisk.locator('summary').click();
+    await expect(atRisk).toHaveAttribute('open');
+    await expect(atRisk.getByRole('listitem')).toHaveCount(10);
+    await expect(atRisk.getByText('e mais 158 membros')).toBeVisible();
+  });
+
   test('a band scope is a plain link to its community', async ({ page }) => {
     await page.goto('/painel-preview/dono-do-cliente?area=membros');
     await bandScope(page).getByRole('link', { name: 'Geral' }).click();
@@ -629,12 +640,17 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
   ).toBeVisible();
 
   const bands = sectionTitled(area, 'Faixas de engajamento');
-  const bandRows = bandBarRows(bands);
-  await expect(bandRows).toHaveCount(6);
-  const bandTexts = await bandRows.allTextContents();
-  ['Novos', 'Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos'].forEach((label, i) => {
-    expect(bandTexts[i]).toContain(label);
-  });
+  const titles = (await bands.locator('details > summary span.font-bold').allTextContents()).map(
+    (text) => text.trim(),
+  );
+  expect(titles).toEqual([...BAND_LABELS, 'Ver movimentos']);
+  const summaries = ['96 · 8%', '62 · 5%', '205 · 17%', '150 · 12%', '168 · 14%', '559 · 45%'];
+  for (const [i, label] of BAND_LABELS.entries()) {
+    const details = bandDetails(bands, label);
+    await expect(details).toHaveCount(1);
+    await expect(details).not.toHaveAttribute('open');
+    await expect(details.locator('summary')).toContainText(summaries[i] ?? '');
+  }
   await expect(bands.getByText('Novos: 54 ativados de 96.')).toBeVisible();
   await expect(kpiCard(area, 'Subiram')).toContainText('77');
   await expect(kpiCard(area, 'Caíram')).toContainText('171');
@@ -656,9 +672,13 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
   expect(recoverY).toBeLessThan(retentionY);
 });
 
-/** The rows of the bands' bar list (the scope selector's items are list items too). */
-function bandBarRows(bands: Locator) {
-  return bands.locator('ul:has([data-bar-fill])').first().getByRole('listitem');
+const BAND_LABELS = ['Novos', 'Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos'];
+
+/** The collapsible of one band (quick 261012-pkd D-02), by its summary's exact bold title. */
+function bandDetails(bands: Locator, label: string) {
+  return bands.locator('details').filter({
+    has: bands.page().locator('summary span.font-bold', { hasText: new RegExp(`^${label}$`) }),
+  });
 }
 
 /** The scope selector of the bands (quick 261012-pkd D-01). */
@@ -716,12 +736,8 @@ test('dono-do-cliente membros: the scope selector', async ({ page }) => {
   await expect(kpiCard(area, 'Subiram')).toContainText('77');
   await expect(kpiCard(area, 'Caíram')).toContainText('171');
   await expect(kpiCard(area, 'Entraram')).toContainText('96');
-  const rows = bandBarRows(bands);
-  await expect(rows.nth(0)).toContainText('14');
-  await expect(rows.nth(0)).toContainText('8%');
-  await expect(rows.nth(4)).toContainText('Em risco');
-  await expect(rows.nth(4)).toContainText('22');
-  await expect(rows.nth(4)).toContainText('12%');
+  await expect(bandDetails(bands, 'Novos').locator('summary')).toContainText('14 · 8%');
+  await expect(bandDetails(bands, 'Em risco').locator('summary')).toContainText('22 · 12%');
 
   await bandScope(page).getByRole('link', { name: 'Toda a base' }).click();
   await expect(page).toHaveURL(/\?area=membros#faixas$/);
@@ -790,6 +806,69 @@ test('dono-do-cliente membros comunidade=vip at 1440x900: inside the phone', asy
     .poll(() => page.locator('[data-phone-screen]').evaluate((el) => el.scrollTop))
     .toBeGreaterThan(0);
 });
+
+const BAND_LIST_SCOPES = [
+  { scope: 'Toda a base', query: '', top: true },
+  { scope: 'Comunidade VIP', query: '&comunidade=vip', top: false },
+  { scope: 'Geral', query: '&comunidade=geral', top: false },
+  { scope: 'Iniciantes', query: '&comunidade=iniciantes', top: false },
+  { scope: 'Eventos', query: '&comunidade=eventos', top: false },
+];
+
+for (const { scope, query, top } of BAND_LIST_SCOPES) {
+  test(`dono-do-cliente membros ${scope}: each band opens its members`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/painel-preview/dono-do-cliente?area=membros${query}`);
+    await expect(bandScope(page).getByRole('link', { name: scope })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    const bands = sectionTitled(ownerArea(page), 'Faixas de engajamento');
+
+    for (const label of BAND_LABELS) {
+      const details = bandDetails(bands, label);
+      const summary = details.locator('summary');
+      const count = Number(
+        /([\d.]+) · /.exec(await summary.innerText())?.[1]?.replace('.', '') ?? Number.NaN,
+      );
+      expect(count, label).toBeGreaterThan(0);
+      await summary.click();
+      await expect(details).toHaveAttribute('open');
+
+      const rows = details.getByRole('listitem');
+      const shown = Math.min(10, count);
+      await expect(rows, label).toHaveCount(shown);
+      for (const text of await rows.allTextContents()) {
+        expect(text).toContain('Membro desde');
+        expect(text).toContain('última atividade');
+        expect(text.includes('Interage mais em'), `${label}: ${text}`).toBe(top);
+      }
+      const more = details.getByText(/^e mais \d+ membros?$/);
+      if (count > 10) {
+        const left = count - shown;
+        await expect(more, label).toHaveText(`e mais ${left} ${left === 1 ? 'membro' : 'membros'}`);
+      } else {
+        await expect(more, label).toHaveCount(0);
+      }
+    }
+
+    if (scope === 'Toda a base') {
+      await expect(bandDetails(bands, 'Em risco').getByText('e mais 158 membros')).toBeVisible();
+      const first = bandDetails(bands, 'Novos').getByRole('listitem').first();
+      await expect(first).toContainText('Luana Ferraz');
+      await expect(first).toContainText('Membro desde set. de 2026 · última atividade hoje 22:40');
+      await expect(first).toContainText('Interage mais em Geral');
+    }
+    if (scope === 'Comunidade VIP') {
+      await expect(bandDetails(bands, 'Inativos').getByText('e mais 8 membros')).toBeVisible();
+    }
+    if (scope === 'Iniciantes' || scope === 'Eventos') {
+      const superfans = bandDetails(bands, 'Superfãs');
+      await expect(superfans.getByRole('listitem')).toHaveCount(scope === 'Iniciantes' ? 6 : 3);
+      await expect(superfans.getByText(/^e mais/)).toHaveCount(0);
+    }
+  });
+}
 
 /** A closed collapsible of the open area, by its title. */
 function areaDetails(page: Page, title: string) {

@@ -14,7 +14,7 @@ import { Card, Chip } from '@rede-social/ui';
 import { HeartHandshake } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { OWNER_BANDS_ANCHOR, ownerMembersHref } from '@/lib/owner-communities';
-import { BandsBarList } from './BandsBarList';
+import { BandMembers } from './BandMembers';
 import {
   bandLabel,
   communityLabel,
@@ -38,7 +38,11 @@ function communityScope(id: string) {
  * Level 4, "Membros": growth (who joined and left in 30 days, the balance against the members KPI's
  * change, new members per week), the engagement bands with who moved up or down, right after them
  * a card to win back the members in risk, then retention by joining month (one number on a phone,
- * the cohort heatmap from `@3xl`). Counts only: no member is named.
+ * the cohort heatmap from `@3xl`).
+ *
+ * The bands have a community scope (`?comunidade=`, quick 261012-pkd D-01; who moved stays whole-base)
+ * and each band opens a named list of its members (D-02). Those lists are the only place this panel
+ * names a member, to the client's own team (D-03); every other block is counts only.
  */
 export async function OwnerMembers({ community }: { community: string | null }) {
   const t = await getTranslations('dashboard');
@@ -114,7 +118,7 @@ export async function OwnerMembers({ community }: { community: string | null }) 
             })}
           </p>
         ) : null}
-        <BandsBarList t={t} bands={scopeBands} />
+        <BandMembers t={t} bands={scopeBands} community={community} />
         <p className="text-xs text-text-secondary">
           {t('bands.newActivated', {
             activated: formatCount(scopeBands.newActivated),

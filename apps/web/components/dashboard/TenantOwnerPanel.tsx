@@ -76,7 +76,8 @@ export interface TenantOwnerPanelProps {
  * Level 4, "Dono do cliente": the client's business in six areas (quick 261012-o00). The header keeps
  * the period and the alerts bell in every area; under it a row of tab links (plain `<a>`, so it works
  * with no JavaScript, wrapping on a phone) picks the area through `?area=`. Each area is its own
- * server component. Segments are counts only: no member is named (D-02 of 261012-fcr).
+ * server component. The Membros band lists name members to the client's own team (261012-pkd D-03);
+ * the bell and every other block stay counts only.
  */
 export async function TenantOwnerPanel({ area, community }: TenantOwnerPanelProps) {
   const t = await getTranslations('dashboard');

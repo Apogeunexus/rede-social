@@ -153,6 +153,17 @@ export function formatMonthAbbrev(isoMonth: string): string {
   return MONTH_SHORT.format(new Date(`${isoMonth}-01T00:00:00Z`));
 }
 
+const MONTH_YEAR = new Intl.DateTimeFormat('pt-BR', {
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** `2026-09-30` -> `set. de 2026` ("Membro desde …"). */
+export function formatMonthYear(isoDate: string): string {
+  return MONTH_YEAR.format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 /** `100` minutes -> `1h40`. */
 export function formatDuration(t: DashboardT, minutes: number): string {
   return t('duration', {

@@ -1,5 +1,17 @@
+import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import type { RelativeMoment } from './platform-panels';
 import type { EngagementBand } from './shared';
+import { tenantOwnerPanel } from './tenant-owner';
+
+/**
+ * The level-4 band lists (quick 261012-pkd D-02): who is in each engagement band, for the whole base
+ * and for each community. RAW DATA (MOD-02): a fixed name table plus a pure builder, no randomness and
+ * no clock, so every render lists the same people. One roster feeds every scope, so a member is never
+ * more engaged nor more recent in a community than in the whole base.
+ *
+ * These names are visible to the client's own team (D-03): the app's privacy notice must say so
+ * before real data replaces this fixture.
+ */
 
 /** The page size of a band list (the future endpoint's page size). */
 export const OWNER_BAND_LIST_LIMIT = 10;
@@ -33,8 +45,224 @@ export interface OwnerRosterMember {
   communities: Record<string, { band: EngagementBand; lastActive: RelativeMoment }>;
 }
 
-export const ownerBandRoster: readonly OwnerRosterMember[] = [];
+/** 12 names per band, in ENGAGEMENT_BAND_ORDER. Fictional; none is used elsewhere in the fixtures. */
+const MEMBER_NAMES = [
+  'Luana Ferraz',
+  'Caio Menezes',
+  'Débora Siqueira',
+  'Henrique Prado',
+  'Tatiane Moura',
+  'Gustavo Rangel',
+  'Priscila Antunes',
+  'Rafael Quintana',
+  'Camila Barreto',
+  'Otávio Lacerda',
+  'Juliana Teixeira',
+  'Murilo Bastos',
+  'Fernanda Paiva',
+  'Leandro Assis',
+  'Patrícia Nogueira',
+  'Diego Valença',
+  'Isabela Tavares',
+  'Renato Couto',
+  'Bruna Esteves',
+  'Vinícius Correia',
+  'Larissa Pimentel',
+  'Thiago Brandão',
+  'Aline Cardoso',
+  'Fábio Monteiro',
+  'Gabriela Sampaio',
+  'Eduardo Falcão',
+  'Natália Rezende',
+  'Rodrigo Aguiar',
+  'Simone Barros',
+  'Matheus Leal',
+  'Carolina Viana',
+  'André Cavalcanti',
+  'Vanessa Dutra',
+  'Felipe Amaral',
+  'Letícia Gomes',
+  'Marcelo Sena',
+  'Beatriz Fontes',
+  'Lucas Damasceno',
+  'Raquel Freitas',
+  'Bruno Carvalho',
+  'Helena Duarte',
+  'Sérgio Rocha',
+  'Mariana Pires',
+  'Daniel Macedo',
+  'Elisa Queiroz',
+  'Hugo Pacheco',
+  'Cecília Fonseca',
+  'Alexandre Bezerra',
+  'Jéssica Lima',
+  'Ricardo Peixoto',
+  'Lívia Medeiros',
+  'Pedro Galvão',
+  'Manuela Ribeiro',
+  'Caetano Borges',
+  'Sofia Araújo',
+  'Leonardo Mattos',
+  'Yasmin Coelho',
+  'Gabriel Xavier',
+  'Paloma Andrade',
+  'Márcio Torres',
+  'Clara Moraes',
+  'Samuel Batista',
+  'Tânia Furtado',
+  'Davi Holanda',
+  'Renata Guimarães',
+  'Wagner Cunha',
+  'Adriana Miranda',
+  'Nelson Arruda',
+  'Olívia Castro',
+  'Rogério Pinto',
+  'Heloísa Martins',
+  'Fausto Bittencourt',
+] as const;
 
-export function ownerBandList(_communityId: string | null, _band: EngagementBand): OwnerBandList {
-  throw new Error('not implemented');
+/** The clock reading of slot j's last action, latest first. */
+const TIMES = [
+  '22:40',
+  '21:15',
+  '20:30',
+  '19:05',
+  '18:20',
+  '16:45',
+  '14:10',
+  '12:35',
+  '10:50',
+  '09:25',
+  '07:40',
+  '06:10',
+] as const;
+
+const PER_BAND = TIMES.length;
+
+/** Whole-base days since the last action, by band and slot: inside each band's window. */
+const WHOLE_DAYS: Record<EngagementBand, (j: number) => number> = {
+  new: (j) => j,
+  superfan: (j) => Math.floor(j / 4),
+  engaged: (j) => j,
+  occasional: (j) => 4 + 2 * j,
+  at_risk: (j) => 31 + 2 * j,
+  inactive: (j) => 64 + 9 * j,
+};
+
+/** Days since the last action in a community where the member sits one band lower. */
+const DROPPED_DAYS: Record<Exclude<EngagementBand, 'new'>, (whole: number, j: number) => number> = {
+  superfan: (whole) => whole + 5,
+  engaged: (whole) => whole + 10,
+  occasional: (_whole, j) => 30 + j,
+  at_risk: (_whole, j) => 60 + 5 * j,
+  inactive: (whole) => whole + 20,
+};
+
+/**
+ * Per community: from which slot a member has access (only the exclusive VIP is bought), and from
+ * which slot a member sits one band lower there (null = never).
+ */
+const COMMUNITY_RULES: Record<string, { accessFrom: number; dropFrom: number | null }> = {
+  'c-vip': { accessFrom: 2, dropFrom: null },
+  'c-geral': { accessFrom: 0, dropFrom: 10 },
+  'c-iniciantes': { accessFrom: 0, dropFrom: 6 },
+  'c-eventos': { accessFrom: 0, dropFrom: 3 },
+};
+
+const DAY_MS = 86_400_000;
+
+function daysBefore(isoDate: string, days: number): string {
+  return new Date(Date.parse(`${isoDate}T00:00:00Z`) - days * DAY_MS).toISOString().slice(0, 10);
+}
+
+function lowerBand(band: EngagementBand): EngagementBand {
+  const index = ENGAGEMENT_BAND_ORDER.indexOf(band);
+  return ENGAGEMENT_BAND_ORDER[Math.min(index + 1, ENGAGEMENT_BAND_ORDER.length - 1)] ?? band;
+}
+
+function at<T>(rows: readonly T[], index: number): T {
+  const row = rows[index];
+  if (row === undefined) throw new Error(`no row at index ${index}`);
+  return row;
+}
+
+function buildMember(bandIndex: number, j: number): OwnerRosterMember {
+  const i = bandIndex * PER_BAND + j;
+  const band = at(ENGAGEMENT_BAND_ORDER, bandIndex);
+  const time = at(TIMES, j);
+  const wholeDays = WHOLE_DAYS[band](j);
+  const joinedDaysAgo = band === 'new' ? 12 + j : 40 + 23 * bandIndex + 9 * j;
+
+  const communities: OwnerRosterMember['communities'] = {};
+  const eligible: string[] = [];
+  for (const [offset, { id }] of tenantOwnerPanel.byCommunity.entries()) {
+    const rule = COMMUNITY_RULES[id];
+    if (!rule) throw new Error(`no roster rule for community ${id}`);
+    if (j < rule.accessFrom) continue;
+    const drop = band !== 'new' && rule.dropFrom !== null && j >= rule.dropFrom;
+    if (drop) {
+      communities[id] = {
+        band: lowerBand(band),
+        lastActive: { daysAgo: DROPPED_DAYS[band](wholeDays, j), time },
+      };
+    } else {
+      communities[id] = { band, lastActive: { daysAgo: wholeDays + offset, time } };
+      eligible.push(id);
+    }
+  }
+
+  return {
+    id: `om-${String(i + 1).padStart(2, '0')}`,
+    name: at(MEMBER_NAMES, i),
+    memberSince: daysBefore(PREVIEW_TODAY, joinedDaysAgo),
+    band,
+    lastActive: { daysAgo: wholeDays, time },
+    topCommunityId: at(eligible, j % eligible.length),
+    communities,
+  };
+}
+
+export const ownerBandRoster: readonly OwnerRosterMember[] = ENGAGEMENT_BAND_ORDER.flatMap(
+  (_band, bandIndex) => Array.from({ length: PER_BAND }, (_, j) => buildMember(bandIndex, j)),
+);
+
+function bandCount(communityId: string | null, band: EngagementBand): number {
+  if (communityId === null) return tenantOwnerPanel.engagement.counts[band];
+  const entry = tenantOwnerPanel.communityEngagement.find((row) => row.id === communityId);
+  if (!entry) throw new Error(`no engagement bands for community ${communityId}`);
+  return entry.bands.counts[band];
+}
+
+/** Most recent first: fewer days ago, then a later clock reading, then the id. */
+function byRecency(a: OwnerBandMember, b: OwnerBandMember): number {
+  return (
+    a.lastActive.daysAgo - b.lastActive.daysAgo ||
+    (b.lastActive.time ?? '').localeCompare(a.lastActive.time ?? '') ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+/**
+ * The members of `band` in a scope (null = the whole base, else a `byCommunity` id; anything else
+ * throws): the `OWNER_BAND_LIST_LIMIT` most recent, with the scope's last action, and how many more
+ * the band count holds. Only the whole base says where each member interacts most.
+ */
+export function ownerBandList(communityId: string | null, band: EngagementBand): OwnerBandList {
+  const count = bandCount(communityId, band);
+  const members = ownerBandRoster
+    .flatMap((row): OwnerBandMember[] => {
+      if (communityId === null) {
+        if (row.band !== band) return [];
+        const { id, name, memberSince, lastActive, topCommunityId } = row;
+        return [{ id, name, memberSince, lastActive, topCommunityId }];
+      }
+      const entry = row.communities[communityId];
+      if (entry?.band !== band) return [];
+      return [
+        { id: row.id, name: row.name, memberSince: row.memberSince, lastActive: entry.lastActive },
+      ];
+    })
+    .sort(byRecency)
+    .slice(0, OWNER_BAND_LIST_LIMIT);
+  return { members, more: count - members.length };
 }

@@ -546,6 +546,12 @@
         "note": "{community}: {count, plural, one {# membro com acesso} other {# membros com acesso}}. Contam só as ações feitas nesta comunidade.",
         "movementNote": "Subiram e Caíram contam toda a base."
       },
+      "bandMembers": {
+        "summary": "{count} · {percent}",
+        "line": "Membro desde {since} · última atividade {when}",
+        "top": "Interage mais em {community}",
+        "more": "e mais {count, plural, one {# membro} other {# membros}}"
+      },
       "formats": {
         "title": "Interações por post, por formato",
         "summary": "{format} rende mais: {perPost} por post",
