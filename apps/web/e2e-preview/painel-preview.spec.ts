@@ -921,7 +921,6 @@ const BAND_LIST_SCOPES: {
   item: string | null;
   query: string;
   recover: string;
-  top: boolean;
 }[] = [
   {
     scope: 'Por membro',
@@ -929,7 +928,6 @@ const BAND_LIST_SCOPES: {
     item: null,
     query: '',
     recover: '168 em risco · 69 com push',
-    top: true,
   },
   ...[
     ['Comunidade VIP', 'vip', '22 em risco · 11 com push'],
@@ -942,7 +940,6 @@ const BAND_LIST_SCOPES: {
     item,
     query: `&recorte=comunidade&comunidade=${slug}`,
     recover,
-    top: false,
   })),
   ...[
     ['u1', '6 em risco · 3 com push'],
@@ -958,11 +955,17 @@ const BAND_LIST_SCOPES: {
     item: EVENT_CHIPS[['u1', 'u2', 'u3', 'e4', 'e3', 'e2', 'e1'].indexOf(id)] ?? `#${i}`,
     query: `&recorte=evento&evento=${id}`,
     recover,
-    top: false,
   })),
 ];
 
-for (const { scope, tab, item, query, recover, top } of BAND_LIST_SCOPES) {
+const CARD_LABELS = [
+  'Membro desde:',
+  'Última atividade:',
+  'Comunidade que mais interage:',
+  'Tempo médio diário:',
+];
+
+for (const { scope, tab, item, query, recover } of BAND_LIST_SCOPES) {
   test(`dono-do-cliente membros ${scope}: each band opens its members`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/painel-preview/dono-do-cliente?area=membros${query}`);
@@ -993,33 +996,46 @@ for (const { scope, tab, item, query, recover, top } of BAND_LIST_SCOPES) {
       const shown = Math.min(10, count);
       await expect(rows, label).toHaveCount(shown);
       for (const text of await rows.allTextContents()) {
-        expect(text).toContain('Membro desde');
-        expect(text).toContain('última atividade');
-        expect(text.includes('Interage mais em'), `${label}: ${text}`).toBe(top);
+        for (const part of CARD_LABELS) expect(text, `${label}: ${text}`).toContain(part);
       }
       const more = details.getByText(/^e mais \d+ membros?$/);
+      const recent = details.getByText('Os 10 com atividade mais recente', { exact: true });
+      const seeAll = details.getByRole('button', { name: 'Ver todos' });
       if (count > 10) {
         const left = count - shown;
         await expect(more, label).toHaveText(`e mais ${left} ${left === 1 ? 'membro' : 'membros'}`);
+        await expect(recent, label).toBeVisible();
+        await expect(seeAll, label).toBeDisabled();
       } else {
         await expect(more, label).toHaveCount(0);
+        await expect(recent, label).toHaveCount(0);
+        await expect(seeAll, label).toHaveCount(0);
       }
+      const empty = details.getByText('Nenhum membro nesta faixa.', { exact: true });
+      if (count === 0) await expect(empty, label).toBeVisible();
+      else await expect(empty, label).toHaveCount(0);
     }
 
     if (scope === 'Por membro') {
       await expect(bandDetails(bands, 'Em risco').getByText('e mais 158 membros')).toBeVisible();
       const first = bandDetails(bands, 'Novos').getByRole('listitem').first();
       await expect(first).toContainText('Luana Ferraz');
-      await expect(first).toContainText('Membro desde set. de 2026 · última atividade hoje 22:40');
-      await expect(first).toContainText('Interage mais em Geral');
+      await expect(first).toContainText('Membro desde: set. de 2026');
+      await expect(first).toContainText('Última atividade: hoje às 22:40');
+      await expect(first).toContainText('Comunidade que mais interage: Geral');
+      await expect(first).toContainText('Tempo médio diário: 18 min');
     }
     if (scope === 'Comunidade VIP') {
       await expect(bandDetails(bands, 'Inativos').getByText('e mais 8 membros')).toBeVisible();
     }
     if (scope === 'Iniciantes' || scope === 'Eventos') {
       const superfans = bandDetails(bands, 'Superfãs');
-      await expect(superfans.getByRole('listitem')).toHaveCount(scope === 'Iniciantes' ? 6 : 3);
+      const count = scope === 'Iniciantes' ? 6 : 3;
+      await expect(superfans.getByRole('listitem')).toHaveCount(count);
       await expect(superfans.getByText(/^e mais/)).toHaveCount(0);
+      await expect(superfans.locator('summary')).toContainText(`${count} · menos de 1%`);
+      const bar = superfans.locator('summary span[aria-hidden="true"] > span');
+      expect((await bar.boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(5);
     }
     if (scope === 'evento u1') {
       await expect(bandDetails(bands, 'Novos').locator('summary')).toContainText('14 · 15%');

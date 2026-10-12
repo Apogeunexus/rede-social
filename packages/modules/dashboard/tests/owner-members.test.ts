@@ -188,7 +188,9 @@ describe('ownerBandList', () => {
         expect([...list.members].sort(compareRecency), where).toEqual(list.members);
         for (const member of list.members) {
           expect(rosterBand(member.id, scope), `${where} ${member.id}`).toBe(band);
-          expect('topCommunityId' in member, `${where} ${member.id}`).toBe(scope.kind === 'member');
+          const roster = ownerBandRoster.find((row) => row.id === member.id);
+          expect(member.topCommunityId, `${where} ${member.id}`).toBe(roster?.topCommunityId);
+          expect(member.dailyMinutes, `${where} ${member.id}`).toEqual(roster?.dailyMinutes);
         }
       }
     }
@@ -264,5 +266,37 @@ describe('event registrations (quick 261012-qer B-2)', () => {
     for (const row of ownerBandRoster) {
       for (const id of row.eventIds) expect(ids.has(id), `${row.id} ${id}`).toBe(true);
     }
+  });
+});
+
+describe('the example daily time (quick 261012-qer B-1)', () => {
+  const MINUTES: Record<EngagementBand, (j: number) => number> = {
+    new: (j) => 18 + 2 * j,
+    superfan: (j) => 45 + 3 * j,
+    engaged: (j) => 25 + 2 * j,
+    occasional: (j) => 8 + j,
+    at_risk: (j) => 2 + (j % 3),
+    inactive: () => 0,
+  };
+
+  it('is an example (no usage sessions yet), a pure function of band and slot', () => {
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      const rows = ownerBandRoster.filter((row) => row.band === band);
+      for (const [j, row] of rows.entries()) {
+        expect(row.dailyMinutes, row.id).toEqual({
+          example: true,
+          reason: 'needs_usage_sessions',
+          value: MINUTES[band](j),
+        });
+      }
+    }
+  });
+
+  it('keeps the bands apart: superfãs spend the most time, inactive none', () => {
+    const range = (band: EngagementBand) =>
+      ownerBandRoster.filter((row) => row.band === band).map((row) => row.dailyMinutes.value);
+    expect(Math.min(...range('superfan'))).toBeGreaterThan(Math.max(...range('occasional')));
+    expect(Math.min(...range('engaged'))).toBeGreaterThan(Math.max(...range('at_risk')));
+    expect(range('inactive').every((value) => value === 0)).toBe(true);
   });
 });
