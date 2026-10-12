@@ -273,6 +273,19 @@ describe('proxy.ts — the access-level panels preview is public only outside pr
     expect(res.headers.get('location')).toBe('http://localhost:3000/entrar');
   });
 
+  it('production with DASHBOARD_PREVIEW_ENABLED="1": the preview is served, every other private path still 307s', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DASHBOARD_PREVIEW_ENABLED', '1');
+    const res = await anonymous('/painel-preview/dono-da-plataforma');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('location')).toBeNull();
+    for (const path of ['/painel-previewx', '/inicio', '/perfil', '/configuracoes']) {
+      const other = await anonymous(path);
+      expect(other.status, path).toBe(307);
+      expect(other.headers.get('location'), path).toBe('http://localhost:3000/entrar');
+    }
+  });
+
   it('development: a look-alike prefix and every other private path still 307 to /entrar', async () => {
     vi.stubEnv('NODE_ENV', 'development');
     for (const path of ['/painel-previewx', '/painel-preview-foo', '/inicio']) {

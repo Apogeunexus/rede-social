@@ -25,6 +25,16 @@ describe('dashboardPreviewEnabled', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(dashboardPreviewEnabled()).toBe(false);
   });
+
+  it('in production only DASHBOARD_PREVIEW_ENABLED="1" opts in; any other value keeps it off', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('DASHBOARD_PREVIEW_ENABLED', '1');
+    expect(dashboardPreviewEnabled()).toBe(true);
+    for (const value of ['', '0', 'true', 'TRUE', ' 1', '1 ', 'yes']) {
+      vi.stubEnv('DASHBOARD_PREVIEW_ENABLED', value);
+      expect(dashboardPreviewEnabled(), JSON.stringify(value)).toBe(false);
+    }
+  });
 });
 
 describe('DASHBOARD_PREVIEW_PATH', () => {

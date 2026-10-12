@@ -4,11 +4,14 @@
  *
  * Two independent locks keep it out of production: `proxy.ts` treats the prefix as public only when
  * `dashboardPreviewEnabled()`, and the preview layout and pages call `notFound()` when it is false.
- * `NODE_ENV` is read per call (tests flip it with `vi.stubEnv`); Next inlines it in a build, so in a
- * production bundle this is the constant `false`.
+ * `NODE_ENV` is read per call (tests flip it with `vi.stubEnv`); Next inlines it in a build.
+ *
+ * A production deploy that exists only to show the panels (a demo project, never a tenant's app) opts
+ * in with `DASHBOARD_PREVIEW_ENABLED=1` in that deploy's runtime env. Only the exact string "1"
+ * counts, so an unset, empty or "true" value keeps the preview out of production.
  */
 export function dashboardPreviewEnabled(): boolean {
-  return process.env.NODE_ENV !== 'production';
+  return process.env.NODE_ENV !== 'production' || process.env.DASHBOARD_PREVIEW_ENABLED === '1';
 }
 
 /** The preview prefix, anchored: `/painel-previewx` and `/painel-preview-foo` do not match. */
