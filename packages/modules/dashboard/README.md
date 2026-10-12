@@ -15,8 +15,8 @@ The package's `exports` map is the whole public surface; nothing else may be imp
 
 | Subpath | What it holds |
 |---|---|
-| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, and `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average). `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host) |
-| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel`, `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03): its metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown to the member |
+| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average), and `sumOf` (a picked number summed over rows), `perItem` (a total per item, rounded, 0 with no items) and `attendancePercent` (check-ins over confirmed RSVPs, unrounded) for the client owner's panel. `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host) |
+| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel` (in `fixtures/tenant-owner.ts`), `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03) and the client owner's panel (261012-o00 D-03): their metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown on screen (the tables below list it) |
 
 UI rules (MOD-02, PWA-03, UI-03): a component holds no route, no clock and no words — every string,
 href and formatted value is a prop decided by the web tier (`apps/web/components/dashboard`, copy in
@@ -65,6 +65,42 @@ of `curtidas`, `comentarios`, `salvamentos`, `compartilhamentos`, `posts-vistos`
   (saves, shares, posts, videos) has one pill next to its count; the stories list is measured
   (`story_views`) and only the time per story is example, so each row's time carries its own pill.
 - **Own data only.** Rows hold the member's own actions; authors are the creator or a community.
+
+### Client owner panel (level 4)
+
+The client owner's panel (`tenantOwnerPanel`, `fixtures/tenant-owner.ts`) has six areas, in this
+order: Visão geral, Membros, Conteúdo, Eventos, Financeiro and Atendimento. The web tier picks the
+area with `?area=<slug>` on the level-4 page, where the slug is one of `visao-geral`, `membros`,
+`conteudo`, `eventos`, `financeiro` and `atendimento` (an allow-list in
+`apps/web/lib/dashboard-preview.ts`); anything else, or no `area`, renders `visao-geral`. The tabs are
+plain links, so they work without JavaScript, and the header keeps the period and the alerts bell in
+every area. The bell holds three items: conversations waiting for an answer (no member is named), the
+event happening today with its seats left, and the members who entered "em risco" this week.
+
+Level-4 numbers equal level 5's where they describe the same thing (the support queue, the first
+response, today's event, attendance, communities, top posts, moderation, store products), and
+`tests/tenant-owner.test.ts` proves every sum. Percents and per-post figures are computed from the
+raw counts, never typed. The metrics the app does not collect yet are `ExampleValue`s with the
+"exemplo" pill next to the value they mark:
+
+| Metric | Source today | What must be collected (reason) |
+|---|---|---|
+| Salvamentos (posts que mais renderam) | none | Saves per post (`needs_saves`) |
+| Compartilhamentos (posts que mais renderam) | none | Shares per post (`needs_shares`) |
+| Alcance por post | none | Post views per member (`needs_post_views`) |
+| % assistido e conclusão (vídeos e reels) | none | Video playback per member (`needs_video_playback`) |
+| Lista de espera | only `events.capacity` (no waiting list) | A waiting list per full event: who joined it, who got a seat, who came (`needs_waitlist`) |
+| Acessos que vencem em 7 dias, taxa de renovação | the `store` access `expires_at` column, never set | Fill `expires_at` when a time-limited access is granted (`needs_access_expiry`) |
+| Conversão por produto | none | Product page visits (`needs_product_page_views`) |
+| Atendimentos por assunto | none | A subject on each support conversation (`needs_support_subject`) |
+| Crescimento (entraram, saíram, novos por semana) | memberships (joined / left dates) | measured |
+| Interações por post, por comunidade | likes + comments joined to `feed_posts.community_id` | measured |
+| Melhor dia e horário para publicar | likes + comments by the post's São Paulo publication weekday and hour | measured |
+| Visualizações por story | aggregate `story_views` (totals only, never who viewed) | measured |
+| Próximos eventos, comparecimento, presencial × online, quem vai | `events.capacity`, RSVPs "vou", check-ins and walk-ins | measured |
+| Receita por produto, quem compra | paid `store` orders by product, and by the buyer's band | measured |
+| Fila, 1ª resposta, atendimentos por semana, equipe | support chat conversations; staff answers from `chat_messages.author_user_id` | measured |
+| Moderação | removed comments, blocks and unblocks | measured |
 
 ## Events emitted
 
