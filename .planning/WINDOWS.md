@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 38
+open_count: 40
 waived_count: 0
-fixed_count: 42
-total_count: 80
-last_updated: 2026-10-12T15:15:54.051Z
+fixed_count: 43
+total_count: 83
+last_updated: 2026-10-12T22:47:57.287Z
 ---
 
 # Broken Windows Ledger
@@ -95,6 +95,9 @@ last_updated: 2026-10-12T15:15:54.051Z
 | 78 | quick-261012-fcr | deviation | apps/web/components/dashboard/PlatformSupportPanel.tsx |  | Level-3 floor hides superfãs (2) but the exact members total (310) and the other five band counts are shown, so the floored count is recoverable by subtraction; needs complement rounding or flooring the total | fixed |  | 2026-10-12T14:44:53.434Z | 2026-10-12T15:04:03.447Z |
 | 79 | quick-261012-gf5 | deviation | apps/web/components/dashboard/PlatformSupportPanel.tsx | 130 | Level-3 members KPI shows '+14 em 7 dias' next to '14 entraram': if the delta is net, joined - delta = departures in 7 days (0), a member count below the privacy floor; define the delta as gross joins or floor joined - delta (pre-existing since 261012-fcr) | open |  | 2026-10-12T15:15:53.971Z |  |
 | 80 | quick-261012-gf5 | deviation | packages/contracts/src/money.ts | 57 | formatBrlCompact leaves any negative value uncompacted (cents < 100_000 is true for negatives): -R$ 50.000,00 instead of -R$ 50 mil; no current caller passes negatives; tests lack 0 and negative cases | open |  | 2026-10-12T15:15:54.051Z |  |
+| 81 | quick-261012-qer | todo | apps/web/components/dashboard/TenantAdminPanel.tsx |  | Level 5 (admin do cliente) has no member list, so it does not get the member insights screen yet (261012-qer B-3, recorded as pending) | open |  | 2026-10-12T22:44:09.755Z |  |
+| 82 | quick-261012-qer | stub | apps/web/components/dashboard/BandMembers.tsx |  | Member cards and the insights header show initials on the brand color; the profile photo replaces them once real profiles are wired (261012-qer B-1) | open |  | 2026-10-12T22:44:09.842Z |  |
+| 83 | quick-261012-qer | unrun-verify | apps/web/components/dashboard/OwnerMemberDetail.tsx |  | critic and flow-critic reviews of the 261012-qer commits (4af4af0d..050a4f02) were not run: the executor cannot launch subagents | fixed |  | 2026-10-12T22:44:09.917Z | 2026-10-12T22:47:57.287Z |
 
 ````json
 [
@@ -1057,6 +1060,42 @@ last_updated: 2026-10-12T15:15:54.051Z
     "reason": "",
     "recorded_at": "2026-10-12T15:15:54.051Z",
     "resolved_at": null
+  },
+  {
+    "id": 81,
+    "kind": "todo",
+    "phase": "quick-261012-qer",
+    "file": "apps/web/components/dashboard/TenantAdminPanel.tsx",
+    "line": null,
+    "description": "Level 5 (admin do cliente) has no member list, so it does not get the member insights screen yet (261012-qer B-3, recorded as pending)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-12T22:44:09.755Z",
+    "resolved_at": null
+  },
+  {
+    "id": 82,
+    "kind": "stub",
+    "phase": "quick-261012-qer",
+    "file": "apps/web/components/dashboard/BandMembers.tsx",
+    "line": null,
+    "description": "Member cards and the insights header show initials on the brand color; the profile photo replaces them once real profiles are wired (261012-qer B-1)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-12T22:44:09.842Z",
+    "resolved_at": null
+  },
+  {
+    "id": 83,
+    "kind": "unrun-verify",
+    "phase": "quick-261012-qer",
+    "file": "apps/web/components/dashboard/OwnerMemberDetail.tsx",
+    "line": null,
+    "description": "critic and flow-critic reviews of the 261012-qer commits (4af4af0d..050a4f02) were not run: the executor cannot launch subagents",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-12T22:44:09.917Z",
+    "resolved_at": "2026-10-12T22:47:57.287Z"
   }
 ]
 ````
