@@ -142,11 +142,49 @@ describe('parseOwnerMembersView: the open band and member (quick 261012-qer B-3)
 
   it('accepts a roster id as the member, and nothing else', () => {
     expect(parseOwnerMembersView({}).memberId).toBeNull();
-    expect(parseOwnerMembersView({ membro: 'om-01' }).memberId).toBe('om-01');
-    expect(parseOwnerMembersView({ membro: 'om-72' }).memberId).toBe('om-72');
+    expect(parseOwnerMembersView({ faixa: 'novos', membro: 'om-01' }).memberId).toBe('om-01');
+    expect(parseOwnerMembersView({ faixa: 'inativos', membro: 'om-72' }).memberId).toBe('om-72');
     for (const membro of ['om-99', 'OM-01', 'om-1', '', '__proto__', 'constructor', ['om-01']]) {
-      expect(parseOwnerMembersView({ membro }).memberId, JSON.stringify(membro)).toBeNull();
+      for (const faixa of [undefined, 'novos', 'inativos']) {
+        expect(
+          parseOwnerMembersView({ faixa, membro }).memberId,
+          JSON.stringify({ faixa, membro }),
+        ).toBeNull();
+      }
     }
+  });
+
+  it('opens a member only from the band they hold in the scope (quick 261012-ri4 R-5)', () => {
+    expect(parseOwnerMembersView({ faixa: 'superfas', membro: 'om-13' }).memberId).toBe('om-13');
+    expect(parseOwnerMembersView({ membro: 'om-13' })).toEqual({
+      scope: { kind: 'member' },
+      band: null,
+      memberId: null,
+    });
+    expect(parseOwnerMembersView({ faixa: 'novos', membro: 'om-13' })).toEqual({
+      scope: { kind: 'member' },
+      band: 'new',
+      memberId: null,
+    });
+    const eventos = { recorte: 'comunidade', comunidade: 'eventos', membro: 'om-28' };
+    expect(parseOwnerMembersView({ ...eventos, faixa: 'ocasionais' }).memberId).toBe('om-28');
+    expect(parseOwnerMembersView({ ...eventos, faixa: 'engajados' })).toEqual({
+      scope: { kind: 'community', id: 'c-eventos' },
+      band: 'engaged',
+      memberId: null,
+    });
+    expect(
+      parseOwnerMembersView({
+        recorte: 'comunidade',
+        comunidade: 'vip',
+        faixa: 'superfas',
+        membro: 'om-13',
+      }).memberId,
+    ).toBeNull();
+    expect(
+      parseOwnerMembersView({ recorte: 'evento', evento: 'u1', faixa: 'inativos', membro: 'om-61' })
+        .memberId,
+    ).toBeNull();
   });
 
   it('keeps the scope next to the band and member', () => {

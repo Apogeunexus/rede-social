@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { EngagementBand, OwnerBandScope, RelativeMoment } from '../fixtures';
 import {
   OWNER_BAND_LIST_LIMIT,
+  ownerBandIncludes,
   ownerBandList,
   tenantOwnerPanel,
   tenantStaffPanel,
@@ -226,6 +227,37 @@ describe('ownerBandList', () => {
   it('throws for a community or an event the client does not have', () => {
     expect(() => ownerBandList({ kind: 'community', id: 'c-nope' }, 'new')).toThrow();
     expect(() => ownerBandList({ kind: 'event', id: 'e9' }, 'new')).toThrow();
+  });
+});
+
+describe('ownerBandIncludes (quick 261012-ri4 R-5)', () => {
+  it('holds a member only in their band of the scope', () => {
+    const eventos: OwnerBandScope = { kind: 'community', id: 'c-eventos' };
+    const vip: OwnerBandScope = { kind: 'community', id: 'c-vip' };
+    expect(ownerBandIncludes(eventos, 'occasional', 'om-28')).toBe(true);
+    expect(ownerBandIncludes(eventos, 'engaged', 'om-28')).toBe(false);
+    expect(ownerBandIncludes(vip, 'engaged', 'om-28')).toBe(true);
+    expect(ownerBandIncludes(vip, 'superfan', 'om-13')).toBe(false);
+    expect(ownerBandIncludes({ kind: 'event', id: 'u1' }, 'inactive', 'om-61')).toBe(false);
+    expect(ownerBandIncludes({ kind: 'member' }, 'new', 'om-99')).toBe(false);
+  });
+
+  it('agrees with every band list, and puts nobody in two bands of a scope', () => {
+    for (const scope of SCOPES) {
+      for (const band of ENGAGEMENT_BAND_ORDER) {
+        for (const member of ownerBandList(scope, band).members) {
+          expect(ownerBandIncludes(scope, band, member.id), `${scopeName(scope)} ${band}`).toBe(
+            true,
+          );
+        }
+      }
+      for (const row of ownerBandRoster) {
+        const bands = ENGAGEMENT_BAND_ORDER.filter((band) =>
+          ownerBandIncludes(scope, band, row.id),
+        );
+        expect(bands.length, `${scopeName(scope)} ${row.id}`).toBeLessThanOrEqual(1);
+      }
+    }
   });
 });
 
