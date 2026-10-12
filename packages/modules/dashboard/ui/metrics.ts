@@ -47,7 +47,16 @@ export function perItem(total: number, count: number): number {
  * follow the values, never the data's order (261012-oxi C-6).
  */
 export function topBy<T>(rows: readonly T[], score: (row: T) => number): T | undefined {
-  throw new Error('not implemented');
+  let best: T | undefined;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const row of rows) {
+    const value = score(row);
+    if (best === undefined || value > bestScore) {
+      best = row;
+      bestScore = value;
+    }
+  }
+  return best;
 }
 
 /** Check-ins as 0–100 of the confirmed RSVPs over a list of events, unrounded (0 for no RSVPs). */

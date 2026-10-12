@@ -10,6 +10,7 @@ import {
   percentOf,
   ResponsiveTable,
   sumOf,
+  topBy,
 } from '@rede-social/module-dashboard/ui';
 import { getTranslations } from 'next-intl/server';
 import { ExamplePill } from './ExamplePill';
@@ -36,7 +37,7 @@ export async function OwnerEvents() {
   const eventPercent = (row: (typeof past)[number]) =>
     Math.round(percentOf(row.checkIns, row.confirmed));
   const byPercent = [...past].sort((a, b) => eventPercent(b) - eventPercent(a));
-  const best = byPercent[0];
+  const best = topBy(past, eventPercent);
   const worst = byPercent.at(-1);
   const formats = FORMATS.map((format) => {
     const rows = past.filter((row) => row.format === format);
@@ -139,7 +140,7 @@ export async function OwnerEvents() {
       >
         <BarList
           max={100}
-          rows={past.map((row, i) => ({
+          rows={past.map((row) => ({
             id: row.id,
             label: row.name,
             value: eventPercent(row),
@@ -148,7 +149,7 @@ export async function OwnerEvents() {
               checkIns: formatCount(row.checkIns),
               confirmed: formatCount(row.confirmed),
             }),
-            highlight: i === 0,
+            highlight: row.id === best?.id,
           }))}
         />
         {walkInEvent ? (

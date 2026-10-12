@@ -268,10 +268,10 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
   atRiskWithPush: 69,
   growth: { joined: 96, left: 9, weeklyJoined: [14, 17, 15, 19, 18, 21, 16, 19, 20, 22, 23, 28] },
   byFormat: [
-    { type: 'video', posts: 18, interactions: 0 },
-    { type: 'gallery', posts: 15, interactions: 0 },
-    { type: 'text', posts: 20, interactions: 0 },
-    { type: 'link', posts: 8, interactions: 0 },
+    { type: 'video', posts: 18, interactions: 1729 },
+    { type: 'gallery', posts: 15, interactions: 1067 },
+    { type: 'text', posts: 20, interactions: 960 },
+    { type: 'link', posts: 8, interactions: 184 },
   ],
   byCommunity: [
     { id: 'c-vip', name: 'VIP', exclusive: true, posts: 22, interactions: 1650 },

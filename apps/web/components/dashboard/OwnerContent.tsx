@@ -8,6 +8,7 @@ import {
   percentOf,
   perItem,
   sumOf,
+  topBy,
 } from '@rede-social/module-dashboard/ui';
 import { Card } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
@@ -15,20 +16,18 @@ import { ExamplePill } from './ExamplePill';
 import { exampleBadge, formatCount, formatDayMonth, formatPercent } from './format';
 import { PanelSection } from './PanelSection';
 
-/** The row with the most likes + comments per post (the first on a tie). */
-function bestPerPost<T extends { posts: number; interactions: number }>(
-  rows: readonly T[],
-): T | undefined {
-  return [...rows].sort(
-    (a, b) => perItem(b.interactions, b.posts) - perItem(a.interactions, a.posts),
-  )[0];
+/** Likes + comments per post of a row, computed (C-4). */
+function perPostOf(row: { posts: number; interactions: number }): number {
+  return perItem(row.interactions, row.posts);
 }
 
 /**
  * Level 4, "Conteúdo": the posts that performed best (saves and shares are examples, marked next to
  * them), reach, video playback and stories (stories are aggregate only, never who viewed), then
  * closed: interactions per post by format and by community, the best day and time to publish, and
- * where members interact. The "exemplo" pill comes from each value's `example` flag (D-03).
+ * where members interact. Every "rende mais", best day/slot and top channel is picked by value with
+ * `topBy`, never by the data's order (C-6). The "exemplo" pill comes from each value's `example`
+ * flag (D-03).
  */
 export async function OwnerContent() {
   const t = await getTranslations('dashboard');
@@ -44,16 +43,14 @@ export async function OwnerContent() {
     engagement,
   } = tenantOwnerPanel;
   const base = bandTotal(engagement);
-  const formats = [...byFormat].sort(
-    (a, b) => perItem(b.interactions, b.posts) - perItem(a.interactions, a.posts),
-  );
+  const formats = [...byFormat].sort((a, b) => perPostOf(b) - perPostOf(a));
   const topFormat = formats[0];
   const formatPosts = sumOf(byFormat, (row) => row.posts);
-  const topCommunity = byCommunity[0];
+  const topCommunity = topBy(byCommunity, perPostOf);
   const communityPosts = sumOf(byCommunity, (row) => row.posts);
-  const bestDay = bestPerPost(publishing.byWeekday);
-  const bestSlot = bestPerPost(publishing.bySlot);
-  const topChannel = channels[0];
+  const bestDay = topBy(publishing.byWeekday, perPostOf);
+  const bestSlot = topBy(publishing.bySlot, perPostOf);
+  const topChannel = topBy(channels, (row) => row.count);
 
   return (
     <>
@@ -135,15 +132,15 @@ export async function OwnerContent() {
           title={t('tenantOwner.formats.title')}
           summary={t('tenantOwner.formats.summary', {
             format: t(`postTypes.${topFormat.type}`),
-            perPost: formatCount(perItem(topFormat.interactions, topFormat.posts)),
+            perPost: formatCount(perPostOf(topFormat)),
           })}
         >
           <BarList
             rows={formats.map((row, i) => ({
               id: row.type,
               label: t(`postTypes.${row.type}`),
-              value: perItem(row.interactions, row.posts),
-              display: formatCount(perItem(row.interactions, row.posts)),
+              value: perPostOf(row),
+              display: formatCount(perPostOf(row)),
               rate: t('tenantOwner.formats.posts', { count: row.posts }),
               highlight: i === 0,
             }))}
@@ -159,19 +156,19 @@ export async function OwnerContent() {
           title={t('tenantOwner.communities.title')}
           summary={t('tenantOwner.communities.summary', {
             name: topCommunity.name,
-            perPost: formatCount(perItem(topCommunity.interactions, topCommunity.posts)),
+            perPost: formatCount(perPostOf(topCommunity)),
           })}
         >
           <BarList
-            rows={byCommunity.map((row, i) => ({
+            rows={byCommunity.map((row) => ({
               id: row.id,
               label: row.exclusive
                 ? t('tenantAdmin.communities.exclusive', { name: row.name })
                 : row.name,
-              value: perItem(row.interactions, row.posts),
-              display: formatCount(perItem(row.interactions, row.posts)),
+              value: perPostOf(row),
+              display: formatCount(perPostOf(row)),
               rate: t('tenantOwner.formats.posts', { count: row.posts }),
-              highlight: i === 0,
+              highlight: row.id === topCommunity.id,
             }))}
           />
           <p className="text-xs text-text-secondary">
@@ -194,8 +191,8 @@ export async function OwnerContent() {
             rows={publishing.byWeekday.map((row) => ({
               id: row.weekday,
               label: t(`tenantOwner.bestTime.weekday.${row.weekday}`),
-              value: perItem(row.interactions, row.posts),
-              display: formatCount(perItem(row.interactions, row.posts)),
+              value: perPostOf(row),
+              display: formatCount(perPostOf(row)),
               rate: t('tenantOwner.formats.posts', { count: row.posts }),
               highlight: row === bestDay,
             }))}
@@ -207,8 +204,8 @@ export async function OwnerContent() {
             rows={publishing.bySlot.map((row) => ({
               id: `${row.fromHour}-${row.toHour}`,
               label: t('tenantOwner.bestTime.slot', { from: row.fromHour, to: row.toHour }),
-              value: perItem(row.interactions, row.posts),
-              display: formatCount(perItem(row.interactions, row.posts)),
+              value: perPostOf(row),
+              display: formatCount(perPostOf(row)),
               rate: t('tenantOwner.formats.posts', { count: row.posts }),
               highlight: row === bestSlot,
             }))}
@@ -226,12 +223,12 @@ export async function OwnerContent() {
           })}
         >
           <BarList
-            rows={channels.map((row, i) => ({
+            rows={channels.map((row) => ({
               id: row.channel,
               label: t(`tenantOwner.channels.${row.channel}`),
               value: row.count,
               display: formatCount(row.count),
-              highlight: i === 0,
+              highlight: row.channel === topChannel.channel,
             }))}
           />
         </Collapsible>
