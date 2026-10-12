@@ -449,6 +449,7 @@ describe('engagement by community (Membros, D-01)', () => {
           counts: { new: 14, superfan: 38, engaged: 61, occasional: 33, at_risk: 22, inactive: 18 },
           newActivated: 11,
         },
+        atRiskWithPush: 11,
       },
       {
         id: 'c-geral',
@@ -463,6 +464,7 @@ describe('engagement by community (Membros, D-01)', () => {
           },
           newActivated: 48,
         },
+        atRiskWithPush: 78,
       },
       {
         id: 'c-iniciantes',
@@ -477,6 +479,7 @@ describe('engagement by community (Membros, D-01)', () => {
           },
           newActivated: 31,
         },
+        atRiskWithPush: 49,
       },
       {
         id: 'c-eventos',
@@ -484,6 +487,7 @@ describe('engagement by community (Membros, D-01)', () => {
           counts: { new: 96, superfan: 3, engaged: 22, occasional: 88, at_risk: 97, inactive: 934 },
           newActivated: 14,
         },
+        atRiskWithPush: 40,
       },
     ]);
   });
@@ -526,6 +530,112 @@ describe('engagement by community (Membros, D-01)', () => {
         whole += engagement.counts[band];
         expect(community, `${row.id} ${band}`).toBeLessThanOrEqual(whole);
       }
+    }
+  });
+});
+
+describe('engagement by event registrants (Membros, quick 261012-qer B-2)', () => {
+  const { engagement, communityEngagement, eventEngagement, atRiskWithPush } = tenantOwnerPanel;
+  const allEvents = [...events.upcoming, ...events.past];
+
+  function entry(id: string) {
+    const row = eventEngagement.find((other) => other.id === id);
+    if (!row) throw new Error(`no event bands for ${id}`);
+    return row;
+  }
+
+  it('has one entry per panel event', () => {
+    expect(eventEngagement.map((row) => row.id).sort()).toEqual(
+      allEvents.map((row) => row.id).sort(),
+    );
+  });
+
+  it('pins every event’s bands and push reach', () => {
+    const pinned: Record<string, [number, number, number, number, number, number, number]> = {
+      u1: [14, 26, 34, 12, 6, 0, 3],
+      u2: [11, 12, 23, 14, 4, 0, 2],
+      u3: [3, 15, 16, 4, 2, 0, 1],
+      e4: [9, 9, 21, 17, 5, 0, 2],
+      e3: [6, 16, 18, 7, 3, 0, 1],
+      e2: [5, 28, 62, 41, 12, 0, 5],
+      e1: [1, 30, 45, 18, 6, 0, 3],
+    };
+    for (const [id, [n, s, e, o, r, i, push]] of Object.entries(pinned)) {
+      const row = entry(id);
+      expect(row.bands.counts, id).toEqual({
+        new: n,
+        superfan: s,
+        engaged: e,
+        occasional: o,
+        at_risk: r,
+        inactive: i,
+      });
+      expect(row.atRiskWithPush, id).toBe(push);
+    }
+  });
+
+  it('sums each event’s bands to its RSVPs "vou"', () => {
+    for (const event of allEvents) {
+      expect(bandTotal(entry(event.id).bands), event.id).toBe(event.confirmed);
+    }
+  });
+
+  it('never holds more members in a band than the whole base, and nobody inactive', () => {
+    for (const row of eventEngagement) {
+      for (const [band, count] of Object.entries(row.bands.counts)) {
+        expect(count, `${row.id} ${band}`).toBeLessThanOrEqual(
+          engagement.counts[band as keyof typeof engagement.counts],
+        );
+      }
+      expect(row.bands.counts.inactive, row.id).toBe(0);
+    }
+  });
+
+  it('counts every registrant novo as activated (an RSVP is a counted action)', () => {
+    for (const row of eventEngagement) {
+      expect(row.bands.newActivated, row.id).toBe(row.bands.counts.new);
+    }
+  });
+
+  it('keeps em risco within the no-shows of a past event', () => {
+    for (const event of events.past) {
+      expect(entry(event.id).bands.counts.at_risk, event.id).toBeLessThanOrEqual(
+        event.confirmed - event.checkIns,
+      );
+    }
+  });
+
+  it('draws past registrants mostly from superfãs and engajados, as attendanceByBand', () => {
+    const confirmed = sumOf(events.past, (row) => row.confirmed);
+    const strong = sumOf(events.past, (row) => {
+      const { superfan, engaged } = entry(row.id).bands.counts;
+      return superfan + engaged;
+    });
+    expect(strong * 2).toBeGreaterThan(confirmed);
+    const { superfan, engaged } = events.attendanceByBand;
+    const presences = sumOf(Object.values(events.attendanceByBand), (count) => count);
+    expect((superfan + engaged) * 2).toBeGreaterThan(presences);
+  });
+
+  it('reaches by push no more members than em risco, in every scope (A-2)', () => {
+    const scopes = [
+      { id: 'base', atRisk: engagement.counts.at_risk, push: atRiskWithPush },
+      ...communityEngagement.map((row) => ({
+        id: row.id,
+        atRisk: row.bands.counts.at_risk,
+        push: row.atRiskWithPush,
+      })),
+      ...eventEngagement.map((row) => ({
+        id: row.id,
+        atRisk: row.bands.counts.at_risk,
+        push: row.atRiskWithPush,
+      })),
+    ];
+    expect(scopes).toHaveLength(12);
+    for (const scope of scopes) {
+      expect(Number.isInteger(scope.push), scope.id).toBe(true);
+      expect(scope.push, scope.id).toBeGreaterThanOrEqual(0);
+      expect(scope.push, scope.id).toBeLessThanOrEqual(scope.atRisk);
     }
   });
 });

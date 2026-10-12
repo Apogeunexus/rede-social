@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EngagementBand, RelativeMoment } from '../fixtures';
+import type { EngagementBand, OwnerBandScope, RelativeMoment } from '../fixtures';
 import {
   OWNER_BAND_LIST_LIMIT,
   ownerBandList,
@@ -14,7 +14,8 @@ import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
  * reads more engaged in a community than in the whole base, and every list adds up to its band.
  */
 
-const { engagement, communityEngagement, byCommunity } = tenantOwnerPanel;
+const { engagement, communityEngagement, eventEngagement, byCommunity, events } = tenantOwnerPanel;
+const ALL_EVENTS = [...events.upcoming, ...events.past];
 
 /** Higher = more engaged; `new` sits apart (a novo is a novo in every scope). */
 const LEVEL: Record<Exclude<EngagementBand, 'new'>, number> = {
@@ -43,16 +44,24 @@ function joinedDaysAgo(memberSince: string): number {
   );
 }
 
-function scopeCount(scope: string | null, band: EngagementBand): number {
-  if (scope === null) return engagement.counts[band];
-  const entry = communityEngagement.find((row) => row.id === scope);
-  if (!entry) throw new Error(`no bands for ${scope}`);
-  return entry.bands.counts[band];
+function scopeBands(scope: OwnerBandScope) {
+  if (scope.kind === 'member') return engagement;
+  const rows = scope.kind === 'community' ? communityEngagement : eventEngagement;
+  const entry = rows.find((row) => row.id === scope.id);
+  if (!entry) throw new Error(`no bands for ${scope.id}`);
+  return entry.bands;
 }
 
-function scopeNewActivated(scope: string | null): number {
-  if (scope === null) return engagement.newActivated;
-  return communityEngagement.find((row) => row.id === scope)?.bands.newActivated ?? 0;
+function scopeCount(scope: OwnerBandScope, band: EngagementBand): number {
+  return scopeBands(scope).counts[band];
+}
+
+function scopeNewActivated(scope: OwnerBandScope): number {
+  return scopeBands(scope).newActivated;
+}
+
+function scopeName(scope: OwnerBandScope): string {
+  return scope.kind === 'member' ? 'all' : scope.id;
 }
 
 /** daysAgo asc, then time desc, then id asc. */
@@ -67,12 +76,18 @@ function compareRecency(
   );
 }
 
-const SCOPES: (string | null)[] = [null, ...byCommunity.map((row) => row.id)];
+const SCOPES: OwnerBandScope[] = [
+  { kind: 'member' },
+  ...byCommunity.map((row): OwnerBandScope => ({ kind: 'community', id: row.id })),
+  ...ALL_EVENTS.map((row): OwnerBandScope => ({ kind: 'event', id: row.id })),
+];
 
-function rosterBand(memberId: string, scope: string | null): EngagementBand | undefined {
+function rosterBand(memberId: string, scope: OwnerBandScope): EngagementBand | undefined {
   const member = ownerBandRoster.find((row) => row.id === memberId);
   if (!member) return undefined;
-  return scope === null ? member.band : member.communities[scope]?.band;
+  if (scope.kind === 'member') return member.band;
+  if (scope.kind === 'community') return member.communities[scope.id]?.band;
+  return member.eventIds.includes(scope.id) ? member.band : undefined;
 }
 
 describe('the band roster', () => {
@@ -165,7 +180,7 @@ describe('ownerBandList', () => {
     expect(OWNER_BAND_LIST_LIMIT).toBe(10);
     for (const scope of SCOPES) {
       for (const band of ENGAGEMENT_BAND_ORDER) {
-        const where = `${scope ?? 'all'} ${band}`;
+        const where = `${scopeName(scope)} ${band}`;
         const count = scopeCount(scope, band);
         const list = ownerBandList(scope, band);
         expect(list.members, where).toHaveLength(Math.min(OWNER_BAND_LIST_LIMIT, count));
@@ -173,7 +188,7 @@ describe('ownerBandList', () => {
         expect([...list.members].sort(compareRecency), where).toEqual(list.members);
         for (const member of list.members) {
           expect(rosterBand(member.id, scope), `${where} ${member.id}`).toBe(band);
-          expect('topCommunityId' in member, `${where} ${member.id}`).toBe(scope === null);
+          expect('topCommunityId' in member, `${where} ${member.id}`).toBe(scope.kind === 'member');
         }
       }
     }
@@ -183,24 +198,71 @@ describe('ownerBandList', () => {
     for (const scope of SCOPES) {
       for (const band of ENGAGEMENT_BAND_ORDER) {
         const inBand = ownerBandRoster.filter((row) => rosterBand(row.id, scope) === band);
-        expect(inBand.length, `${scope ?? 'all'} ${band}`).toBeLessThanOrEqual(
+        expect(inBand.length, `${scopeName(scope)} ${band}`).toBeLessThanOrEqual(
           scopeCount(scope, band),
         );
       }
       const novos = ownerBandRoster.filter((row) => rosterBand(row.id, scope) === 'new');
-      expect(novos.length, scope ?? 'all').toBeLessThanOrEqual(scopeNewActivated(scope));
+      expect(novos.length, scopeName(scope)).toBeLessThanOrEqual(scopeNewActivated(scope));
     }
   });
 
   it('carries the scope’s last activity', () => {
-    const list = ownerBandList('c-eventos', 'at_risk');
+    const list = ownerBandList({ kind: 'community', id: 'c-eventos' }, 'at_risk');
     for (const member of list.members) {
       const roster = ownerBandRoster.find((row) => row.id === member.id);
       expect(member.lastActive).toEqual(roster?.communities['c-eventos']?.lastActive);
     }
+    const event = ownerBandList({ kind: 'event', id: 'u1' }, 'engaged');
+    expect(event.members.length).toBeGreaterThan(0);
+    for (const member of event.members) {
+      const roster = ownerBandRoster.find((row) => row.id === member.id);
+      expect(member.lastActive).toEqual(roster?.lastActive);
+    }
   });
 
-  it('throws for a community the client does not have', () => {
-    expect(() => ownerBandList('c-nope', 'new')).toThrow();
+  it('throws for a community or an event the client does not have', () => {
+    expect(() => ownerBandList({ kind: 'community', id: 'c-nope' }, 'new')).toThrow();
+    expect(() => ownerBandList({ kind: 'event', id: 'e9' }, 'new')).toThrow();
+  });
+});
+
+describe('event registrations (quick 261012-qer B-2)', () => {
+  function eligible(memberSince: string, event: { id: string; date: string }): boolean {
+    const past = events.past.some((row) => row.id === event.id);
+    return !past || memberSince <= event.date;
+  }
+
+  it('registers, per event and band, the first eligible slots up to the band count', () => {
+    for (const event of ALL_EVENTS) {
+      const bands = eventEngagement.find((row) => row.id === event.id)?.bands;
+      if (!bands) throw new Error(`no bands for ${event.id}`);
+      for (const band of ENGAGEMENT_BAND_ORDER) {
+        const slots = ownerBandRoster.filter(
+          (row) => row.band === band && eligible(row.memberSince, event),
+        );
+        const expected = slots.slice(0, Math.min(bands.counts[band], 12)).map((row) => row.id);
+        const registered = ownerBandRoster
+          .filter((row) => row.band === band && row.eventIds.includes(event.id))
+          .map((row) => row.id);
+        expect(registered, `${event.id} ${band}`).toEqual(expected);
+      }
+    }
+  });
+
+  it('never registers a member for a past event they joined after', () => {
+    for (const row of ownerBandRoster) {
+      for (const id of row.eventIds) {
+        const past = events.past.find((event) => event.id === id);
+        if (past) expect(row.memberSince <= past.date, `${row.id} ${id}`).toBe(true);
+      }
+    }
+  });
+
+  it('only names panel events', () => {
+    const ids = new Set(ALL_EVENTS.map((row) => row.id));
+    for (const row of ownerBandRoster) {
+      for (const id of row.eventIds) expect(ids.has(id), `${row.id} ${id}`).toBe(true);
+    }
   });
 });
