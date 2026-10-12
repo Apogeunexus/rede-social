@@ -15,6 +15,7 @@ import { TenantStaffPanel } from '@/components/dashboard/TenantStaffPanel';
 import {
   dashboardPreviewEnabled,
   type PreviewSlug,
+  parseMemberList,
   parseStaffFunctions,
   previewLevel,
 } from '@/lib/dashboard-preview';
@@ -43,7 +44,7 @@ const PANELS: Record<PreviewSlug, (query: SearchParams) => ReactNode> = {
   'dono-do-cliente': () => <TenantOwnerPanel />,
   'admin-do-cliente': () => <TenantAdminPanel />,
   'equipe-do-cliente': (query) => <TenantStaffPanel {...parseStaffFunctions(query)} />,
-  membro: () => <MemberPanel />,
+  membro: (query) => <MemberPanel list={parseMemberList(query)} />,
 };
 
 /** One level of the preview: the allow-listed slug picks the panel; anything else is a 404. */

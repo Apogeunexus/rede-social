@@ -3,8 +3,10 @@ import { ActionCard, type ForYouCard, selectForYouCards } from '@rede-social/mod
 import { CalendarClock, CalendarDays, Lock, MessageCircle, Sparkles } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
+import type { MemberListSlug } from '@/lib/dashboard-preview';
 import { formatCount, formatMonthYear, initials } from './format';
 import { MemberActivity } from './MemberActivity';
+import { MemberActivityList } from './MemberActivityList';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection, PreviewAction } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
@@ -18,8 +20,11 @@ import { TenantColumn } from './TenantColumn';
  * absent or not measured is not a candidate, so the member never sees "Ainda não medido". Then the
  * "Sua atividade" report, which also holds the presence at events and the weekly streak. Own data
  * only: the member never sees their engagement band.
+ *
+ * With `list` (an allow-listed `?lista=` slug, quick 261012-hqr) the profile header stays and the
+ * list behind that report card replaces "Para você" and the report, with a "Voltar" link back.
  */
-export async function MemberPanel() {
+export async function MemberPanel({ list }: { list: MemberListSlug | null }) {
   const t = await getTranslations('dashboard');
   const { profile, forYou } = memberPanel;
   const { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity } = forYou;
@@ -104,13 +109,19 @@ export async function MemberPanel() {
         </div>
       </div>
 
-      {cards.length > 0 ? (
-        <PanelSection title={t('member.forYou.title')}>
-          <div className="flex flex-col gap-3">{cards.map((card) => renderCard[card]())}</div>
-        </PanelSection>
-      ) : null}
+      {list ? (
+        <MemberActivityList slug={list} />
+      ) : (
+        <>
+          {cards.length > 0 ? (
+            <PanelSection title={t('member.forYou.title')}>
+              <div className="flex flex-col gap-3">{cards.map((card) => renderCard[card]())}</div>
+            </PanelSection>
+          ) : null}
 
-      <MemberActivity />
+          <MemberActivity />
+        </>
+      )}
     </TenantColumn>
   );
 }

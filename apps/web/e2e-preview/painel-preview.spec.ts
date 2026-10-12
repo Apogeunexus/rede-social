@@ -820,3 +820,153 @@ test('membro: Sua atividade report', async ({ page }) => {
   await expect(page.getByText('Ainda não medido')).toHaveCount(0);
   await expect(page.getByText('Precisa registrar')).toHaveCount(0);
 });
+
+/** The drill-down lists behind the member report (quick 261012-hqr), one row per list. */
+interface MemberListCase {
+  slug: string;
+  card: string;
+  title: string;
+  rows: number;
+  count: string;
+  /** The whole list is example data: one pill next to the count. */
+  listExample: boolean;
+  /** Rows whose own value is example data: one pill each. */
+  rowExamples: number;
+  sample?: string;
+}
+
+const MEMBER_LIST_CASES: MemberListCase[] = [
+  {
+    slug: 'curtidas',
+    card: 'Curtidas',
+    title: 'Posts que você curtiu',
+    rows: 46,
+    count: '46 curtidas',
+    listExample: false,
+    rowExamples: 0,
+  },
+];
+
+/** The report cards that open a list, in report order. */
+const MEMBER_LIST_LABELS = ['Curtidas'];
+
+function memberCardLink(page: Page, label: string) {
+  return kpiCard(page, label).locator('xpath=ancestor::a[1]');
+}
+
+for (const list of MEMBER_LIST_CASES) {
+  test(`membro: the ${list.card} card opens its list and Voltar returns`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/painel-preview/membro');
+    await memberCardLink(page, list.card).click();
+    await expect(page).toHaveURL(new RegExp(`\\?lista=${list.slug}#lista$`));
+
+    const title = page.getByRole('heading', { level: 3, name: list.title, exact: true });
+    await expect(title).toBeVisible();
+    await expect(title).toBeInViewport();
+    await expect(page.getByText(list.count, { exact: true })).toBeVisible();
+    await expect(sectionTitled(page, list.title).getByRole('listitem')).toHaveCount(list.rows);
+    await expect(page.getByText('exemplo', { exact: true })).toHaveCount(
+      (list.listExample ? 1 : 0) + list.rowExamples,
+    );
+    if (list.sample) await expect(page.getByText(list.sample).first()).toBeVisible();
+    for (const heading of ['Para você', 'Sua atividade']) {
+      await expect(page.getByRole('heading', { name: heading, exact: true })).toHaveCount(0);
+    }
+    await expect(page.getByText('Precisa registrar')).toHaveCount(0);
+    await expect(page.getByText('Ainda não medido')).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Voltar', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`#atividade-${list.slug}$`));
+    await expect(
+      page.getByRole('heading', { level: 3, name: 'Sua atividade', exact: true }),
+    ).toBeVisible();
+    await expect(kpiCard(page, list.card)).toBeInViewport();
+  });
+}
+
+test('membro: an unknown lista falls back to the report', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const query of ['lista=xyz', 'lista=', 'lista=CURTIDAS', 'lista=curtidas&lista=curtidas']) {
+    await page.goto(`/painel-preview/membro?${query}`);
+    await expect(
+      page.getByRole('heading', { level: 3, name: 'Sua atividade', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Voltar', exact: true })).toHaveCount(0);
+  }
+});
+
+test('membro: only the list cards are links', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/membro');
+  await expect(page.locator('[data-phone-screen] a[href*="?lista="]')).toHaveCount(
+    MEMBER_LIST_LABELS.length,
+  );
+  for (const label of MEMBER_LIST_LABELS) {
+    await expect(memberCardLink(page, label)).toHaveCount(1);
+  }
+  await expect(page.getByText('Ver lista', { exact: true })).toHaveCount(MEMBER_LIST_LABELS.length);
+  for (const label of ['Média por dia', 'Presença nos encontros', 'Sequência']) {
+    await expect(memberCardLink(page, label)).toHaveCount(0);
+  }
+  await expect(sectionTitled(page, 'Onde você mais participa').locator('a')).toHaveCount(0);
+});
+
+test('membro: list links are keyboard-focusable with a visible ring', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  async function expectRing(link: Locator) {
+    await link.focus();
+    await expect(link).toBeFocused();
+    const ring = await link.evaluate((el) => ({
+      visible: el.matches(':focus-visible'),
+      shadow: getComputedStyle(el).boxShadow,
+    }));
+    expect(ring.visible).toBe(true);
+    expect(ring.shadow).not.toBe('none');
+  }
+
+  await page.goto('/painel-preview/membro');
+  await expectRing(memberCardLink(page, 'Curtidas'));
+  await page.goto('/painel-preview/membro?lista=curtidas');
+  await expectRing(page.getByRole('link', { name: 'Voltar', exact: true }));
+});
+
+test('membro: a list scrolls inside the phone at 1440x900', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/painel-preview/membro');
+  const screen = page.locator('[data-phone-screen]');
+  await memberCardLink(page, 'Curtidas').click();
+  await expect(page).toHaveURL(/\?lista=curtidas#lista$/);
+  await expect(
+    screen.getByRole('heading', { level: 3, name: 'Posts que você curtiu', exact: true }),
+  ).toBeInViewport();
+
+  const metrics = await screenMetrics(page);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  const scrolled = await screen.evaluate((el) => {
+    el.scrollBy(0, 300);
+    return { screen: el.scrollTop, window: window.scrollY };
+  });
+  expect(scrolled.screen).toBeGreaterThan(0);
+  expect(scrolled.window).toBe(0);
+
+  await screen.getByRole('link', { name: 'Voltar', exact: true }).click();
+  await expect(page).toHaveURL(/#atividade-curtidas$/);
+  await expect(kpiCard(page, 'Curtidas')).toBeInViewport();
+});
+
+for (const list of MEMBER_LIST_CASES) {
+  for (const width of PHONE_WIDTHS) {
+    test(`membro ?lista=${list.slug} at ${width}px: no horizontal scroll`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/painel-preview/membro?lista=${list.slug}`);
+      await expect(
+        page.getByRole('heading', { level: 3, name: list.title, exact: true }),
+      ).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    });
+  }
+}

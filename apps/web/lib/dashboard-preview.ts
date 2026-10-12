@@ -84,3 +84,40 @@ export function parseStaffFunctions(params: SearchParams): {
       : (functions[0] ?? null);
   return { functions, active };
 }
+
+/**
+ * The member report's drill-down lists (quick 261012-hqr), in canonical order: each slug is a
+ * `?lista=` value on the level-7 page.
+ */
+export const MEMBER_LISTS = ['curtidas'] as const;
+export type MemberListSlug = (typeof MEMBER_LISTS)[number];
+
+function isMemberList(value: unknown): value is MemberListSlug {
+  return (MEMBER_LISTS as readonly unknown[]).includes(value);
+}
+
+/**
+ * The list the query asks for (untrusted): `lista` only when it is a single string that is exactly
+ * an allow-listed slug, else null and the report renders. Only these constants ever reach markup or
+ * URLs.
+ */
+export function parseMemberList(params: SearchParams): MemberListSlug | null {
+  const raw = params.lista;
+  return typeof raw === 'string' && isMemberList(raw) ? raw : null;
+}
+
+/** The id of the list screen's wrapper: opening a list lands on it. */
+export const MEMBER_LIST_ANCHOR = 'lista';
+
+/** The id of the report card that opens `slug`: "Voltar" lands back on it. */
+export function memberCardAnchor(slug: MemberListSlug): string {
+  return `atividade-${slug}`;
+}
+
+export function memberListHref(slug: MemberListSlug): string {
+  return `${previewLevelPath('membro')}?lista=${slug}#${MEMBER_LIST_ANCHOR}`;
+}
+
+export function memberReportHref(slug: MemberListSlug): string {
+  return `${previewLevelPath('membro')}#${memberCardAnchor(slug)}`;
+}

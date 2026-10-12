@@ -29,6 +29,8 @@ export interface KpiCardProps {
   variant?: 'default' | 'missing';
   /** A small neutral pill next to the value ("exemplo"), already worded by the host. */
   badge?: string;
+  /** A last line under everything (e.g. the host's "Ver lista" when it makes the card a link). */
+  footer?: ReactNode;
 }
 
 const DIRECTION_ICON = { up: ArrowUp, down: ArrowDown, flat: Minus } as const;
@@ -53,6 +55,7 @@ export function KpiCard({
   chart,
   variant = 'default',
   badge,
+  footer,
 }: KpiCardProps) {
   const missing = variant === 'missing';
   const Arrow = delta ? DIRECTION_ICON[delta.direction] : null;
@@ -96,6 +99,7 @@ export function KpiCard({
       ) : null}
       {note ? <span className="text-xs text-text-tertiary">{note}</span> : null}
       {chart ? <div className="mt-1">{chart}</div> : null}
+      {footer ? <div className="mt-1">{footer}</div> : null}
     </Card>
   );
 }

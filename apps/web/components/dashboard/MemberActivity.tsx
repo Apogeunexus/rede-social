@@ -1,4 +1,4 @@
-import { memberPanel, type ReportValue } from '@rede-social/module-dashboard/fixtures';
+import { type Delta, memberPanel, type ReportValue } from '@rede-social/module-dashboard/fixtures';
 import {
   BarList,
   dailyAverageMinutes,
@@ -9,7 +9,10 @@ import {
   totalMinutes,
 } from '@rede-social/module-dashboard/ui';
 import { StatusPill } from '@rede-social/ui';
+import { ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
+import { type MemberListSlug, memberCardAnchor, memberListHref } from '@/lib/dashboard-preview';
 import {
   type DashboardT,
   formatCount,
@@ -22,6 +25,31 @@ import { PanelSection } from './PanelSection';
 /** The "exemplo" pill text for a fictional value; nothing for a measured one (D-03). */
 function exampleBadge(t: DashboardT, metric: ReportValue<unknown>): string | undefined {
   return metric.example ? t('member.activity.example') : undefined;
+}
+
+/**
+ * A report card that opens its list (quick 261012-hqr): the whole card is a plain link (a server
+ * navigation, no client JS) and carries the id "Voltar" returns to, unless another card already
+ * holds it (`anchor={false}`, so ids stay unique).
+ */
+function ListLink({
+  slug,
+  anchor = true,
+  children,
+}: {
+  slug: MemberListSlug;
+  anchor?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={memberListHref(slug)}
+      id={anchor ? memberCardAnchor(slug) : undefined}
+      className="grid scroll-mt-20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+    >
+      {children}
+    </a>
+  );
 }
 
 /**
@@ -38,13 +66,23 @@ export async function MemberActivity() {
   const { activity, profile } = memberPanel;
   const { usage, peakHours, engagement, seen, byCommunity } = activity;
   const days = usage.value.days;
-  const engagementCards = [
-    { key: 'likes', metric: engagement.likes },
+  const engagementCards: {
+    key: 'likes' | 'comments' | 'saves' | 'shares';
+    metric: ReportValue<{ count: number; delta: Delta }>;
+    list?: MemberListSlug;
+  }[] = [
+    { key: 'likes', metric: engagement.likes, list: 'curtidas' },
     { key: 'comments', metric: engagement.comments },
     { key: 'saves', metric: engagement.saves },
     { key: 'shares', metric: engagement.shares },
-  ] as const;
+  ];
   const peakBadge = exampleBadge(t, peakHours);
+  const seeList = (
+    <span className="flex items-center gap-1 text-xs font-bold text-brand">
+      {t('member.lists.seeList')}
+      <ChevronRight aria-hidden size={14} />
+    </span>
+  );
 
   return (
     <PanelSection title={t('member.activity.title')} prominent>
@@ -94,15 +132,25 @@ export async function MemberActivity() {
           period={t('member.activity.period')}
         >
           <KpiGrid>
-            {engagementCards.map(({ key, metric }) => (
-              <KpiCard
-                key={key}
-                label={t(`member.activity.engagement.${key}`)}
-                value={formatCount(metric.value.count)}
-                delta={kpiDelta(t, metric.value.delta)}
-                badge={exampleBadge(t, metric)}
-              />
-            ))}
+            {engagementCards.map(({ key, metric, list }) => {
+              const card = (
+                <KpiCard
+                  key={key}
+                  label={t(`member.activity.engagement.${key}`)}
+                  value={formatCount(metric.value.count)}
+                  delta={kpiDelta(t, metric.value.delta)}
+                  badge={exampleBadge(t, metric)}
+                  footer={list ? seeList : undefined}
+                />
+              );
+              return list ? (
+                <ListLink key={key} slug={list}>
+                  {card}
+                </ListLink>
+              ) : (
+                card
+              );
+            })}
           </KpiGrid>
         </PanelSection>
 

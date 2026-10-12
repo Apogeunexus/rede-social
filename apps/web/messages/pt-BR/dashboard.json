@@ -626,6 +626,15 @@
           "streakUnit": "{weeks, plural, one {semana} other {semanas}}",
           "streakNote": "com atividade toda semana"
         }
+      },
+      "lists": {
+        "back": "Voltar",
+        "seeList": "Ver lista",
+        "likes": {
+          "title": "Posts que você curtiu",
+          "count": "{count, plural, one {# curtida} other {# curtidas}}",
+          "line": "{community} · curtido {when}"
+        }
       }
     }
   }
