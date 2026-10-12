@@ -13,6 +13,7 @@ export {
   type ViewedPost,
   type WatchedVideo,
 } from './member-lists';
+export { type OwnerMemberInsights, ownerMemberInsights } from './owner-member-insights';
 export {
   OWNER_BAND_LIST_LIMIT,
   type OwnerBandList,

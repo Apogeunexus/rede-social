@@ -197,8 +197,16 @@ const COMMUNITY_RULES: Record<string, { accessFrom: number; dropFrom: number | n
 
 const DAY_MS = 86_400_000;
 
-function daysBefore(isoDate: string, days: number): string {
+/** The ISO date `days` before `isoDate` (negative = after). */
+export function daysBefore(isoDate: string, days: number): string {
   return new Date(Date.parse(`${isoDate}T00:00:00Z`) - days * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** Whole days from an ISO date to the preview's today. */
+export function daysSince(isoDate: string): number {
+  return Math.round(
+    (Date.parse(`${PREVIEW_TODAY}T00:00:00Z`) - Date.parse(`${isoDate}T00:00:00Z`)) / DAY_MS,
+  );
 }
 
 function lowerBand(band: EngagementBand): EngagementBand {
