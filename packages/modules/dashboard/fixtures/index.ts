@@ -25,9 +25,12 @@ export type {
   DeltaKind,
   EngagementBand,
   EngagementBands,
+  ExampleValue,
   KpiHint,
+  MeasuredValue,
   NotMeasured,
   NotMeasuredReason,
+  ReportValue,
   Tone,
 } from './shared';
 export {

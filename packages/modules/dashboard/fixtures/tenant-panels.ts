@@ -1,5 +1,5 @@
 import type { RelativeMoment } from './platform-panels';
-import type { Delta, EngagementBand, EngagementBands, NotMeasured } from './shared';
+import type { Delta, EngagementBand, EngagementBands, NotMeasured, ReportValue } from './shared';
 
 /**
  * The four tenant-side levels, all for the preview tenant (`previewTenant.displayName`): fictional
@@ -487,6 +487,31 @@ export interface MemberPanel {
     newSinceLastVisit?: { community: string; posts: number | NotMeasured };
     unlockedCommunity?: { name: string; posts: number };
   };
+  /**
+   * The "Sua atividade" report. The window is the last 7 complete São Paulo days, oldest first;
+   * every delta compares with the 7 days before and is `good: null` (the report never grades).
+   */
+  activity: {
+    /** Minutes in the app per day. */
+    usage: ReportValue<{ days: { date: string; minutes: number }[]; delta: Delta }>;
+    /** The two-hour slot the member uses the app most, in São Paulo hours. */
+    peakHours: ReportValue<{ fromHour: number; toHour: number }>;
+    /** The member's own actions in the window. */
+    engagement: {
+      likes: ReportValue<{ count: number; delta: Delta }>;
+      comments: ReportValue<{ count: number; delta: Delta }>;
+      saves: ReportValue<{ count: number; delta: Delta }>;
+      shares: ReportValue<{ count: number; delta: Delta }>;
+    };
+    /** What the member viewed in the window; stories are the member's own `story_views` rows. */
+    seen: {
+      posts: ReportValue<number>;
+      videos: ReportValue<{ count: number; minutes: number }>;
+      stories: ReportValue<number>;
+    };
+    /** The member's likes + comments joined to `feed_posts.community_id`, most first. */
+    byCommunity: ReportValue<{ id: string; name: string; interactions: number }[]>;
+  };
 }
 
 export const memberPanel: MemberPanel = {
@@ -513,5 +538,103 @@ export const memberPanel: MemberPanel = {
       posts: { measured: false, reason: 'needs_last_visit' },
     },
     unlockedCommunity: { name: 'Comunidade VIP', posts: 42 },
+  },
+  activity: {
+    usage: {
+      example: true,
+      reason: 'needs_usage_sessions',
+      value: {
+        days: [
+          { date: '2026-10-05', minutes: 32 },
+          { date: '2026-10-06', minutes: 41 },
+          { date: '2026-10-07', minutes: 28 },
+          { date: '2026-10-08', minutes: 45 },
+          { date: '2026-10-09', minutes: 36 },
+          { date: '2026-10-10', minutes: 52 },
+          { date: '2026-10-11', minutes: 32 },
+        ],
+        delta: {
+          amount: 6,
+          kind: 'minutes',
+          direction: 'down',
+          good: null,
+          basis: 'previous_7_days',
+        },
+      },
+    },
+    peakHours: {
+      example: true,
+      reason: 'needs_usage_sessions',
+      value: { fromHour: 20, toHour: 22 },
+    },
+    engagement: {
+      likes: {
+        example: false,
+        value: {
+          count: 46,
+          delta: {
+            amount: 8,
+            kind: 'count',
+            direction: 'up',
+            good: null,
+            basis: 'previous_7_days',
+          },
+        },
+      },
+      comments: {
+        example: false,
+        value: {
+          count: 12,
+          delta: {
+            amount: 3,
+            kind: 'count',
+            direction: 'up',
+            good: null,
+            basis: 'previous_7_days',
+          },
+        },
+      },
+      saves: {
+        example: true,
+        reason: 'needs_saves',
+        value: {
+          count: 9,
+          delta: {
+            amount: 2,
+            kind: 'count',
+            direction: 'up',
+            good: null,
+            basis: 'previous_7_days',
+          },
+        },
+      },
+      shares: {
+        example: true,
+        reason: 'needs_shares',
+        value: {
+          count: 3,
+          delta: {
+            amount: 1,
+            kind: 'count',
+            direction: 'down',
+            good: null,
+            basis: 'previous_7_days',
+          },
+        },
+      },
+    },
+    seen: {
+      posts: { example: true, reason: 'needs_post_views', value: 128 },
+      videos: { example: true, reason: 'needs_video_playback', value: { count: 41, minutes: 72 } },
+      stories: { example: false, value: 23 },
+    },
+    byCommunity: {
+      example: false,
+      value: [
+        { id: 'c-vip', name: 'Comunidade VIP', interactions: 31 },
+        { id: 'c-geral', name: 'Geral', interactions: 19 },
+        { id: 'c-eventos', name: 'Eventos', interactions: 8 },
+      ],
+    },
   },
 };

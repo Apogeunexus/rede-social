@@ -126,6 +126,16 @@ export function vsMedian(
   return interactions / median - 1;
 }
 
+/** The minutes of a window of days, summed (0 for no days). */
+export function totalMinutes(days: readonly { minutes: number }[]): number {
+  return days.reduce((total, day) => total + day.minutes, 0);
+}
+
+/** The average minutes per day of a window, rounded to whole minutes (0 for no days). */
+export function dailyAverageMinutes(days: readonly { minutes: number }[]): number {
+  return days.length === 0 ? 0 : Math.round(totalMinutes(days) / days.length);
+}
+
 /** A weekly streak shorter than this is not shown. */
 export const MIN_STREAK_WEEKS = 2;
 

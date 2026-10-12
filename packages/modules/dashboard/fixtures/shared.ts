@@ -16,6 +16,7 @@ export type DeltaBasis =
   | 'previous_24h'
   | 'yesterday'
   | 'last_7_days'
+  | 'previous_7_days'
   | 'average_30_days'
   | 'none';
 
@@ -71,7 +72,8 @@ export type NotMeasuredReason =
   | 'needs_shares'
   | 'needs_video_playback'
   | 'needs_product_page_views'
-  | 'needs_last_visit';
+  | 'needs_last_visit'
+  | 'needs_usage_sessions';
 
 /**
  * A metric the app does not collect yet: there is deliberately no value field, so no number can be
@@ -81,3 +83,23 @@ export interface NotMeasured {
   measured: false;
   reason: NotMeasuredReason;
 }
+
+/** A value the app collects today. */
+export interface MeasuredValue<T> {
+  example: false;
+  value: T;
+}
+
+/**
+ * A FICTIONAL value for a metric the app does not collect yet. This is the bounded exception to
+ * "NotMeasured has no value", for the member's "Sua atividade" report only (261012-h5t D-03): it
+ * always renders with the "exemplo" pill, and `reason` is never shown to the member.
+ */
+export interface ExampleValue<T> {
+  example: true;
+  value: T;
+  reason: NotMeasuredReason;
+}
+
+/** A member-report metric: measured, or an example the UI must mark as such. */
+export type ReportValue<T> = MeasuredValue<T> | ExampleValue<T>;

@@ -720,3 +720,29 @@ test('membro: three cards by priority, presence and streak, no band', async ({ p
     await expect(page.getByText(band, { exact: true })).toHaveCount(0);
   }
 });
+
+test('membro: Sua atividade report', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/membro');
+
+  const title = page.getByRole('heading', { level: 3, name: 'Sua atividade', exact: true });
+  await expect(title).toBeVisible();
+  const forYou = page.getByRole('heading', { level: 3, name: 'Para você', exact: true });
+  const titleY = (await title.boundingBox())?.y ?? Number.NaN;
+  const forYouY = (await forYou.boundingBox())?.y ?? Number.NaN;
+  expect(titleY).toBeGreaterThan(forYouY);
+  const report = sectionTitled(page, 'Sua atividade');
+  await expect(report.getByText('Últimos 7 dias', { exact: true })).toBeVisible();
+
+  for (const label of ['Salvamentos', 'Compartilhamentos']) {
+    await expect(kpiCard(page, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
+  for (const label of ['Curtidas', 'Comentários']) {
+    await expect(kpiCard(page, label).getByText('exemplo', { exact: true })).toHaveCount(0);
+  }
+  const likes = kpiCard(page, 'Curtidas');
+  await expect(likes).toContainText('46');
+  await expect(likes).toContainText('8 vs. semana anterior');
+  const engagement = sectionTitled(page, 'Seu engajamento');
+  await expect(engagement.getByText(/melhorou|piorou/)).toHaveCount(0);
+});

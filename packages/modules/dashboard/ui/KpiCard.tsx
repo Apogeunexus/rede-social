@@ -1,4 +1,4 @@
-import { Card, cn } from '@rede-social/ui';
+import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -27,6 +27,8 @@ export interface KpiCardProps {
   chart?: ReactNode;
   /** `missing`: a metric the app cannot measure yet — dashed border, muted value. */
   variant?: 'default' | 'missing';
+  /** A small neutral pill next to the value ("exemplo"), already worded by the host. */
+  badge?: string;
 }
 
 const DIRECTION_ICON = { up: ArrowUp, down: ArrowDown, flat: Minus } as const;
@@ -50,9 +52,21 @@ export function KpiCard({
   note,
   chart,
   variant = 'default',
+  badge,
 }: KpiCardProps) {
   const missing = variant === 'missing';
   const Arrow = delta ? DIRECTION_ICON[delta.direction] : null;
+  const valueSpan = (
+    <span
+      className={cn(
+        'font-extrabold tabular-nums leading-tight',
+        missing ? 'text-base text-text-tertiary' : 'text-2xl text-text',
+      )}
+    >
+      {value}
+      {unit ? <span className="ml-1 text-sm font-semibold text-text-secondary">{unit}</span> : null}
+    </span>
+  );
   return (
     <Card
       className={cn(
@@ -61,17 +75,16 @@ export function KpiCard({
       )}
     >
       <span className="text-xs font-bold text-text-secondary">{label}</span>
-      <span
-        className={cn(
-          'font-extrabold tabular-nums leading-tight',
-          missing ? 'text-base text-text-tertiary' : 'text-2xl text-text',
-        )}
-      >
-        {value}
-        {unit ? (
-          <span className="ml-1 text-sm font-semibold text-text-secondary">{unit}</span>
-        ) : null}
-      </span>
+      {badge ? (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {valueSpan}
+          <StatusPill tone="neutral" className="px-2 py-0.5">
+            {badge}
+          </StatusPill>
+        </div>
+      ) : (
+        valueSpan
+      )}
       {delta && Arrow ? (
         <span
           className={cn('flex items-center gap-1 text-xs font-semibold', TONE_CLASS[delta.tone])}

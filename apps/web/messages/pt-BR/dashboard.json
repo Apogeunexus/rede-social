@@ -51,6 +51,7 @@
       "previous_24h": "{amount} vs. 24h anteriores",
       "yesterday": "{amount} vs. ontem",
       "last_7_days": "{amount} em 7 dias",
+      "previous_7_days": "{amount} vs. semana anterior",
       "average_30_days": "{amount} vs. média de 30 dias",
       "none": "{amount}"
     },
@@ -74,7 +75,8 @@
       "needs_shares": "Precisa registrar os compartilhamentos",
       "needs_video_playback": "Precisa registrar a reprodução dos vídeos",
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
-      "needs_last_visit": "Precisa registrar a última visita de cada membro"
+      "needs_last_visit": "Precisa registrar a última visita de cada membro",
+      "needs_usage_sessions": "Precisa registrar as sessões de uso do app"
     },
     "belowFloor": "menos de {floor}",
     "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
@@ -582,6 +584,18 @@
         },
         "community": {
           "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"
+        }
+      },
+      "activity": {
+        "title": "Sua atividade",
+        "period": "Últimos 7 dias",
+        "example": "exemplo",
+        "engagement": {
+          "title": "Seu engajamento",
+          "likes": "Curtidas",
+          "comments": "Comentários",
+          "saves": "Salvamentos",
+          "shares": "Compartilhamentos"
         }
       }
     }

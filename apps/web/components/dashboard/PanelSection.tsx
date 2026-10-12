@@ -1,4 +1,4 @@
-import { Button, type ButtonVariant, cn, SectionTitle } from '@rede-social/ui';
+import { Button, type ButtonVariant, cn, SectionTitle, StatusPill } from '@rede-social/ui';
 import type { ReactNode } from 'react';
 import { PREVIEW_NOTE_ID } from '@/lib/dashboard-preview';
 
@@ -24,18 +24,30 @@ export interface PanelSectionProps {
   title: string;
   /** The section's disabled action label, on the right of the title. */
   action?: string;
+  /** A static period pill on the right of the title ("Últimos 7 dias"), like the panel header's. */
+  period?: string;
+  /** `h4` for a block nested in another section. */
+  as?: 'h3' | 'h4';
   children: ReactNode;
   className?: string;
 }
 
-/** A titled block of a panel (h3 under the level's h2). */
-export function PanelSection({ title, action, children, className }: PanelSectionProps) {
+/** A titled block of a panel (h3 under the level's h2, or h4 inside another section). */
+export function PanelSection({
+  title,
+  action,
+  period,
+  as = 'h3',
+  children,
+  className,
+}: PanelSectionProps) {
   return (
     <section className={cn('flex min-w-0 flex-col gap-3', className)}>
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3">
-        <SectionTitle as="h3" variant="group">
+        <SectionTitle as={as} variant="group">
           {title}
         </SectionTitle>
+        {period ? <StatusPill className="shrink-0">{period}</StatusPill> : null}
         {action ? <PreviewAction>{action}</PreviewAction> : null}
       </div>
       {children}

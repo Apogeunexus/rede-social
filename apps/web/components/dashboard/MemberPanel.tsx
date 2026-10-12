@@ -9,6 +9,7 @@ import { CalendarClock, CalendarDays, Lock, MessageCircle, Sparkles } from 'luci
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { formatCount, formatMonthYear, initials } from './format';
+import { MemberActivity } from './MemberActivity';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection, PreviewAction } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
@@ -123,6 +124,8 @@ export async function MemberPanel() {
           <div className="flex flex-col gap-3">{cards.map((card) => renderCard[card]())}</div>
         </PanelSection>
       ) : null}
+
+      <MemberActivity />
     </TenantColumn>
   );
 }

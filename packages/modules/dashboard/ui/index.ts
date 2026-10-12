@@ -16,6 +16,7 @@ export { LineChart, type LineChartProps } from './LineChart';
 export {
   type BandGroup,
   bandTotal,
+  dailyAverageMinutes,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
   FOR_YOU_PRIORITY,
@@ -32,6 +33,7 @@ export {
   PRIVACY_FLOOR,
   percentOf,
   selectForYouCards,
+  totalMinutes,
   vsMedian,
 } from './metrics';
 export {
