@@ -6,6 +6,8 @@ import {
   engagedPercent,
   interactedCount,
   interactedPercent,
+  isBelowPrivacyFloor,
+  PRIVACY_FLOOR,
   percentOf,
 } from '../ui/metrics';
 
@@ -86,5 +88,15 @@ describe('percentOf', () => {
   it('is 0 when the whole is not positive', () => {
     expect(percentOf(5, 0)).toBe(0);
     expect(percentOf(5, -1)).toBe(0);
+  });
+});
+
+describe('the privacy floor (D-02)', () => {
+  it('hides any count under 5', () => {
+    expect(PRIVACY_FLOOR).toBe(5);
+    expect(isBelowPrivacyFloor(4)).toBe(true);
+    expect(isBelowPrivacyFloor(0)).toBe(true);
+    expect(isBelowPrivacyFloor(5)).toBe(false);
+    expect(isBelowPrivacyFloor(37)).toBe(false);
   });
 });

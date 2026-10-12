@@ -1,7 +1,20 @@
 import { resolveBranding, tenantBrandingSchema } from '@rede-social/contracts/branding';
 import { describe, expect, it } from 'vitest';
-import { platformOwnerPanel, previewTenant, tenantAdminPanel, tenantOwnerPanel } from '../fixtures';
-import { bandTotal, interactedPercent } from '../ui/metrics';
+import {
+  platformAdminPanel,
+  platformOwnerPanel,
+  platformSupportPanel,
+  previewTenant,
+  tenantAdminPanel,
+  tenantOwnerPanel,
+} from '../fixtures';
+import {
+  bandTotal,
+  engagedPercent,
+  interactedPercent,
+  isBelowPrivacyFloor,
+  percentOf,
+} from '../ui/metrics';
 
 describe('previewTenant (the Igor Alves brand record)', () => {
   it('parses as a stored tenant branding', () => {
@@ -129,5 +142,74 @@ describe('tenantAdminPanel (level 5)', () => {
 
   it("measures stories against the client's member base", () => {
     expect(tenantAdminPanel.stories.memberBase).toBe(tenantOwnerPanel.kpis.members.count);
+  });
+});
+
+describe('platform engagement (levels 1–3)', () => {
+  const { engagement, kpis, clients } = platformOwnerPanel;
+  const client = (id: string) => clients.find((row) => row.id === id);
+
+  it('sums the platform bands to the members KPI and its percents', () => {
+    expect(bandTotal(engagement)).toBe(kpis.members.count);
+    expect(bandTotal(engagement)).toBe(8430);
+    expect(Math.round(interactedPercent(engagement))).toBe(kpis.members.interactedPercent);
+    expect(Math.round(engagedPercent(engagement))).toBe(22);
+  });
+
+  it("derives Dr. Igor Alves's row from the client's own bands", () => {
+    const bands = tenantOwnerPanel.engagement;
+    const igor = client('c-igor');
+    expect(igor?.engagedPercent).toBe(Math.round(engagedPercent(bands)));
+    expect(igor?.engagedPercent).toBe(22);
+    expect(igor?.atRiskPercent).toBe(Math.round(percentOf(bands.counts.at_risk, bandTotal(bands))));
+    expect(igor?.atRiskPercent).toBe(14);
+  });
+
+  it("derives Clube Corrida Sul's row from the support panel's bands", () => {
+    const bands = platformSupportPanel.engagement;
+    const corrida = client('c-corrida');
+    expect(corrida?.members).toBe(platformSupportPanel.kpis.members.count);
+    expect(bandTotal(bands)).toBe(310);
+    expect(corrida?.members).toBe(bandTotal(bands));
+    expect(corrida?.engagedPercent).toBe(Math.round(engagedPercent(bands)));
+    expect(corrida?.engagedPercent).toBe(3);
+    expect(corrida?.atRiskPercent).toBe(Math.round(percentOf(bands.counts.at_risk, 310)));
+    expect(corrida?.atRiskPercent).toBe(31);
+    expect(corrida?.interactedPercent).toBe(Math.round(interactedPercent(bands)));
+    expect(corrida?.interactedPercent).toBe(12);
+  });
+
+  it('exercises the privacy floor on the support bands', () => {
+    expect(isBelowPrivacyFloor(platformSupportPanel.engagement.counts.superfan)).toBe(true);
+  });
+
+  it("counts Dr. Igor Alves's order value in the platform store sales", () => {
+    const igor = kpis.storeSales.byClient.find((row) => row.clientId === 'c-igor');
+    expect(igor?.cents).toBe(tenantOwnerPanel.kpis.orderValue.cents);
+    expect(igor?.cents).toBe(894000);
+  });
+
+  it("alerts on Escola Horizonte's drop to its current engaged share", () => {
+    const drop = platformAdminPanel.pending.find((item) => item.kind === 'engagement_drop');
+    expect(drop && 'toPercent' in drop ? drop.toPercent : undefined).toBe(
+      client('c-horizonte')?.engagedPercent,
+    );
+    expect(client('c-horizonte')?.engagedPercent).toBe(12);
+  });
+
+  it('never grows from one activation step to the next, ending at 10 active members', () => {
+    const counts = platformAdminPanel.activation.map((step) => step.clients);
+    for (let i = 1; i < counts.length; i += 1) {
+      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1] ?? 0);
+    }
+    expect(platformAdminPanel.activation.at(-1)).toEqual({
+      step: 'ten_active_members',
+      clients: 2,
+    });
+  });
+
+  it('never has more new members who never acted than joined', () => {
+    const { newNeverActed7d } = platformSupportPanel.kpis;
+    expect(newNeverActed7d.count).toBeLessThanOrEqual(newNeverActed7d.joined);
   });
 });

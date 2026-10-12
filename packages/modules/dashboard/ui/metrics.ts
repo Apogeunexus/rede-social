@@ -41,3 +41,11 @@ export function interactedPercent(bands: EngagementBands): number {
 export function engagedPercent(bands: EngagementBands): number {
   return percentOf(bands.counts.superfan + bands.counts.engaged, bandTotal(bands));
 }
+
+/** Counts of a client's members or devices below this are shown as "menos de 5" to platform support (D-02). */
+export const PRIVACY_FLOOR = 5;
+
+/** Whether a count is small enough to re-identify someone (`count < PRIVACY_FLOOR`). */
+export function isBelowPrivacyFloor(_count: number): boolean {
+  throw new Error('not implemented');
+}
