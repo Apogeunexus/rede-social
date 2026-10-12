@@ -6,7 +6,7 @@ status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
 last_updated: "2026-10-12T21:19:48.704Z"
 last_activity: 2026-10-12
-last_activity_desc: Completed quick task 261012-qer (scope tabs, member cards, member insights)
+last_activity_desc: Completed quick task 261012-ri4 (member card and insights polish)
 state_head: e6d196e408a10fbcc5143800219283b9dd20ec2e
 progress:
   total_phases: 17
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-25)
 Phase: 08.1 — Multi-Tenant Identity (INSERTED)
 Plan: 08.1-08 pending (contract release)
 Status: Release 1 pending merge, push and production deploy
-Last activity: 2026-10-12 - Completed quick task 261012-qer: scope tabs, member cards, member insights
+Last activity: 2026-10-12 - Completed quick task 261012-ri4: member card and insights polish
 
 Progress: [█░░░░░░░░░] 6%
 
@@ -693,6 +693,7 @@ None yet.
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261012-ri4 | Acabamento do cartão e da tela do membro (desenho do usuário, seta, uma pílula por lista, duas faixas, link validado) | 2026-10-12 | 1b130e8 | complete | [261012-ri4-acabamento-do-cartao-e-da-tela-do-membro](./quick/261012-ri4-acabamento-do-cartao-e-da-tela-do-membro/) |
 | 261012-qer | Filtros Por membro/comunidade/evento, cartão do membro e tela de insights do membro | 2026-10-12 | 050a4f0 | complete | [261012-qer-ajustes-de-fluxo-nas-faixas-por-comunida](./quick/261012-qer-ajustes-de-fluxo-nas-faixas-por-comunida/) |
 | 261012-pkd | Faixas de engajamento por comunidade com lista de membros por faixa | 2026-10-12 | 79f756b | complete | [261012-pkd-faixas-de-engajamento-por-comunidade-com](./quick/261012-pkd-faixas-de-engajamento-por-comunidade-com/) |
 | 261012-oxi | Correções das revisões do painel do dono em seis áreas | 2026-10-12 | e181dfc | complete | [261012-oxi-corrigir-achados-das-revisoes-do-painel-](./quick/261012-oxi-corrigir-achados-das-revisoes-do-painel-/) |
