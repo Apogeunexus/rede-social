@@ -649,7 +649,7 @@
       "events": {
         "title": "Eventos",
         "summary": "comparecimento {percent}",
-        "footnote": "Check-in ÷ confirmados. +{count} pessoas sem confirmação no {event}."
+        "footnote": "Check-in ÷ inscritos. +{count} pessoas sem inscrição no {event}."
       },
       "communities": {
         "title": "Comunidades",
