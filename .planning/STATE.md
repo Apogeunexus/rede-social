@@ -4,10 +4,10 @@ current_phase: 08.1
 current_phase_name: Multi-Tenant Identity (INSERTED)
 status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
-last_updated: "2026-10-12T21:14:40.737Z"
+last_updated: "2026-10-12T21:19:48.704Z"
 last_activity: 2026-10-12
 last_activity_desc: Completed quick task 261012-oxi (owner panel review fixes)
-state_head: b69777f7114feabb06c1c7cc556f882c98a8db5a
+state_head: e6d196e408a10fbcc5143800219283b9dd20ec2e
 progress:
   total_phases: 17
   completed_phases: 4
@@ -732,6 +732,7 @@ None yet.
 | 261009-8fz | Stop exposing the public schema through the Supabase Data API: PostgREST serves only the empty `data_api_closed` schema (08.2 review CR-01 follow-up); production closes on the next deploy (config push), verify with the DEPLOY.md curl proof | 2026-10-09 | 63b91e0 | — | [261009-8fz-stop-exposing-the-public-schema-through-](./quick/261009-8fz-stop-exposing-the-public-schema-through-/) |
 | 36 | Opt-in DASHBOARD_PREVIEW_ENABLED=1 para mostrar os painéis num deploy de demonstração | 2026-10-12 | 8a85b2ea | — | — |
 | 39 | Nível 5 passa a dizer check-in ÷ inscritos, igual ao nível 4 | 2026-10-12 | b69777f7 | — | — |
+| 40 | Abas do painel do dono em duas fileiras de três, mesma largura | 2026-10-12 | e6d196e4 | — | — |
 
 ### Roadmap Evolution
 
