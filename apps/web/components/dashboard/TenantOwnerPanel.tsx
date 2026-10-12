@@ -87,10 +87,15 @@ export async function TenantOwnerPanel({ area }: TenantOwnerPanelProps) {
       />
 
       <nav aria-label={t('tenantOwner.areas.label')}>
-        <ul className="flex flex-wrap gap-2">
+        {/* Six areas as two rows of three equal tabs spanning the whole bar. */}
+        <ul className="grid grid-cols-3 gap-2">
           {OWNER_AREAS.map((slug) => (
-            <li key={slug}>
-              <Chip href={ownerAreaHref(slug)} active={slug === area}>
+            <li key={slug} className="min-w-0">
+              <Chip
+                href={ownerAreaHref(slug)}
+                active={slug === area}
+                className="w-full justify-center text-center"
+              >
                 {t(AREAS[slug].labelKey)}
               </Chip>
             </li>
