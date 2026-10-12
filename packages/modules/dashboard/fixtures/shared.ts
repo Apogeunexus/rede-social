@@ -35,3 +35,48 @@ export interface Delta {
 export type KpiHint = 'no_comparison_yet' | 'should_stay_zero';
 
 export type Tone = 'success' | 'warning' | 'danger' | 'neutral';
+
+/**
+ * The engagement segmentation of one tenant's members (role `member`, status `active`).
+ *
+ * Counted actions: like, comment, post, RSVP "vou", check-in or walk-in, paid order. Support
+ * messages and moderated (removed) comments do not count. An active day is a São Paulo calendar day
+ * with at least one counted action; the window is the last 30 rolling days.
+ *
+ * The bands are exclusive, evaluated in this order (the first that matches wins):
+ * 1. `new`: joined less than 30 days ago.
+ * 2. `superfan`: 12+ active days in 30 AND 3+ strong actions (comment, post, check-in, order) in 30.
+ * 3. `engaged`: 4+ active days in 30.
+ * 4. `occasional`: 1–3 active days in 30.
+ * 5. `at_risk`: no active day in the last 30, at least one in days 31–60.
+ * 6. `inactive`: no active day in 60.
+ *
+ * "Interagiu" = superfãs + engajados + ocasionais + novos ativados, so it always matches the bands.
+ */
+export type EngagementBand = 'new' | 'superfan' | 'engaged' | 'occasional' | 'at_risk' | 'inactive';
+
+export interface EngagementBands {
+  /** Members (role member, status active) per exclusive band, evaluated in ENGAGEMENT_BAND_ORDER. */
+  counts: Record<EngagementBand, number>;
+  /** Novos (joined < 30 days) with at least one counted action. */
+  newActivated: number;
+}
+
+/** What the app must start collecting before the metric can be measured. */
+export type NotMeasuredReason =
+  | 'needs_billing_per_client'
+  | 'needs_post_views'
+  | 'needs_saves'
+  | 'needs_shares'
+  | 'needs_video_playback'
+  | 'needs_product_page_views'
+  | 'needs_last_visit';
+
+/**
+ * A metric the app does not collect yet: there is deliberately no value field, so no number can be
+ * shown for it (it reads "Ainda não medido" with its reason).
+ */
+export interface NotMeasured {
+  measured: false;
+  reason: NotMeasuredReason;
+}

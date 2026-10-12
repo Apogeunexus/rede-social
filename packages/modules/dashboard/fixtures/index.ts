@@ -18,7 +18,18 @@ export {
   type SupportErrorKind,
 } from './platform-panels';
 export { type PreviewTenant, previewTenant } from './preview-tenant';
-export type { Delta, DeltaBasis, DeltaDirection, DeltaKind, KpiHint, Tone } from './shared';
+export type {
+  Delta,
+  DeltaBasis,
+  DeltaDirection,
+  DeltaKind,
+  EngagementBand,
+  EngagementBands,
+  KpiHint,
+  NotMeasured,
+  NotMeasuredReason,
+  Tone,
+} from './shared';
 export {
   type MemberPanel,
   memberPanel,
