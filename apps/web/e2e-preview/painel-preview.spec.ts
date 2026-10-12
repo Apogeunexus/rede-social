@@ -741,7 +741,9 @@ test('membro: Sua atividade report', async ({ page }) => {
   const forYouY = (await forYou.boundingBox())?.y ?? Number.NaN;
   expect(titleY).toBeGreaterThan(forYouY);
   const report = sectionTitled(page, 'Sua atividade');
-  await expect(report.getByText('Últimos 7 dias', { exact: true })).toBeVisible();
+  // Each block states its own window: four 7-day blocks, presence over 30 days.
+  await expect(report.getByText('Últimos 7 dias', { exact: true })).toHaveCount(4);
+  await expect(report.getByText('Últimos 30 dias', { exact: true })).toHaveCount(1);
 
   for (const label of ['Salvamentos', 'Compartilhamentos']) {
     await expect(kpiCard(page, label).getByText('exemplo', { exact: true })).toHaveCount(1);

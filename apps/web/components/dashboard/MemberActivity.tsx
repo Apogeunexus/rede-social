@@ -47,9 +47,13 @@ export async function MemberActivity() {
   const peakBadge = exampleBadge(t, peakHours);
 
   return (
-    <PanelSection title={t('member.activity.title')} period={t('member.activity.period')}>
+    <PanelSection title={t('member.activity.title')} prominent>
       <div className="flex flex-col gap-6">
-        <PanelSection as="h4" title={t('member.activity.usage.title')}>
+        <PanelSection
+          as="h4"
+          title={t('member.activity.usage.title')}
+          period={t('member.activity.period')}
+        >
           <KpiCard
             label={t('member.activity.usage.average')}
             value={formatCount(dailyAverageMinutes(days))}
@@ -84,7 +88,11 @@ export async function MemberActivity() {
           </p>
         </PanelSection>
 
-        <PanelSection as="h4" title={t('member.activity.engagement.title')}>
+        <PanelSection
+          as="h4"
+          title={t('member.activity.engagement.title')}
+          period={t('member.activity.period')}
+        >
           <KpiGrid>
             {engagementCards.map(({ key, metric }) => (
               <KpiCard
@@ -98,7 +106,11 @@ export async function MemberActivity() {
           </KpiGrid>
         </PanelSection>
 
-        <PanelSection as="h4" title={t('member.activity.seen.title')}>
+        <PanelSection
+          as="h4"
+          title={t('member.activity.seen.title')}
+          period={t('member.activity.period')}
+        >
           <KpiGrid>
             <KpiCard
               label={t('member.activity.seen.posts')}
@@ -124,7 +136,11 @@ export async function MemberActivity() {
           </KpiGrid>
         </PanelSection>
 
-        <PanelSection as="h4" title={t('member.activity.communities.title')}>
+        <PanelSection
+          as="h4"
+          title={t('member.activity.communities.title')}
+          period={t('member.activity.period')}
+        >
           <BarList
             rows={byCommunity.value.map((row, i) => ({
               id: row.id,
@@ -137,7 +153,11 @@ export async function MemberActivity() {
           <p className="text-xs text-text-secondary">{t('member.activity.communities.caption')}</p>
         </PanelSection>
 
-        <PanelSection as="h4" title={t('member.activity.presence.title')}>
+        <PanelSection
+          as="h4"
+          title={t('member.activity.presence.title')}
+          period={t('member.activity.presencePeriod')}
+        >
           <KpiGrid>
             <KpiCard
               label={t('member.activity.presence.attendance')}

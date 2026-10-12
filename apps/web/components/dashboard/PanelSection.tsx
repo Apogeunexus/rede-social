@@ -28,6 +28,8 @@ export interface PanelSectionProps {
   period?: string;
   /** `h4` for a block nested in another section. */
   as?: 'h3' | 'h4';
+  /** A section that groups other sections (e.g. the member's report) reads one level above them. */
+  prominent?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -38,13 +40,18 @@ export function PanelSection({
   action,
   period,
   as = 'h3',
+  prominent = false,
   children,
   className,
 }: PanelSectionProps) {
   return (
     <section className={cn('flex min-w-0 flex-col gap-3', className)}>
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3">
-        <SectionTitle as={as} variant="group">
+        <SectionTitle
+          as={as}
+          variant="group"
+          className={prominent ? 'text-base font-extrabold text-text' : undefined}
+        >
           {title}
         </SectionTitle>
         {period ? <StatusPill className="shrink-0">{period}</StatusPill> : null}

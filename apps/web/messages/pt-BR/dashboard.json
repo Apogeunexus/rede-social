@@ -291,7 +291,7 @@
       }
     },
     "duration": "{hours}h{minutes}",
-    "durationLong": "{hours, plural, =0 {{minutes} min} other {# h {minutes} min}}",
+    "durationLong": "{hours, plural, =0 {{minutes} min} other {{hours} h{minutes, plural, =0 {} other { # min}}}}",
     "clock": "{minutes}:{seconds}",
     "actionsPerActiveMember": "{actions} ações por membro ativo",
     "bands": {
@@ -588,6 +588,7 @@
       "activity": {
         "title": "Sua atividade",
         "period": "Últimos 7 dias",
+        "presencePeriod": "Últimos 30 dias",
         "example": "exemplo",
         "usage": {
           "title": "Tempo de uso",
