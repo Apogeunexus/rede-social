@@ -114,6 +114,13 @@ export function formatMonthShort(isoMonth: string): string {
   return MONTH_SHORT.format(new Date(`${isoMonth}-01T00:00:00Z`)).replace('.', '');
 }
 
+const WEEKDAY_SHORT = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: 'UTC' });
+
+/** `2026-10-05` -> `seg` (a chart's x labels: no trailing dot). */
+export function formatWeekdayShort(isoDate: string): string {
+  return WEEKDAY_SHORT.format(new Date(`${isoDate}T00:00:00Z`)).replace('.', '');
+}
+
 function deltaAmount(t: DashboardT, delta: Delta): string {
   switch (delta.kind) {
     case 'percent':
@@ -156,6 +163,11 @@ export function formatDuration(t: DashboardT, minutes: number): string {
     hours: Math.floor(minutes / 60),
     minutes: String(minutes % 60).padStart(2, '0'),
   });
+}
+
+/** `266` minutes -> `4 h 26 min`; under an hour -> `38 min` (a duration in a sentence). */
+export function formatHoursMinutes(t: DashboardT, minutes: number): string {
+  return t('durationLong', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
 /** `252` seconds -> `4:12` (a video's length). */

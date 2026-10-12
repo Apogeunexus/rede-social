@@ -1,10 +1,5 @@
 import { memberPanel, previewTenant } from '@rede-social/module-dashboard/fixtures';
-import {
-  ActionCard,
-  type ForYouCard,
-  MIN_STREAK_WEEKS,
-  selectForYouCards,
-} from '@rede-social/module-dashboard/ui';
+import { ActionCard, type ForYouCard, selectForYouCards } from '@rede-social/module-dashboard/ui';
 import { CalendarClock, CalendarDays, Lock, MessageCircle, Sparkles } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -16,11 +11,12 @@ import { TenantColumn } from './TenantColumn';
 
 /**
  * Level 7, "Membro": what is there for me now that I must not miss? Not a new page in the app: the
- * profile header with the member's presence at events and weekly streak (from 2 weeks), then a
- * "Para você" block of at most three cards, by priority: the next event (with the check-in) > a
- * support reply (unread dot) > an access about to expire (renew) > news since the last visit (once
- * last visits are recorded) > a community the member's purchase unlocked. A card whose data is
- * absent or not measured is not a candidate, so the member never sees "Ainda não medido". Own data
+ * profile header (name and "Membro desde"), then a "Para você" block of at most three cards, by
+ * priority: the next event (with the check-in) > a support reply (unread dot) > an access about to
+ * expire (renew) > news since the last visit (once last visits are recorded) > a community the
+ * member's purchase unlocked. A card whose data is
+ * absent or not measured is not a candidate, so the member never sees "Ainda não medido". Then the
+ * "Sua atividade" report, which also holds the presence at events and the weekly streak. Own data
  * only: the member never sees their engagement band.
  */
 export async function MemberPanel() {
@@ -105,17 +101,6 @@ export async function MemberPanel() {
           <p className="text-xs text-text-secondary">
             {t('member.memberSince', { date: formatMonthYear(profile.memberSince) })}
           </p>
-          <p className="text-xs text-text-secondary">
-            {t('member.attendance', {
-              attended: formatCount(profile.attendance.attended),
-              total: formatCount(profile.attendance.events),
-            })}
-          </p>
-          {profile.weeklyStreak >= MIN_STREAK_WEEKS ? (
-            <p className="text-xs text-text-secondary">
-              {t('member.streak', { weeks: profile.weeklyStreak })}
-            </p>
-          ) : null}
         </div>
       </div>
 

@@ -714,8 +714,17 @@ test('membro: three cards by priority, presence and streak, no band', async ({ p
   await expect(page.getByText('Ainda não medido')).toHaveCount(0);
   await expect(page.getByText('Precisa registrar')).toHaveCount(0);
 
-  await expect(page.getByText('Presença nos encontros: 3 de 4', { exact: true })).toBeVisible();
-  await expect(page.getByText('Sequência: 6 semanas', { exact: true })).toBeVisible();
+  const attendance = kpiCard(page, 'Presença nos encontros');
+  for (const text of ['3', 'de 4', 'nos últimos 30 dias'])
+    await expect(attendance).toContainText(text);
+  const streak = kpiCard(page, 'Sequência');
+  for (const text of ['6', 'semanas']) await expect(streak).toContainText(text);
+  await expect(page.getByText('Presença nos encontros', { exact: true })).toHaveCount(1);
+  await expect(
+    sectionTitled(page, 'Presença e constância').getByText('Presença nos encontros', {
+      exact: true,
+    }),
+  ).toHaveCount(1);
   for (const band of ['Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos']) {
     await expect(page.getByText(band, { exact: true })).toHaveCount(0);
   }
@@ -745,4 +754,67 @@ test('membro: Sua atividade report', async ({ page }) => {
   await expect(likes).toContainText('8 vs. semana anterior');
   const engagement = sectionTitled(page, 'Seu engajamento');
   await expect(engagement.getByText(/melhorou|piorou/)).toHaveCount(0);
+
+  expect((await report.locator('h4').allTextContents()).map((text) => text.trim())).toEqual([
+    'Tempo de uso',
+    'Seu engajamento',
+    'O que você viu',
+    'Onde você mais participa',
+    'Presença e constância',
+  ]);
+
+  const average = kpiCard(page, 'Média por dia');
+  for (const text of ['38', '4 h 26 min na semana', '6 min vs. semana anterior']) {
+    await expect(average).toContainText(text);
+  }
+  await expect(average.getByText(/melhorou|piorou/)).toHaveCount(0);
+  const usage = sectionTitled(page, 'Tempo de uso');
+  const chart = usage.locator('svg[role="img"]');
+  await expect(chart).toHaveCount(1);
+  await expect(chart).toHaveAttribute('aria-label', 'Minutos de uso por dia, de segunda a domingo');
+  expect(
+    (await chart.locator('[data-x-label]').allTextContents()).map((text) => text.trim()),
+  ).toEqual(['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']);
+  const peak = page.getByText('Horário em que você mais usa: 20h–22h', { exact: true });
+  await expect(peak).toBeVisible();
+  await expect(peak.locator('..')).toContainText('exemplo');
+
+  await expect(page.getByText('exemplo', { exact: true })).toHaveCount(7);
+  for (const label of [
+    'Média por dia',
+    'Salvamentos',
+    'Compartilhamentos',
+    'Posts vistos',
+    'Vídeos e reels',
+    'Tempo em vídeos e reels',
+  ]) {
+    await expect(kpiCard(page, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
+  for (const label of [
+    'Curtidas',
+    'Comentários',
+    'Stories vistos',
+    'Presença nos encontros',
+    'Sequência',
+  ]) {
+    await expect(kpiCard(page, label).getByText('exemplo', { exact: true })).toHaveCount(0);
+  }
+  const communities = sectionTitled(page, 'Onde você mais participa');
+  await expect(communities.getByText('exemplo', { exact: true })).toHaveCount(0);
+
+  const seenValues: [string, string][] = [
+    ['Posts vistos', '128'],
+    ['Stories vistos', '23'],
+    ['Vídeos e reels', '41'],
+    ['Tempo em vídeos e reels', '1 h 12 min'],
+  ];
+  for (const [label, value] of seenValues) await expect(kpiCard(page, label)).toContainText(value);
+
+  const rows = (await communities.getByRole('listitem').allTextContents()).map((text) =>
+    text.replace(/\s+/g, ' ').trim(),
+  );
+  expect(rows).toEqual(['Comunidade VIP31', 'Geral19', 'Eventos8']);
+
+  await expect(page.getByText('Ainda não medido')).toHaveCount(0);
+  await expect(page.getByText('Precisa registrar')).toHaveCount(0);
 });

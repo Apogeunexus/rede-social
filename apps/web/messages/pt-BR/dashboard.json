@@ -291,6 +291,7 @@
       }
     },
     "duration": "{hours}h{minutes}",
+    "durationLong": "{hours, plural, =0 {{minutes} min} other {# h {minutes} min}}",
     "clock": "{minutes}:{seconds}",
     "actionsPerActiveMember": "{actions} ações por membro ativo",
     "bands": {
@@ -560,8 +561,6 @@
         "subtitle": "Perfil"
       },
       "memberSince": "Membro desde {date}",
-      "attendance": "Presença nos encontros: {attended} de {total}",
-      "streak": "Sequência: {weeks, plural, one {# semana} other {# semanas}}",
       "forYou": {
         "title": "Para você",
         "event": {
@@ -590,12 +589,41 @@
         "title": "Sua atividade",
         "period": "Últimos 7 dias",
         "example": "exemplo",
+        "usage": {
+          "title": "Tempo de uso",
+          "average": "Média por dia",
+          "unit": "min",
+          "weekTotal": "{duration} na semana",
+          "chartLabel": "Minutos de uso por dia, de segunda a domingo",
+          "peak": "Horário em que você mais usa: {from}h–{to}h"
+        },
         "engagement": {
           "title": "Seu engajamento",
           "likes": "Curtidas",
           "comments": "Comentários",
           "saves": "Salvamentos",
           "shares": "Compartilhamentos"
+        },
+        "seen": {
+          "title": "O que você viu",
+          "posts": "Posts vistos",
+          "stories": "Stories vistos",
+          "videos": "Vídeos e reels",
+          "videosUnit": "{count, plural, one {assistido} other {assistidos}}",
+          "videoTime": "Tempo em vídeos e reels"
+        },
+        "communities": {
+          "title": "Onde você mais participa",
+          "caption": "Curtidas e comentários nos posts de cada comunidade"
+        },
+        "presence": {
+          "title": "Presença e constância",
+          "attendance": "Presença nos encontros",
+          "attendanceOf": "de {total}",
+          "attendanceWindow": "nos últimos 30 dias",
+          "streak": "Sequência",
+          "streakUnit": "{weeks, plural, one {semana} other {semanas}}",
+          "streakNote": "com atividade toda semana"
         }
       }
     }
