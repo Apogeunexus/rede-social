@@ -105,14 +105,33 @@ one per row (261012-oxi C-3):
 | Moderação | removed comments, blocks and unblocks | measured |
 | Faixas por comunidade | the counted actions joined to the community, plus access for the base (paid access for the exclusive VIP, membership for the others) | measured |
 | Membros de cada faixa | the same per-member band, plus the member's last counted action | measured |
+| Faixas por evento | the whole-base band of each member with an RSVP "vou" to the event | measured |
+| Insights do membro | one member's counted actions, RSVPs and check-ins, paid orders and support conversation counts; daily time, posts seen and access expiry are examples | measured + examples |
 
-#### Faixas por comunidade e membros de cada faixa (261012-pkd)
+#### Faixas por comunidade e membros de cada faixa (261012-pkd, 261012-qer)
 
-The "Faixas de engajamento" block of the Membros area has a scope: Toda a base, or one community
-(Comunidade VIP, Geral, Iniciantes, Eventos). The web tier reads `?comunidade=<slug>` through an
-allow-list in `apps/web/lib/owner-communities.ts`, where the slug is the fixture id without its `c-`
-prefix; anything else renders Toda a base. The scope chips are plain links that keep `area=membros`
-and end in `#faixas`, so they land on the block and work without JavaScript.
+The "Faixas de engajamento" block of the Membros area opens with three equal tabs (261012-qer B-2):
+**Por membro** (the whole base), **Por comunidade** and **Por evento**. The last two add a second
+row: the four communities (Comunidade VIP first) or the seven panel events (upcoming soonest first,
+then past most recent first, each as "name · dd/mm"). The web tier reads `?recorte=`, `?comunidade=`
+and `?evento=` through the allow-lists in `apps/web/lib/owner-band-scope.ts` (the community slug is
+the fixture id without its `c-` prefix, the event value is its id). An unknown or repeated `recorte`,
+or a bare legacy `?comunidade=`, renders Por membro; an unknown community or event under a valid
+`recorte` renders that row's first item. Every tab and chip is a plain link that keeps
+`area=membros` and ends in `#faixas`, so it lands on the block and works without JavaScript.
+
+Por evento shows today's whole-base band of everyone who RSVP'd "vou" to the event
+(`eventEngagement`). `tests/tenant-owner.test.ts` proves that each event's bands sum to its
+`confirmed`, that no band exceeds the base's, that nobody is inactive (no fixture RSVP is older than
+60 days), that a past event's em risco fit in its no-shows (a check-in within 30 days makes a member
+active today), and that past registrants are mostly superfãs and engajados, as `attendanceByBand`.
+Every registrant acted (the RSVP), so the "Novos: X ativados de Y" line is hidden in event mode. The
+roster knows each member's registrations: per event and band, the first eligible slots up to the
+band count, never a past event the member joined after.
+
+The "Recuperar quem está em risco" card follows the scope (A-2): the whole base reads 168 em risco
+with 69 reachable by push, and each community and event carries its own `atRiskWithPush`, always
+between 0 and its em risco.
 
 A community's bands follow the same rules as the whole base, counting only the member's actions in
 that community. Its base is who has access: the exclusive VIP counts who bought it (186), the other
@@ -124,18 +143,51 @@ Caíram stay whole-base (a planner decision: per-community movement would need i
 line says so whenever a community is selected.
 
 Each band is a closed `<details>` whose summary reads "count · percent" with a mini share bar (only
-Em risco is solid). Opened, it lists the 10 members of the band with the most recent activity in the
-scope, then "e mais N membros" for the rest of the band count. On Toda a base each row also says
-where the member interacts most ("Interage mais em …"). The roster behind the lists
+Em risco is solid). A band with members whose share rounds to 0% reads "menos de 1%", and its bar
+keeps a 6 px minimum (A-1). Opened, it lists the 10 members of the band with the most recent
+activity in the scope. A band over 10 says "Os 10 com atividade mais recente" on top and ends with
+"e mais N membros" beside a disabled "Ver todos" (A-3); a band with 0 members opens to "Nenhum membro
+nesta faixa." (A-4, live in every event's Inativos). The body keys on the band count, so it always
+agrees with the summary.
+
+Each member is a card (B-1): an initials circle on the brand color (the profile photo replaces the
+initials once real profiles are wired), the name, and four labeled lines: Membro desde, Última
+atividade ("hoje às 22:40", "ontem às HH:MM", else "há N dias"), Comunidade que mais interage (in
+every scope) and Tempo médio diário, an example (`needs_usage_sessions`) with its "exemplo" pill on
+that line. The roster behind the lists
 (`fixtures/owner-members.ts`) is a fixed table of 72 fictional names, 12 per band, and a pure builder
 with no randomness and no clock. A member keeps their band or drops one level in a community, never
 rises, and their last activity there is never more recent than overall; `tests/owner-members.test.ts`
 proves this, the band windows, and that every list adds up to its band count.
 
-**Privacy (261012-pkd D-03, user decision).** Until this task, the level-4 panel showed only counts.
-The band lists now show member names and their engagement level to the client's team. Before real
-data is wired, the app's privacy notice must tell members that the client's team sees each member's
-engagement level. Platform levels 1–3 keep aggregates only.
+#### Insights do membro (261012-qer B-3)
+
+Tapping a member card opens that member's insights in place of the Membros area
+(`&faixa=<band>&membro=om-NN`; `faixa` is one of six slugs and `membro` a roster id, anything else
+renders the area). "Voltar" returns to the same scope with the same band open, at `#faixas`. Top to
+bottom: the header (initials, name, band pill, Membro desde, top community); the last 30 days
+(active days, likes, comments, strong actions, plus the example daily time and posts seen); the
+band 60 and 30 days ago and today with a 12-week chart of active days; where they interact
+(communities and post types); their event registrations and presences; their purchases (the access
+expiry is an example, `needs_access_expiry`); support as counts and dates only; and a suggestion by
+band whose button is disabled like every preview action.
+
+`fixtures/owner-member-insights.ts` builds it from the roster row, purely. Every number comes from
+one set of active days per member, never after the last action nor before joining, so the 30-day
+counts, the weekly chart and the band history agree with each other and with the band rules.
+Attended events and the VIP purchase (exactly the members with VIP access, at 19700 cents) are active
+days. Across the roster, each event's attendees stay within its check-ins, the 30-day VIP purchases
+within the 21 VIP orders and the support conversations within the 8 weeks' 127.
+`tests/owner-member-insights.test.ts` proves all of it over the 72 members, and that the support
+object has no field for message text.
+
+**Privacy (261012-pkd D-03, 261012-qer B-1/B-3, user decisions).** Until 261012-pkd, the level-4
+panel showed only counts. The band lists show member names and their engagement level to the
+client's team, and the insights screen shows one member's individual behavior: 30-day numbers,
+events, purchases and support counts, never message text. Before real data is wired, the app's
+privacy notice must tell members that the client's management sees each member's individual
+behavior. Platform levels 1–3 keep aggregates only. Only `OwnerMemberDetail.tsx` reads
+`ownerMemberInsights`, and only `BandMembers.tsx` reads `ownerBandList`.
 
 #### Para quando os dados reais forem ligados
 
@@ -158,8 +210,11 @@ says what will appear there and when. What each one renders today with no rows:
   empty bar card.
 - **Conversão por produto** (`OwnerFinance`): the "visitas à página → compra" summary with its pill
   and, opened, an empty bar card.
-- **Faixas de engajamento** (`BandMembers`, 261012-pkd): a band with 0 members renders "0 · 0%" and
-  opens to nothing, so it needs a pt-BR empty sentence.
+- **Faixas de engajamento** (`BandMembers`): done in 261012-qer A-4. A band with 0 members reads
+  "0 · 0%" and opens to "Nenhum membro nesta faixa.".
+
+Level 5 (admin do cliente) has no member list, so it does not get the insights screen yet
+(261012-qer B-3, pending).
 
 Expiring access shown as measured (C-8, accepted, out of scope). Level 6 (`TenantStaffPanel`,
 `tenantStaffPanel.store.expiringAccess7d`) shows "Acessos que vencem em 7 dias: 6" as a measured
