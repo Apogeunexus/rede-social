@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tenantAdminPanel, tenantOwnerPanel, tenantStaffPanel } from '../fixtures';
-import { attendancePercent, percentOf, perItem, sumOf, topBy } from '../ui/metrics';
+import { attendancePercent, bandTotal, percentOf, perItem, sumOf, topBy } from '../ui/metrics';
 
 /**
  * D-05 (quick 261012-o00): every number the client owner's panel shows agrees with the rest of the
@@ -430,5 +430,102 @@ describe('moderation', () => {
   it('equals level 5’s removals, blocks and unblocks', () => {
     const { removedComments, blocks, unblocks } = tenantAdminPanel.moderation;
     expect(moderation).toEqual({ removedComments, blocks, unblocks });
+  });
+});
+
+describe('engagement by community (Membros, D-01)', () => {
+  const { engagement, communityEngagement } = tenantOwnerPanel;
+  const PREFIX = ['superfan', 'engaged', 'occasional', 'at_risk'] as const;
+
+  it('has one entry per community, in byCommunity order', () => {
+    expect(communityEngagement.map((row) => row.id)).toEqual(byCommunity.map((row) => row.id));
+  });
+
+  it('pins every community’s bands', () => {
+    expect(communityEngagement).toEqual([
+      {
+        id: 'c-vip',
+        bands: {
+          counts: { new: 14, superfan: 38, engaged: 61, occasional: 33, at_risk: 22, inactive: 18 },
+          newActivated: 11,
+        },
+      },
+      {
+        id: 'c-geral',
+        bands: {
+          counts: {
+            new: 96,
+            superfan: 41,
+            engaged: 150,
+            occasional: 170,
+            at_risk: 190,
+            inactive: 593,
+          },
+          newActivated: 48,
+        },
+      },
+      {
+        id: 'c-iniciantes',
+        bands: {
+          counts: {
+            new: 96,
+            superfan: 6,
+            engaged: 38,
+            occasional: 104,
+            at_risk: 120,
+            inactive: 876,
+          },
+          newActivated: 31,
+        },
+      },
+      {
+        id: 'c-eventos',
+        bands: {
+          counts: { new: 96, superfan: 3, engaged: 22, occasional: 88, at_risk: 97, inactive: 934 },
+          newActivated: 14,
+        },
+      },
+    ]);
+  });
+
+  it('sums each community to its base: VIP who bought it, the open ones every member', () => {
+    const whole = bandTotal(engagement);
+    expect(whole).toBe(kpis.members.count);
+    for (const row of communityEngagement) {
+      const community = byCommunity.find((other) => other.id === row.id);
+      if (community?.exclusive) {
+        expect(bandTotal(row.bands)).toBe(186);
+        expect(bandTotal(row.bands)).toBeLessThan(whole);
+      } else {
+        expect(bandTotal(row.bands), row.id).toBe(whole);
+        expect(row.bands.counts.new, row.id).toBe(engagement.counts.new);
+      }
+    }
+  });
+
+  it('keeps VIP novos within the VIP orders', () => {
+    const vip = communityEngagement.find((row) => row.id === 'c-vip');
+    const orders = store.products.find((row) => row.id === 's2')?.orders ?? 0;
+    expect(vip?.bands.counts.new ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(orders);
+  });
+
+  it('activates no more novos than the community has or the base activated', () => {
+    for (const row of communityEngagement) {
+      expect(row.bands.newActivated, row.id).toBeLessThanOrEqual(
+        Math.min(row.bands.counts.new, engagement.newActivated),
+      );
+    }
+  });
+
+  it('never ranks more members from superfã down to em risco than the whole base', () => {
+    for (const row of communityEngagement) {
+      let community = 0;
+      let whole = 0;
+      for (const band of PREFIX) {
+        community += row.bands.counts[band];
+        whole += engagement.counts[band];
+        expect(community, `${row.id} ${band}`).toBeLessThanOrEqual(whole);
+      }
+    }
   });
 });

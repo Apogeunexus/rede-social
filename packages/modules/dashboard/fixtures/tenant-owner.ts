@@ -92,6 +92,13 @@ export interface TenantOwnerPanel {
   /** The members in the six engagement bands, last 30 days. */
   engagement: EngagementBands;
   /**
+   * The six bands per community (quick 261012-pkd D-01), with the same ids and order as
+   * `byCommunity`. Same band rules as `engagement`, counting only the member's actions in that
+   * community. The base is who has access: the exclusive VIP = who bought it, the others = every
+   * member. Novos in an open community are the base's novos.
+   */
+  communityEngagement: { id: string; bands: EngagementBands }[];
+  /**
    * Band today vs 30 days ago, novos excluded: how many moved up or down, and the biggest flows
    * (`active` = any of superfã, engajado or ocasional).
    */
@@ -255,6 +262,36 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     counts: { new: 96, superfan: 62, engaged: 205, occasional: 150, at_risk: 168, inactive: 559 },
     newActivated: 54,
   },
+  communityEngagement: [
+    {
+      id: 'c-vip',
+      bands: {
+        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
+        newActivated: 0,
+      },
+    },
+    {
+      id: 'c-geral',
+      bands: {
+        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
+        newActivated: 0,
+      },
+    },
+    {
+      id: 'c-iniciantes',
+      bands: {
+        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
+        newActivated: 0,
+      },
+    },
+    {
+      id: 'c-eventos',
+      bands: {
+        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
+        newActivated: 0,
+      },
+    },
+  ],
   movement: {
     up: 77,
     down: 171,
