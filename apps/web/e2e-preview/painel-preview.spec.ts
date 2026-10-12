@@ -1092,7 +1092,8 @@ test('dono-do-cliente membros: a member card opens their insights and Voltar ret
     ys.push((await heading.boundingBox())?.y ?? Number.NaN);
   }
   ys.push(
-    (await area.getByText('Sugestão de ação', { exact: true }).boundingBox())?.y ?? Number.NaN,
+    (await area.getByText('Sugestão de ação (base toda)', { exact: true }).boundingBox())?.y ??
+      Number.NaN,
   );
   expect([...ys].sort((a, b) => a - b)).toEqual(ys);
   await expect(area.getByRole('button', { name: 'Convidar para o encontro' })).toBeDisabled();
@@ -1137,12 +1138,85 @@ test('dono-do-cliente membros: Voltar from an event registrant keeps the event a
   ).toHaveAttribute('open');
 });
 
+const DEMOTED_DETAIL =
+  '/painel-preview/dono-do-cliente?area=membros&recorte=comunidade&comunidade=eventos&faixa=ocasionais&membro=om-28';
+
+test('dono-do-cliente membros: a member demoted in a community shows both bands', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    '/painel-preview/dono-do-cliente?area=membros&recorte=comunidade&comunidade=eventos',
+  );
+  const area = ownerArea(page);
+  const occasional = bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Ocasionais');
+  await occasional.locator('summary').click();
+  await occasional.getByRole('link', { name: /Rodrigo Aguiar/ }).click();
+
+  await expect(page).toHaveURL(
+    /\?area=membros&recorte=comunidade&comunidade=eventos&faixa=ocasionais&membro=om-28$/,
+  );
+  await expect(area.getByText('Ocasional em Eventos', { exact: true })).toBeVisible();
+  await expect(area.getByText('Engajado na base toda', { exact: true })).toBeVisible();
+  await expect(area.getByText('Hoje (base toda): Engajado', { exact: true })).toBeVisible();
+  expect(
+    await area.getByRole('link', { name: 'Voltar', exact: true }).getAttribute('href'),
+  ).toMatch(/&faixa=ocasionais#faixas$/);
+
+  await page.goto(
+    '/painel-preview/dono-do-cliente?area=membros&recorte=comunidade&comunidade=vip&faixa=engajados&membro=om-28',
+  );
+  await expect(area.getByText('Engajado', { exact: true })).toBeVisible();
+  await expect(area.getByText(/na base toda$/)).toHaveCount(0);
+});
+
 test('dono-do-cliente membros: an unknown membro shows the bands', async ({ page }) => {
   for (const query of ['membro=xyz', 'faixa=em-risco&membro=om-99', 'membro=OM-01']) {
     await page.goto(`/painel-preview/dono-do-cliente?area=membros&${query}`);
     const area = ownerArea(page);
     await expect(area.getByRole('heading', { name: 'Faixas de engajamento' }), query).toBeVisible();
     await expect(area.getByRole('link', { name: 'Voltar', exact: true }), query).toHaveCount(0);
+  }
+});
+
+test('dono-do-cliente membros: a member outside the named band or scope shows that list', async ({
+  page,
+}) => {
+  const forged: { query: string; band: string | null; chip: string | null }[] = [
+    { query: 'membro=om-13', band: null, chip: null },
+    { query: 'faixa=novos&membro=om-13', band: 'Novos', chip: null },
+    {
+      query: 'recorte=comunidade&comunidade=vip&faixa=superfas&membro=om-13',
+      band: 'Superfãs',
+      chip: 'Comunidade VIP',
+    },
+    {
+      query: 'recorte=comunidade&comunidade=eventos&faixa=engajados&membro=om-28',
+      band: 'Engajados',
+      chip: 'Eventos',
+    },
+  ];
+  for (const { query, band, chip } of forged) {
+    await page.goto(`/painel-preview/dono-do-cliente?area=membros&${query}`);
+    const area = ownerArea(page);
+    const bands = sectionTitled(area, 'Faixas de engajamento');
+    await expect(area.getByRole('heading', { name: 'Faixas de engajamento' }), query).toBeVisible();
+    await expect(area.getByRole('link', { name: 'Voltar', exact: true }), query).toHaveCount(0);
+    for (const label of BAND_LABELS) {
+      const details = bandDetails(bands, label);
+      if (label === band) await expect(details, query).toHaveAttribute('open');
+      else await expect(details, `${query} ${label}`).not.toHaveAttribute('open');
+    }
+    if (chip !== null) {
+      await expect(
+        bandScope(page).getByRole('link', { name: 'Por comunidade' }),
+        query,
+      ).toHaveAttribute('aria-current', 'page');
+      await expect(
+        bandScopeItems(page, 'community').getByRole('link', { name: chip, exact: true }),
+        query,
+      ).toHaveAttribute('aria-current', 'page');
+    }
   }
 });
 
@@ -1153,10 +1227,15 @@ for (const width of PHONE_WIDTHS) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto(SUPERFAN_DETAIL);
-    await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
-    const overflow = await horizontalOverflow(page);
-    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    for (const url of [SUPERFAN_DETAIL, DEMOTED_DETAIL]) {
+      await page.goto(url);
+      await expect(
+        ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' }),
+        url,
+      ).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, url).toBeLessThanOrEqual(overflow.clientWidth);
+    }
   });
 }
 

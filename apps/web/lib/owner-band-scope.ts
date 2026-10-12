@@ -1,6 +1,7 @@
 import {
   type EngagementBand,
   type OwnerBandScope,
+  ownerBandIncludes,
   ownerBandRoster,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
@@ -47,7 +48,8 @@ const OWNER_MEMBER_IDS: readonly string[] = ownerBandRoster.map((row) => row.id)
 
 /**
  * What the Membros area renders: the bands' scope, the band to reopen (null = all closed) and the
- * member whose insights replace the area (null = the area itself).
+ * member whose insights replace the area (null = the area itself). A member is only ever set together
+ * with the band they hold in the scope (quick 261012-ri4 R-5).
  */
 export interface OwnerMembersView {
   scope: OwnerBandScope;
@@ -100,15 +102,17 @@ function parseScope(params: SearchParams): OwnerBandScope {
 /**
  * The view the query asks for (untrusted). `recorte` picks Por membro, Por comunidade or Por evento;
  * anything else is Por membro, so a bare legacy `?comunidade=` too. Under a valid `recorte`, an
- * unknown `comunidade` or `evento` falls to that row's first item. `faixa` is a band slug and
- * `membro` a roster id, else null. Only allow-listed constants ever reach markup or URLs.
+ * unknown `comunidade` or `evento` falls to that row's first item. `faixa` is a band slug, else null.
+ * `membro` is a roster id that must hold `faixa` in the scope (R-5); otherwise it is null and the
+ * scope and band stay, so the area falls back to that list with the band open. Only allow-listed
+ * constants ever reach markup or URLs.
  */
 export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
-  return {
-    scope: parseScope(params),
-    band: parseBand(params),
-    memberId: pick(params.membro, OWNER_MEMBER_IDS) ?? null,
-  };
+  const scope = parseScope(params);
+  const band = parseBand(params);
+  const id = pick(params.membro, OWNER_MEMBER_IDS);
+  const memberId = id && band && ownerBandIncludes(scope, band, id) ? id : null;
+  return { scope, band, memberId };
 }
 
 /** A scope's query after `?area=membros` (empty for Por membro). */

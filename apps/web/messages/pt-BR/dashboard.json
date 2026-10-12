@@ -575,6 +575,8 @@
           "at_risk": "Em risco",
           "inactive": "Inativo"
         },
+        "bandIn": "{band} em {community}",
+        "bandWhole": "{band} na base toda",
         "last30": {
           "title": "Últimos 30 dias",
           "activeDays": "Dias ativos",
@@ -588,7 +590,7 @@
         "evolution": {
           "title": "Evolução",
           "past": "{month} (há {days} dias)",
-          "today": "Hoje",
+          "today": "Hoje (base toda)",
           "line": "{when}: {band}",
           "notMember": "ainda não era membro",
           "weeklyTitle": "Dias ativos por semana",
@@ -619,7 +621,7 @@
           "empty": "Nenhuma conversa com o atendimento em 8 semanas."
         },
         "suggestion": {
-          "title": "Sugestão de ação",
+          "title": "Sugestão de ação (base toda)",
           "new": {
             "detail": "Entrou há {days, plural, one {# dia} other {# dias}}. Dê as boas-vindas e indique a comunidade Iniciantes.",
             "action": "Enviar boas-vindas"

@@ -307,6 +307,16 @@ function byRecency(a: OwnerBandMember, b: OwnerBandMember): number {
   );
 }
 
+/** The member's band and last action in a scope, or null when the scope does not hold them. */
+function scopeEntry(
+  row: OwnerRosterMember,
+  scope: OwnerBandScope,
+): { band: EngagementBand; lastActive: RelativeMoment } | null {
+  if (scope.kind === 'community') return row.communities[scope.id] ?? null;
+  if (scope.kind === 'event' && !row.eventIds.includes(scope.id)) return null;
+  return { band: row.band, lastActive: row.lastActive };
+}
+
 /**
  * The members of `band` in a scope (an id the fixture does not have throws): the
  * `OWNER_BAND_LIST_LIMIT` most recent, with the scope's last action, and how many more the band count
@@ -316,18 +326,28 @@ export function ownerBandList(scope: OwnerBandScope, band: EngagementBand): Owne
   const count = scopeBands(scope).counts[band];
   const members = ownerBandRoster
     .flatMap((row): OwnerBandMember[] => {
-      const { id, name, memberSince, topCommunityId, dailyMinutes } = row;
-      const card = { id, name, memberSince, topCommunityId, dailyMinutes };
-      if (scope.kind !== 'community') {
-        if (row.band !== band) return [];
-        if (scope.kind === 'event' && !row.eventIds.includes(scope.id)) return [];
-        return [{ ...card, lastActive: row.lastActive }];
-      }
-      const entry = row.communities[scope.id];
+      const entry = scopeEntry(row, scope);
       if (entry?.band !== band) return [];
-      return [{ ...card, lastActive: entry.lastActive }];
+      const { id, name, memberSince, topCommunityId, dailyMinutes } = row;
+      return [
+        { id, name, memberSince, topCommunityId, dailyMinutes, lastActive: entry.lastActive },
+      ];
     })
     .sort(byRecency)
     .slice(0, OWNER_BAND_LIST_LIMIT);
   return { members, more: count - members.length };
+}
+
+/**
+ * Whether the member sits in `band` within the scope: the membership the band lists filter on (the
+ * whole band, not only its listed rows). The URL parser uses it so a link cannot open a member outside
+ * the band and scope it names (quick 261012-ri4 R-5).
+ */
+export function ownerBandIncludes(
+  scope: OwnerBandScope,
+  band: EngagementBand,
+  memberId: string,
+): boolean {
+  const row = ownerBandRoster.find((member) => member.id === memberId);
+  return row !== undefined && scopeEntry(row, scope)?.band === band;
 }

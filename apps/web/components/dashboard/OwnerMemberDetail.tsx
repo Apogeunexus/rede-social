@@ -1,6 +1,7 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import {
   type EngagementBand,
+  type OwnerBandScope,
   type OwnerMemberInsights,
   ownerMemberInsights,
   tenantOwnerPanel,
@@ -67,7 +68,19 @@ function bandName(t: DashboardT, band: EngagementBand): string {
   return t(`tenantOwner.memberDetail.band.${band}`);
 }
 
-function Header({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights }) {
+function Header({
+  t,
+  insights,
+  scope,
+  band,
+}: {
+  t: DashboardT;
+  insights: OwnerMemberInsights;
+  scope: OwnerBandScope;
+  band: EngagementBand;
+}) {
+  // In a community the member may sit one band lower than in the whole base (R-4): show both.
+  const split = scope.kind === 'community' && band !== insights.band;
   return (
     <Card className="flex items-start gap-3 p-4">
       <span
@@ -78,9 +91,23 @@ function Header({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights 
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-1 [overflow-wrap:anywhere]">
         <h3 className="text-lg font-bold text-text">{insights.name}</h3>
-        <StatusPill tone={BAND_TONE[insights.band]} className="w-fit">
-          {bandName(t, insights.band)}
-        </StatusPill>
+        {split ? (
+          <div className="flex flex-wrap gap-2">
+            <StatusPill tone={BAND_TONE[band]} className="w-fit">
+              {t('tenantOwner.memberDetail.bandIn', {
+                band: bandName(t, band),
+                community: communityOf(t, scope.id),
+              })}
+            </StatusPill>
+            <StatusPill tone={BAND_TONE[insights.band]} className="w-fit">
+              {t('tenantOwner.memberDetail.bandWhole', { band: bandName(t, insights.band) })}
+            </StatusPill>
+          </div>
+        ) : (
+          <StatusPill tone={BAND_TONE[insights.band]} className="w-fit">
+            {bandName(t, insights.band)}
+          </StatusPill>
+        )}
         <dl className="flex flex-col gap-0.5 text-xs text-text-secondary">
           <div>
             <dt className="inline font-semibold">{t('tenantOwner.bandMembers.since')}</dt>{' '}
@@ -284,15 +311,19 @@ function Support({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights
 
 /**
  * One member's insights in the level-4 Membros area (quick 261012-qer B-3), opened from their band
- * card: "Voltar" to the same scope with the same band open at #faixas, then the header, the last 30
+ * card: "Voltar" to the same scope with the same band open at #faixas, then the header (the community
+ * band next to the whole-base one when they differ, quick 261012-ri4 R-4), the last 30
  * days (example values marked), the band history with the weekly active days, where they interact,
  * their events, purchases and support counts (never message text), and a suggested next step whose
  * button is disabled like every preview action. Visible to the client's management only.
  */
 export function OwnerMemberDetail({ t, view }: { t: DashboardT; view: OwnerMembersView }) {
-  // The parser only lets roster ids through, so a missing member is a bug.
+  // The parser only lets a roster member through together with the band they hold in the scope
+  // (R-5), so a missing member or band is a bug.
   const insights = view.memberId ? ownerMemberInsights(view.memberId) : null;
-  if (!insights) throw new Error(`no insights for member ${view.memberId ?? '(none)'}`);
+  if (!insights || !view.band) {
+    throw new Error(`no insights for member ${view.memberId ?? '(none)'} in band ${view.band}`);
+  }
   const { kind, days } = insights.suggestion;
 
   return (
@@ -307,7 +338,7 @@ export function OwnerMemberDetail({ t, view }: { t: DashboardT; view: OwnerMembe
         <ChevronLeft aria-hidden size={18} />
         {t('tenantOwner.memberDetail.back')}
       </a>
-      <Header t={t} insights={insights} />
+      <Header t={t} insights={insights} scope={view.scope} band={view.band} />
       <Last30 t={t} insights={insights} />
       <Evolution t={t} insights={insights} />
       <WhereInteracts t={t} insights={insights} />

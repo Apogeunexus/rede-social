@@ -19,6 +19,7 @@ export {
   type OwnerBandList,
   type OwnerBandMember,
   type OwnerBandScope,
+  ownerBandIncludes,
   ownerBandList,
   ownerBandRoster,
 } from './owner-members';
