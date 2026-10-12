@@ -455,8 +455,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
     pills: 0,
   },
   { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 0 },
-  { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 7 },
-  { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 1 },
+  { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 4 },
+  { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 3 },
   { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
   { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
 ];
@@ -591,6 +591,7 @@ test('dono-do-cliente: Visão geral', async ({ page }) => {
   }
   await expect(cards.nth(0)).toContainText('+96 novos');
   await expect(kpiCard(area, 'Engajados')).toContainText('9,3 ações por membro ativo');
+  await expect(kpiCard(area, 'Comparecimento em eventos')).toContainText('check-in ÷ inscritos');
   await expect(
     area.getByText('38% da base interagiu nos últimos 30 dias (471 de 1.240).', { exact: true }),
   ).toBeVisible();
@@ -655,11 +656,19 @@ test('dono-do-cliente ?area=conteudo', async ({ page }) => {
   await page.goto('/painel-preview/dono-do-cliente?area=conteudo');
   const area = ownerArea(page);
 
-  const posts = sectionTitled(area, 'Posts que mais renderam').getByRole('listitem');
+  const topPosts = sectionTitled(area, 'Posts que mais renderam');
+  const posts = topPosts.getByRole('listitem');
   await expect(posts).toHaveCount(4);
   for (let i = 0; i < 4; i += 1) {
-    await expect(posts.nth(i).getByText('exemplo', { exact: true })).toHaveCount(1);
+    await expect(posts.nth(i).getByText('exemplo', { exact: true })).toHaveCount(0);
   }
+  await expect(topPosts.getByText('exemplo', { exact: true })).toHaveCount(1);
+  await expect(
+    topPosts.getByText(
+      'Curtidas e comentários são medidos; salvamentos e compartilhamentos são valores de exemplo.',
+      { exact: true },
+    ),
+  ).toBeVisible();
   await expect(posts.first()).toContainText('96 curtidas · 31 comentários');
   await expect(posts.first()).toContainText('18 salvamentos · 7 compartilhamentos');
 
@@ -702,7 +711,10 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await expect(upcoming.filter({ hasText: 'Live de dúvidas' })).toContainText('Sem limite');
 
   const waitlist = sectionTitled(area, 'Lista de espera');
-  await expect(waitlist.getByText('exemplo', { exact: true })).toHaveCount(1);
+  await expect(waitlist.getByText('exemplo', { exact: true })).toHaveCount(3);
+  for (const label of ['Conseguiram vaga', 'Foram ao evento']) {
+    await expect(kpiCard(waitlist, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
   await expect(
     waitlist.getByText('67 pessoas entraram na espera de 3 eventos lotados', { exact: true }),
   ).toBeVisible();
@@ -775,11 +787,10 @@ test('dono-do-cliente ?area=atendimento', async ({ page }) => {
   await expect(areaDetails(page, 'Atendimentos por semana').locator('summary')).toContainText(
     '72 nas últimas 4 semanas',
   );
-  await expect(
-    areaDetails(page, 'Atendimentos por assunto')
-      .locator('summary')
-      .getByText('exemplo', { exact: true }),
-  ).toHaveCount(1);
+  const subjects = areaDetails(page, 'Atendimentos por assunto');
+  await expect(subjects).not.toHaveAttribute('open');
+  await expect(subjects.locator('summary')).toContainText('Acesso e login lidera: 26 (35%)');
+  await expect(subjects.locator('summary').getByText('exemplo', { exact: true })).toHaveCount(1);
 
   const team = areaDetails(page, 'Equipe');
   await expect(team).not.toHaveAttribute('open');

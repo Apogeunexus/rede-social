@@ -22,8 +22,8 @@ function perPostOf(row: { posts: number; interactions: number }): number {
 }
 
 /**
- * Level 4, "Conteúdo": the posts that performed best (saves and shares are examples, marked next to
- * them), reach, video playback and stories (stories are aggregate only, never who viewed), then
+ * Level 4, "Conteúdo": the posts that performed best (saves and shares are examples, marked by one
+ * pill on the block's note line, not on every row: C-3), reach, video playback and stories (stories are aggregate only, never who viewed), then
  * closed: interactions per post by format and by community, the best day and time to publish, and
  * where members interact. Every "rende mais", best day/slot and top channel is picked by value with
  * `topBy`, never by the data's order (C-6). The "exemplo" pill comes from each value's `example`
@@ -51,10 +51,17 @@ export async function OwnerContent() {
   const bestDay = topBy(publishing.byWeekday, perPostOf);
   const bestSlot = topBy(publishing.bySlot, perPostOf);
   const topChannel = topBy(channels, (row) => row.count);
+  const postsExample = topPosts.some((post) => post.saves.example || post.shares.example);
 
   return (
     <>
       <PanelSection title={t('tenantOwner.topPosts.title')}>
+        {postsExample ? (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
+            <span>{t('tenantOwner.topPosts.exampleNote')}</span>
+            <ExamplePill text={exampleBadge(t, { example: postsExample })} />
+          </p>
+        ) : null}
         <Card>
           <ul className="divide-y divide-border">
             {topPosts.map((post) => (
@@ -72,18 +79,11 @@ export async function OwnerContent() {
                       comments: post.comments,
                     })}
                   </p>
-                  <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-secondary">
-                    <span>
-                      {t('tenantOwner.topPosts.saved', {
-                        saves: post.saves.value,
-                        shares: post.shares.value,
-                      })}
-                    </span>
-                    <ExamplePill
-                      text={exampleBadge(t, {
-                        example: post.saves.example || post.shares.example,
-                      })}
-                    />
+                  <p className="text-xs text-text-secondary">
+                    {t('tenantOwner.topPosts.saved', {
+                      saves: post.saves.value,
+                      shares: post.shares.value,
+                    })}
                   </p>
                 </div>
                 <span className="shrink-0 text-xs font-bold tabular-nums text-text">

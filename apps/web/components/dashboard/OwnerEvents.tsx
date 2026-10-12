@@ -121,6 +121,7 @@ export async function OwnerEvents() {
             label={t('tenantOwner.waitlist.gotSeat')}
             value={formatCount(sumOf(waitlist.value, (row) => row.gotSeat))}
             note={t('tenantOwner.waitlist.gotSeatNote')}
+            badge={exampleBadge(t, waitlist)}
           />
           <KpiCard
             label={t('tenantOwner.waitlist.attended')}
@@ -128,6 +129,7 @@ export async function OwnerEvents() {
             note={t('tenantOwner.waitlist.attendedNote', {
               count: formatCount(sumOf(happened, (row) => row.gotSeat)),
             })}
+            badge={exampleBadge(t, waitlist)}
           />
         </KpiGrid>
       </PanelSection>

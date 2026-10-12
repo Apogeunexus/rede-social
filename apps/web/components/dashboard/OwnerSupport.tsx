@@ -25,7 +25,7 @@ import { PanelSection } from './PanelSection';
 /**
  * Level 4, "Atendimento": the queue now and the weekly first-response median (the same numbers as
  * level 5), then closed: conversations per week, per subject (an example: no subject is recorded
- * yet), answered per person of the client's team (staff names only, never a member's) and
+ * yet; the closed block names the leading subject, C-5), answered per person of the client's team (staff names only, never a member's) and
  * moderation with its removal rate.
  */
 export async function OwnerSupport() {
@@ -37,6 +37,7 @@ export async function OwnerSupport() {
   const median = firstResponse.weeklyMedianMinutes.at(-1);
   const subjects = [...bySubject.value].sort((a, b) => b.conversations - a.conversations);
   const subjectTotal = sumOf(subjects, (row) => row.conversations);
+  const leader = subjects[0];
   const staff = [...answeredByStaff].sort((a, b) => b.conversations - a.conversations);
   const comments = channels.find((row) => row.channel === 'comments')?.count ?? 0;
   const removalRate = comments > 0 ? moderation.removedComments / comments : 0;
@@ -91,7 +92,18 @@ export async function OwnerSupport() {
 
       <Collapsible
         title={t('tenantOwner.subjects.title')}
-        summary={<ExamplePill text={exampleBadge(t, bySubject)} />}
+        summary={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {leader
+              ? t('tenantOwner.subjects.summary', {
+                  subject: t(`tenantOwner.subjects.${leader.subject}`),
+                  count: formatCount(leader.conversations),
+                  percent: formatPercent(percentOf(leader.conversations, subjectTotal)),
+                })
+              : null}
+            <ExamplePill text={exampleBadge(t, bySubject)} />
+          </span>
+        }
       >
         <BarList
           rows={subjects.map((row, i) => ({

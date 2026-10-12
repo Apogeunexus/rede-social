@@ -361,7 +361,7 @@
         "members": "Membros",
         "membersNote": "+{count} novos",
         "attendance": "Comparecimento em eventos",
-        "attendanceNote": "check-in ÷ confirmados",
+        "attendanceNote": "check-in ÷ inscritos",
         "orderValue": "Vendas do mês",
         "orderValueNote": "valor registrado, sem pagamento real",
         "engaged": "Engajados",
@@ -389,6 +389,7 @@
       },
       "topPosts": {
         "title": "Posts que mais renderam",
+        "exampleNote": "Curtidas e comentários são medidos; salvamentos e compartilhamentos são valores de exemplo.",
         "post": "{type} · {community}",
         "measured": "{likes, plural, one {# curtida} other {# curtidas}} · {comments, plural, one {# comentário} other {# comentários}}",
         "saved": "{saves, plural, one {# salvamento} other {# salvamentos}} · {shares, plural, one {# compartilhamento} other {# compartilhamentos}}"
@@ -505,6 +506,7 @@
       },
       "subjects": {
         "title": "Atendimentos por assunto",
+        "summary": "{subject} lidera: {count} ({percent})",
         "access": "Acesso e login",
         "payment": "Pagamentos e compras",
         "events": "Eventos",
