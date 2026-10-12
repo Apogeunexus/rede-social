@@ -8,24 +8,19 @@ import {
   MIN_STREAK_WEEKS,
   totalMinutes,
 } from '@rede-social/module-dashboard/ui';
-import { StatusPill } from '@rede-social/ui';
 import { ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { type MemberListSlug, memberCardAnchor, memberListHref } from '@/lib/dashboard-preview';
+import { ExamplePill } from './ExamplePill';
 import {
-  type DashboardT,
+  exampleBadge,
   formatCount,
   formatHoursMinutes,
   formatWeekdayShort,
   kpiDelta,
 } from './format';
 import { PanelSection } from './PanelSection';
-
-/** The "exemplo" pill text for a fictional value; nothing for a measured one (D-03). */
-function exampleBadge(t: DashboardT, metric: ReportValue<unknown>): string | undefined {
-  return metric.example ? t('member.activity.example') : undefined;
-}
 
 /**
  * A report card that opens its list (quick 261012-hqr): the whole card is a plain link (a server
@@ -118,11 +113,7 @@ export async function MemberActivity() {
                 to: peakHours.value.toHour,
               })}
             </span>
-            {peakBadge ? (
-              <StatusPill tone="neutral" className="px-2 py-0.5">
-                {peakBadge}
-              </StatusPill>
-            ) : null}
+            <ExamplePill text={peakBadge} />
           </p>
         </PanelSection>
 

@@ -455,6 +455,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
     pills: 0,
   },
   { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 0 },
+  { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 7 },
+  { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 1 },
 ];
 
 test('dono-do-cliente: the area tabs', async ({ page }) => {
@@ -630,6 +632,92 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
     Number.NaN;
   expect(recoverY).toBeGreaterThan(movesY);
   expect(recoverY).toBeLessThan(retentionY);
+});
+
+/** A closed collapsible of the open area, by its title. */
+function areaDetails(page: Page, title: string) {
+  return ownerArea(page)
+    .locator('details')
+    .filter({ has: page.locator('summary', { hasText: title }) });
+}
+
+test('dono-do-cliente ?area=conteudo', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=conteudo');
+  const area = ownerArea(page);
+
+  const posts = sectionTitled(area, 'Posts que mais renderam').getByRole('listitem');
+  await expect(posts).toHaveCount(4);
+  for (let i = 0; i < 4; i += 1) {
+    await expect(posts.nth(i).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
+  await expect(posts.first()).toContainText('96 curtidas · 31 comentários');
+  await expect(posts.first()).toContainText('18 salvamentos · 7 compartilhamentos');
+
+  for (const label of [
+    'Alcance por post',
+    '% assistido (vídeos e reels)',
+    'Conclusão (vídeos e reels)',
+  ]) {
+    await expect(kpiCard(area, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
+  await expect(
+    kpiCard(area, 'Visualizações por story').getByText('exemplo', { exact: true }),
+  ).toHaveCount(0);
+
+  const summaries: [string, string][] = [
+    ['Interações por post, por formato', 'Vídeo rende mais: 96 por post'],
+    ['Interações por post, por comunidade', 'VIP rende mais: 75 por post'],
+    ['Melhor dia e horário para publicar', 'Quinta, 20h–22h'],
+    ['Onde os membros interagem', 'Curtidas: 3.100'],
+  ];
+  for (const [title, summary] of summaries) {
+    const details = areaDetails(page, title);
+    await expect(details).toHaveCount(1);
+    await expect(details).not.toHaveAttribute('open');
+    await expect(details.locator('summary')).toContainText(summary);
+  }
+});
+
+test('dono-do-cliente ?area=eventos', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=eventos');
+  const area = ownerArea(page);
+
+  const upcoming = sectionTitled(area, 'Próximos eventos').getByRole('listitem');
+  await expect(upcoming).toHaveCount(3);
+  const encontro = upcoming.filter({ hasText: 'Encontro mensal' });
+  await expect(encontro).toContainText('92');
+  await expect(encontro).toContainText('8');
+  await expect(upcoming.filter({ hasText: 'Imersão presencial' })).toContainText('Lotado');
+  await expect(upcoming.filter({ hasText: 'Live de dúvidas' })).toContainText('Sem limite');
+
+  const waitlist = sectionTitled(area, 'Lista de espera');
+  await expect(waitlist.getByText('exemplo', { exact: true })).toHaveCount(1);
+  await expect(
+    waitlist.getByText('67 pessoas entraram na espera de 3 eventos lotados', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    waitlist.getByText('Encontro set.: 100 vagas, 38 na espera.', { exact: true }),
+  ).toBeVisible();
+  await expect(kpiCard(waitlist, 'Conseguiram vaga')).toContainText('15');
+  await expect(kpiCard(waitlist, 'Foram ao evento')).toContainText('10');
+
+  const summaries: [string, string][] = [
+    ['Comparecimento por evento', 'comparecimento 64%'],
+    ['Presencial × online', 'presencial 76% · online 56%'],
+    ['Quem vai aos eventos', '69% das presenças vêm de 22% dos membros (superfãs e engajados).'],
+  ];
+  for (const [title, summary] of summaries) {
+    const details = areaDetails(page, title);
+    await expect(details).not.toHaveAttribute('open');
+    await expect(details.locator('summary')).toContainText(summary);
+  }
+
+  const attendance = areaDetails(page, 'Comparecimento por evento');
+  await attendance.locator('summary').click();
+  await expect(attendance.getByRole('listitem')).toHaveCount(4);
+  await expect(attendance).toContainText('+6 pessoas sem inscrição no Encontro set.');
 });
 
 test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, at-risk entries', async ({

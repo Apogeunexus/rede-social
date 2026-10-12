@@ -76,8 +76,10 @@
       "needs_video_playback": "Precisa registrar a reprodução dos vídeos",
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
       "needs_usage_sessions": "Precisa registrar as sessões de uso do app",
-      "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela"
+      "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela",
+      "needs_waitlist": "Precisa registrar a lista de espera dos eventos"
     },
+    "example": "exemplo",
     "belowFloor": "menos de {floor}",
     "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
     "daysAgo": "há {days, plural, one {# dia} other {# dias}}",
@@ -330,7 +332,9 @@
       "areas": {
         "label": "Áreas do painel",
         "overview": "Visão geral",
-        "members": "Membros"
+        "members": "Membros",
+        "content": "Conteúdo",
+        "events": "Eventos"
       },
       "alerts": {
         "support_waiting": {
@@ -379,13 +383,93 @@
         "weeklyTitle": "Novos membros por semana",
         "weeklyLabel": "Novos membros por semana: as últimas 12 semanas"
       },
+      "topPosts": {
+        "title": "Posts que mais renderam",
+        "post": "{type} · {community}",
+        "measured": "{likes, plural, one {# curtida} other {# curtidas}} · {comments, plural, one {# comentário} other {# comentários}}",
+        "saved": "{saves, plural, one {# salvamento} other {# salvamentos}} · {shares, plural, one {# compartilhamento} other {# compartilhamentos}}"
+      },
+      "reach": {
+        "title": "Alcance, vídeos e stories",
+        "perPost": "Alcance por post",
+        "perPostNote": "{percent} dos membros, em média",
+        "stories": "Visualizações por story",
+        "storiesNote": "média de {count} stories · {percent} dos membros",
+        "watched": "% assistido (vídeos e reels)",
+        "completion": "Conclusão (vídeos e reels)",
+        "footnote": "Stories mostram só totais, nunca quem viu."
+      },
+      "communities": {
+        "title": "Interações por post, por comunidade",
+        "summary": "{name} rende mais: {perPost} por post"
+      },
+      "bestTime": {
+        "title": "Melhor dia e horário para publicar",
+        "summary": "{day}, {from}h–{to}h",
+        "byDay": "Por dia da semana",
+        "bySlot": "Por horário de publicação",
+        "slot": "{from}h–{to}h",
+        "weekday": {
+          "mon": "Segunda",
+          "tue": "Terça",
+          "wed": "Quarta",
+          "thu": "Quinta",
+          "fri": "Sexta",
+          "sat": "Sábado",
+          "sun": "Domingo"
+        },
+        "footnote": "Curtidas e comentários por post, pelo dia e horário de publicação (horário de Brasília)."
+      },
+      "upcoming": {
+        "title": "Próximos eventos",
+        "columns": {
+          "event": "Evento",
+          "when": "Quando",
+          "confirmed": "Inscritos",
+          "left": "Vagas"
+        },
+        "when": "{date}, {hour}h",
+        "unlimited": "Sem limite",
+        "full": "Lotado"
+      },
+      "waitlist": {
+        "title": "Lista de espera",
+        "summary": "{waiting, plural, one {# pessoa entrou} other {# pessoas entraram}} na espera de {events, plural, one {# evento lotado} other {# eventos lotados}}",
+        "waiting": "{count} na espera",
+        "capacity": "{count} vagas",
+        "demand": "{event}: {capacity} vagas, {waiting} na espera.",
+        "gotSeat": "Conseguiram vaga",
+        "gotSeatNote": "quando alguém desistiu",
+        "attended": "Foram ao evento",
+        "attendedNote": "de {count} que conseguiram vaga em eventos que já aconteceram"
+      },
+      "attendance": {
+        "title": "Comparecimento por evento",
+        "summary": "comparecimento {percent}",
+        "rate": "{checkIns} de {confirmed}",
+        "footnote": "Check-in ÷ inscritos. +{count} pessoas sem inscrição no {event}."
+      },
+      "formatsCompared": {
+        "title": "Presencial × online",
+        "summary": "presencial {inPerson} · online {online}",
+        "in_person": "Presencial",
+        "online": "Online",
+        "rate": "{events, plural, one {# evento} other {# eventos}}, {full, plural, =0 {nenhum lotou} one {# lotou} other {# lotaram}}",
+        "footnote": "{best} teve o maior comparecimento ({bestPercent}); {worst}, o menor ({worstPercent})."
+      },
+      "whoAttends": {
+        "title": "Quem vai aos eventos",
+        "sentence": "{presences} das presenças vêm de {members} dos membros (superfãs e engajados).",
+        "footnote": "Cada presença conta na faixa de quem foi no dia anterior ao evento."
+      },
       "channels": {
         "title": "Onde os membros interagem",
         "likes": "Curtidas",
         "comments": "Comentários",
         "attendance": "Presenças",
         "orders": "Pedidos",
-        "support": "Suporte"
+        "support": "Suporte",
+        "summary": "{channel}: {count}"
       },
       "movement": {
         "up": "Subiram",
@@ -595,7 +679,6 @@
         "title": "Sua atividade",
         "period": "Últimos 7 dias",
         "presencePeriod": "Últimos 30 dias",
-        "example": "exemplo",
         "usage": {
           "title": "Tempo de uso",
           "average": "Média por dia",

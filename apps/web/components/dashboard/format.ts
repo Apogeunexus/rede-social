@@ -179,6 +179,11 @@ export function formatClock(t: DashboardT, seconds: number): string {
   });
 }
 
+/** The "exemplo" pill text for a fictional value; nothing for a measured one (D-03). */
+export function exampleBadge(t: DashboardT, metric: { example: boolean }): string | undefined {
+  return metric.example ? t('example') : undefined;
+}
+
 /** An engagement band (or `active`, any of the three active bands) -> its catalog name. */
 export function bandLabel(t: DashboardT, band: EngagementBand | 'active'): string {
   return t(`bands.${band}`);

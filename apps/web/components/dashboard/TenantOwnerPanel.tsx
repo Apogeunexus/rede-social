@@ -9,6 +9,8 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-preview';
 import { type DashboardT, formatCount } from './format';
+import { OwnerContent } from './OwnerContent';
+import { OwnerEvents } from './OwnerEvents';
 import { OwnerMembers } from './OwnerMembers';
 import { OwnerOverview } from './OwnerOverview';
 import { PanelHeader } from './PanelHeader';
@@ -52,6 +54,8 @@ function ownerAttentionItem(t: DashboardT, item: TenantOwnerAttention): Attentio
 const AREAS = {
   'visao-geral': { labelKey: 'tenantOwner.areas.overview', Area: OwnerOverview },
   membros: { labelKey: 'tenantOwner.areas.members', Area: OwnerMembers },
+  conteudo: { labelKey: 'tenantOwner.areas.content', Area: OwnerContent },
+  eventos: { labelKey: 'tenantOwner.areas.events', Area: OwnerEvents },
 } satisfies Record<OwnerArea, { labelKey: string; Area: () => Promise<ReactNode> }>;
 
 export interface TenantOwnerPanelProps {

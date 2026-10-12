@@ -1,9 +1,10 @@
 import { memberActivityLists } from '@rede-social/module-dashboard/fixtures';
 import { totalViews, totalWatchedSeconds } from '@rede-social/module-dashboard/ui';
-import { Card, cn, StatusPill } from '@rede-social/ui';
+import { Card, cn } from '@rede-social/ui';
 import { ChevronLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { MEMBER_LIST_ANCHOR, type MemberListSlug, memberReportHref } from '@/lib/dashboard-preview';
+import { ExamplePill } from './ExamplePill';
 import { type DashboardT, formatHoursMinutes, formatMinutesSeconds, momentText } from './format';
 import { PanelSection } from './PanelSection';
 
@@ -162,7 +163,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
         title: row.author,
         lines: [momentText(t, row.when)],
         aside: formatMinutesSeconds(t, row.seconds.value),
-        ...(row.seconds.example ? { asideBadge: t('member.activity.example') } : {}),
+        ...(row.seconds.example ? { asideBadge: t('example') } : {}),
       })),
     };
   },
@@ -170,14 +171,6 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
 
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg';
-
-function ExamplePill({ children }: { children: string }) {
-  return (
-    <StatusPill tone="neutral" className="px-2 py-0.5">
-      {children}
-    </StatusPill>
-  );
-}
 
 /**
  * The list behind one "Sua atividade" card (quick 261012-hqr): "Voltar" to the card that opened it,
@@ -188,7 +181,7 @@ function ExamplePill({ children }: { children: string }) {
 export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
   const t = await getTranslations('dashboard');
   const view = VIEWS[slug](t);
-  const example = t('member.activity.example');
+  const example = t('example');
 
   return (
     <div id={MEMBER_LIST_ANCHOR} className="flex scroll-mt-20 flex-col gap-3">
@@ -205,7 +198,7 @@ export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
       <PanelSection title={view.title} period={t('member.activity.period')} prominent>
         <p className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
           <span>{view.count}</span>
-          {view.example ? <ExamplePill>{example}</ExamplePill> : null}
+          <ExamplePill text={view.example ? example : undefined} />
         </p>
         {view.rows.length === 0 ? (
           <p className="text-sm text-text-secondary">{view.empty}</p>
@@ -225,7 +218,7 @@ export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
                   {row.aside ? (
                     <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold tabular-nums text-text">
                       {row.aside}
-                      {row.asideBadge ? <ExamplePill>{row.asideBadge}</ExamplePill> : null}
+                      <ExamplePill text={row.asideBadge} />
                     </span>
                   ) : null}
                 </li>
