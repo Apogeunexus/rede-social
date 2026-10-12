@@ -81,7 +81,9 @@ Level-4 numbers equal level 5's where they describe the same thing (the support 
 response, today's event, attendance, communities, top posts, moderation, store products), and
 `tests/tenant-owner.test.ts` proves every sum. Percents and per-post figures are computed from the
 raw counts, never typed. The metrics the app does not collect yet are `ExampleValue`s with the
-"exemplo" pill next to the value they mark:
+"exemplo" pill next to the value they mark. The top posts are the exception: their saves and shares
+are examples on every row, so the block carries one pill on a note line under its title instead of
+one per row (261012-oxi C-3):
 
 | Metric | Source today | What must be collected (reason) |
 |---|---|---|
@@ -101,6 +103,35 @@ raw counts, never typed. The metrics the app does not collect yet are `ExampleVa
 | Receita por produto, quem compra | paid `store` orders by product, and by the buyer's band | measured |
 | Fila, 1ª resposta, atendimentos por semana, equipe | support chat conversations; staff answers from `chat_messages.author_user_id` | measured |
 | Moderação | removed comments, blocks and unblocks | measured |
+
+#### Para quando os dados reais forem ligados
+
+Notes from the 261012-oxi review, for the change that replaces the fixture with API answers.
+
+Empty lists (C-7, not implemented). The fixture always has rows, so no level-4 block has an empty
+state yet. Once real data is wired, each of these blocks needs a pt-BR sentence for "no rows" that
+says what will appear there and when. What each one renders today with no rows:
+
+- **Posts que mais renderam** (`OwnerContent`): an empty card; the example note line also hides,
+  because it only shows while a post's saves or shares are examples.
+- **Próximos eventos** (`OwnerEvents`, `ResponsiveTable`): on a phone, nothing under the heading; at
+  `@3xl`, a table with its column headers and no body rows.
+- **Lista de espera** (`OwnerEvents`): "0 pessoa entrou na espera de 0 evento lotado" (pt-BR plural
+  rules put 0 in `one`), an empty bar card, no demand line, and the "Conseguiram vaga" / "Foram ao
+  evento" cards at 0.
+- **Atendimentos por assunto** (`OwnerSupport`): the closed summary drops the leader sentence and
+  keeps only the pill; opened, an empty bar card.
+- **Equipe** (`OwnerSupport`): "0 conversas respondidas por 0 pessoas em 30 dias" and, opened, an
+  empty bar card.
+- **Conversão por produto** (`OwnerFinance`): the "visitas à página → compra" summary with its pill
+  and, opened, an empty bar card.
+
+Expiring access shown as measured (C-8, accepted, out of scope). Level 6 (`TenantStaffPanel`,
+`tenantStaffPanel.store.expiringAccess7d`) shows "Acessos que vencem em 7 dias: 6" as a measured
+value, but the `store` access `expires_at` column is never written, so nothing can be counted yet.
+Level 4 shows the same 6 with the "exemplo" pill. To close it, either level 6 adopts `ReportValue`
+with the pill, or the app starts filling `expires_at` when it grants a time-limited access
+(`needs_access_expiry`).
 
 ## Events emitted
 
