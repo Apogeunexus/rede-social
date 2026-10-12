@@ -1,10 +1,10 @@
 ---
 schema_version: 1
-open_count: 36
+open_count: 38
 waived_count: 0
-fixed_count: 41
-total_count: 77
-last_updated: 2026-10-08T20:43:42.312Z
+fixed_count: 42
+total_count: 80
+last_updated: 2026-10-12T15:15:54.051Z
 ---
 
 # Broken Windows Ledger
@@ -92,6 +92,9 @@ last_updated: 2026-10-08T20:43:42.312Z
 | 75 | 08.1 | deviation | apps/web/app/(auth)/participar/actions.ts |  | participar join redirects to /auth/blocked and /auth/suspended from a server action; the handler's sign-out does not stick, so the B-origin session survives (fixed for joinFromSignup in 08.1-02) | fixed |  | 2026-10-06T20:56:02.347Z | 2026-10-06T21:26:34.387Z |
 | 76 | 08.1 | unrun-verify | apps/web/e2e/csp.spec.ts | 114 | 08.1-07 release-1 gate: pnpm verify stops at e2e; csp.spec (tracer, refreshed session), admin-branding E12 and platform-wizard:164 fail on FRONT-PENDENCIAS copy and markup drift (f18d1af); e2e 797/805, e2e:pwa 58/64 | open |  | 2026-10-07T00:10:14.850Z |  |
 | 77 | 08.2 | stub | apps/web/app/(app)/loja/[productId]/page.tsx |  | Product page has no Comprar/Obter control for a non-holder until 08.2-08 builds the purchase dialog | fixed |  | 2026-10-08T20:21:26.736Z | 2026-10-08T20:43:42.312Z |
+| 78 | quick-261012-fcr | deviation | apps/web/components/dashboard/PlatformSupportPanel.tsx |  | Level-3 floor hides superfãs (2) but the exact members total (310) and the other five band counts are shown, so the floored count is recoverable by subtraction; needs complement rounding or flooring the total | fixed |  | 2026-10-12T14:44:53.434Z | 2026-10-12T15:04:03.447Z |
+| 79 | quick-261012-gf5 | deviation | apps/web/components/dashboard/PlatformSupportPanel.tsx | 130 | Level-3 members KPI shows '+14 em 7 dias' next to '14 entraram': if the delta is net, joined - delta = departures in 7 days (0), a member count below the privacy floor; define the delta as gross joins or floor joined - delta (pre-existing since 261012-fcr) | open |  | 2026-10-12T15:15:53.971Z |  |
+| 80 | quick-261012-gf5 | deviation | packages/contracts/src/money.ts | 57 | formatBrlCompact leaves any negative value uncompacted (cents < 100_000 is true for negatives): -R$ 50.000,00 instead of -R$ 50 mil; no current caller passes negatives; tests lack 0 and negative cases | open |  | 2026-10-12T15:15:54.051Z |  |
 
 ````json
 [
@@ -1018,6 +1021,42 @@ last_updated: 2026-10-08T20:43:42.312Z
     "reason": "",
     "recorded_at": "2026-10-08T20:21:26.736Z",
     "resolved_at": "2026-10-08T20:43:42.312Z"
+  },
+  {
+    "id": 78,
+    "kind": "deviation",
+    "phase": "quick-261012-fcr",
+    "file": "apps/web/components/dashboard/PlatformSupportPanel.tsx",
+    "line": null,
+    "description": "Level-3 floor hides superfãs (2) but the exact members total (310) and the other five band counts are shown, so the floored count is recoverable by subtraction; needs complement rounding or flooring the total",
+    "status": "fixed",
+    "reason": "",
+    "recorded_at": "2026-10-12T14:44:53.434Z",
+    "resolved_at": "2026-10-12T15:04:03.447Z"
+  },
+  {
+    "id": 79,
+    "kind": "deviation",
+    "phase": "quick-261012-gf5",
+    "file": "apps/web/components/dashboard/PlatformSupportPanel.tsx",
+    "line": 130,
+    "description": "Level-3 members KPI shows '+14 em 7 dias' next to '14 entraram': if the delta is net, joined - delta = departures in 7 days (0), a member count below the privacy floor; define the delta as gross joins or floor joined - delta (pre-existing since 261012-fcr)",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-12T15:15:53.971Z",
+    "resolved_at": null
+  },
+  {
+    "id": 80,
+    "kind": "deviation",
+    "phase": "quick-261012-gf5",
+    "file": "packages/contracts/src/money.ts",
+    "line": 57,
+    "description": "formatBrlCompact leaves any negative value uncompacted (cents < 100_000 is true for negatives): -R$ 50.000,00 instead of -R$ 50 mil; no current caller passes negatives; tests lack 0 and negative cases",
+    "status": "open",
+    "reason": "",
+    "recorded_at": "2026-10-12T15:15:54.051Z",
+    "resolved_at": null
   }
 ]
 ````
