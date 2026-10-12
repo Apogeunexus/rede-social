@@ -637,19 +637,22 @@
         "likes": {
           "title": "Posts que você curtiu",
           "count": "{count, plural, one {# curtida} other {# curtidas}}",
-          "line": "{community} · curtido {when}"
+          "line": "{community} · curtido {when}",
+          "empty": "Você não curtiu nenhum post nos últimos 7 dias."
         },
         "comments": {
           "title": "Seus comentários",
           "count": "{count, plural, one {# comentário} other {# comentários}}",
           "text": "“{text}”",
           "on": "Em “{post}”",
-          "line": "{community} · {when}"
+          "line": "{community} · {when}",
+          "empty": "Você não comentou nos últimos 7 dias."
         },
         "saves": {
           "title": "Posts que você salvou",
           "count": "{count, plural, one {# salvamento} other {# salvamentos}}",
-          "line": "{community} · salvo {when}"
+          "line": "{community} · salvo {when}",
+          "empty": "Você não salvou nenhum post nos últimos 7 dias."
         },
         "shares": {
           "title": "Posts que você compartilhou",
@@ -658,27 +661,31 @@
           "via": {
             "link": "Link copiado",
             "native": "Compartilhado pelo celular"
-          }
+          },
+          "empty": "Você não compartilhou nenhum post nos últimos 7 dias."
         },
         "posts": {
           "title": "Posts que você viu",
-          "count": "{posts, plural, one {# post} other {# posts}} · {views, plural, one {# visualização} other {# visualizações}}",
+          "count": "{posts, plural, one {# post} other {# posts}} · {views, plural, one {# visualização} other {# visualizações}} · mais vistos primeiro",
           "line": "{community} · última vez {when}",
-          "times": "visto {count}×"
+          "times": "visto {count}×",
+          "empty": "Você não viu nenhum post nos últimos 7 dias."
         },
         "videos": {
           "title": "Vídeos e reels que você assistiu",
-          "count": "{count, plural, one {# assistido} other {# assistidos}} · {duration}",
+          "count": "{count, plural, one {# assistido} other {# assistidos}} · {duration} · mais assistidos primeiro",
           "kind": {
             "video": "Vídeo",
             "reel": "Reel"
           },
           "line": "{kind} · {community}",
-          "watched": "{watched} de {duration} · {plays}×"
+          "watched": "{watched} de {duration} · {plays}×",
+          "empty": "Você não assistiu a nenhum vídeo nos últimos 7 dias."
         },
         "stories": {
           "title": "Stories que você viu",
-          "count": "{count, plural, one {# story} other {# stories}}"
+          "count": "{count, plural, one {# story} other {# stories}}",
+          "empty": "Você não viu nenhum story nos últimos 7 dias."
         }
       }
     }

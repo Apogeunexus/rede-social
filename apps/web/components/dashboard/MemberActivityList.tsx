@@ -22,6 +22,8 @@ interface ListView {
   count: string;
   /** The whole list is fictional: one "exemplo" pill next to the count. */
   example: boolean;
+  /** Shown instead of an empty card when the member did nothing of this kind in the period. */
+  empty: string;
   rows: ListRow[];
 }
 
@@ -31,6 +33,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.likes;
     return {
       title: t('member.lists.likes.title'),
+      empty: t('member.lists.likes.empty'),
       count: t('member.lists.likes.count', { count: list.value.length }),
       example: list.example,
       rows: list.value.map((row) => ({
@@ -46,6 +49,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.comments;
     return {
       title: t('member.lists.comments.title'),
+      empty: t('member.lists.comments.empty'),
       count: t('member.lists.comments.count', { count: list.value.length }),
       example: list.example,
       rows: list.value.map((row) => ({
@@ -65,6 +69,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.saves;
     return {
       title: t('member.lists.saves.title'),
+      empty: t('member.lists.saves.empty'),
       count: t('member.lists.saves.count', { count: list.value.length }),
       example: list.example,
       rows: list.value.map((row) => ({
@@ -80,6 +85,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.shares;
     return {
       title: t('member.lists.shares.title'),
+      empty: t('member.lists.shares.empty'),
       count: t('member.lists.shares.count', { count: list.value.length }),
       example: list.example,
       rows: list.value.map((row) => ({
@@ -98,6 +104,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.posts;
     return {
       title: t('member.lists.posts.title'),
+      empty: t('member.lists.posts.empty'),
       count: t('member.lists.posts.count', {
         posts: list.value.length,
         views: totalViews(list.value),
@@ -120,6 +127,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.videos;
     return {
       title: t('member.lists.videos.title'),
+      empty: t('member.lists.videos.empty'),
       count: t('member.lists.videos.count', {
         count: list.value.length,
         duration: formatHoursMinutes(t, totalWatchedSeconds(list.value) / 60),
@@ -146,6 +154,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
     const list = memberActivityLists.stories;
     return {
       title: t('member.lists.stories.title'),
+      empty: t('member.lists.stories.empty'),
       count: t('member.lists.stories.count', { count: list.value.length }),
       example: list.example,
       rows: list.value.map((row) => ({
@@ -198,28 +207,32 @@ export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
           <span>{view.count}</span>
           {view.example ? <ExamplePill>{example}</ExamplePill> : null}
         </p>
-        <Card>
-          <ul className="divide-y divide-border">
-            {view.rows.map((row) => (
-              <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                <div className="flex min-w-0 flex-col gap-0.5 [overflow-wrap:anywhere]">
-                  <p className="text-sm font-semibold text-text">{row.title}</p>
-                  {row.lines.map((line) => (
-                    <p key={line} className="text-xs text-text-secondary">
-                      {line}
-                    </p>
-                  ))}
-                </div>
-                {row.aside ? (
-                  <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold tabular-nums text-text">
-                    {row.aside}
-                    {row.asideBadge ? <ExamplePill>{row.asideBadge}</ExamplePill> : null}
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </Card>
+        {view.rows.length === 0 ? (
+          <p className="text-sm text-text-secondary">{view.empty}</p>
+        ) : (
+          <Card>
+            <ul className="divide-y divide-border">
+              {view.rows.map((row) => (
+                <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
+                  <div className="flex min-w-0 flex-col gap-0.5 [overflow-wrap:anywhere]">
+                    <p className="text-sm font-semibold text-text">{row.title}</p>
+                    {row.lines.map((line) => (
+                      <p key={line} className="text-xs text-text-secondary">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                  {row.aside ? (
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs font-bold tabular-nums text-text">
+                      {row.aside}
+                      {row.asideBadge ? <ExamplePill>{row.asideBadge}</ExamplePill> : null}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
       </PanelSection>
     </div>
   );
