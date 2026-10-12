@@ -107,8 +107,11 @@ export interface TenantOwnerPanel {
    * (the last 12 weeks, oldest first).
    */
   growth: { joined: number; left: number; weeklyJoined: number[] };
-  /** Likes + comments per post by format, posts of the last 30 days. */
-  byFormat: { type: PostType; posts: number; perPost: number }[];
+  /**
+   * Posts and their likes + comments of the last 30 days by format; the per-post figure is computed
+   * (`perItem`), never typed.
+   */
+  byFormat: { type: PostType; posts: number; interactions: number }[];
   /**
    * Posts and their likes + comments of the last 30 days by community (`feed_posts.community_id`),
    * in rank order; the ids are level 5's.
@@ -265,10 +268,10 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
   atRiskWithPush: 69,
   growth: { joined: 96, left: 9, weeklyJoined: [14, 17, 15, 19, 18, 21, 16, 19, 20, 22, 23, 28] },
   byFormat: [
-    { type: 'video', posts: 18, perPost: 96 },
-    { type: 'gallery', posts: 15, perPost: 71 },
-    { type: 'text', posts: 20, perPost: 48 },
-    { type: 'link', posts: 8, perPost: 23 },
+    { type: 'video', posts: 18, interactions: 0 },
+    { type: 'gallery', posts: 15, interactions: 0 },
+    { type: 'text', posts: 20, interactions: 0 },
+    { type: 'link', posts: 8, interactions: 0 },
   ],
   byCommunity: [
     { id: 'c-vip', name: 'VIP', exclusive: true, posts: 22, interactions: 1650 },

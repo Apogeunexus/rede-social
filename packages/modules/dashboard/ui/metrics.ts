@@ -42,6 +42,14 @@ export function perItem(total: number, count: number): number {
   return count > 0 ? Math.round(total / count) : 0;
 }
 
+/**
+ * The row with the highest score, the earliest on a tie; `undefined` for no rows. A highlight must
+ * follow the values, never the data's order (261012-oxi C-6).
+ */
+export function topBy<T>(rows: readonly T[], score: (row: T) => number): T | undefined {
+  throw new Error('not implemented');
+}
+
 /** Check-ins as 0–100 of the confirmed RSVPs over a list of events, unrounded (0 for no RSVPs). */
 export function attendancePercent(
   rows: readonly { confirmed: number; checkIns: number }[],

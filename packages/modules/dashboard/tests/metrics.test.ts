@@ -19,6 +19,7 @@ import {
   percentOf,
   perItem,
   sumOf,
+  topBy,
   totalMinutes,
   totalViews,
   totalWatchedSeconds,
@@ -304,5 +305,39 @@ describe('sumOf / perItem / attendancePercent (level 4, 261012-o00)', () => {
     ];
     expect(attendancePercent(past)).toBeCloseTo((230 / 359) * 100, 10);
     expect(Math.round(attendancePercent(past))).toBe(64);
+  });
+});
+
+describe('topBy (261012-oxi C-6: a highlight follows the values)', () => {
+  it('gives undefined for no rows', () => {
+    expect(topBy([], (row: { n: number }) => row.n)).toBeUndefined();
+  });
+
+  it('picks the highest score whatever the input order', () => {
+    const rows = [
+      { id: 'a', n: 3 },
+      { id: 'b', n: 9 },
+      { id: 'c', n: 5 },
+    ];
+    expect(topBy(rows, (row) => row.n)?.id).toBe('b');
+    expect(topBy([...rows].reverse(), (row) => row.n)?.id).toBe('b');
+  });
+
+  it('keeps the earliest row on a tie', () => {
+    const rows = [
+      { id: 'a', n: 4 },
+      { id: 'b', n: 7 },
+      { id: 'c', n: 7 },
+    ];
+    expect(topBy(rows, (row) => row.n)?.id).toBe('b');
+  });
+
+  it('returns the largest of all-negative scores (no 0 seed)', () => {
+    const rows = [
+      { id: 'a', n: -8 },
+      { id: 'b', n: -2 },
+      { id: 'c', n: -5 },
+    ];
+    expect(topBy(rows, (row) => row.n)?.id).toBe('b');
   });
 });

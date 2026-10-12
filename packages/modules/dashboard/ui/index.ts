@@ -32,6 +32,7 @@ export {
   percentOf,
   perItem,
   sumOf,
+  topBy,
   totalMinutes,
   totalViews,
   totalWatchedSeconds,

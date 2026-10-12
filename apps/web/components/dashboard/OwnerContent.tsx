@@ -44,7 +44,9 @@ export async function OwnerContent() {
     engagement,
   } = tenantOwnerPanel;
   const base = bandTotal(engagement);
-  const formats = [...byFormat].sort((a, b) => b.perPost - a.perPost);
+  const formats = [...byFormat].sort(
+    (a, b) => perItem(b.interactions, b.posts) - perItem(a.interactions, a.posts),
+  );
   const topFormat = formats[0];
   const formatPosts = sumOf(byFormat, (row) => row.posts);
   const topCommunity = byCommunity[0];
@@ -133,15 +135,15 @@ export async function OwnerContent() {
           title={t('tenantOwner.formats.title')}
           summary={t('tenantOwner.formats.summary', {
             format: t(`postTypes.${topFormat.type}`),
-            perPost: formatCount(topFormat.perPost),
+            perPost: formatCount(perItem(topFormat.interactions, topFormat.posts)),
           })}
         >
           <BarList
             rows={formats.map((row, i) => ({
               id: row.type,
               label: t(`postTypes.${row.type}`),
-              value: row.perPost,
-              display: formatCount(row.perPost),
+              value: perItem(row.interactions, row.posts),
+              display: formatCount(perItem(row.interactions, row.posts)),
               rate: t('tenantOwner.formats.posts', { count: row.posts }),
               highlight: i === 0,
             }))}

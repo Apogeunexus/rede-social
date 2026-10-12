@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tenantAdminPanel, tenantOwnerPanel, tenantStaffPanel } from '../fixtures';
-import { attendancePercent, percentOf, perItem, sumOf } from '../ui/metrics';
+import { attendancePercent, percentOf, perItem, sumOf, topBy } from '../ui/metrics';
 
 /**
  * D-05 (quick 261012-o00): every number the client owner's panel shows agrees with the rest of the
@@ -12,6 +12,7 @@ const {
   growth,
   kpis,
   byCommunity,
+  byFormat,
   events,
   channels,
   support,
@@ -24,6 +25,12 @@ const {
   ordersByBand,
   account,
 } = tenantOwnerPanel;
+
+/** Every rotation of `rows`, plus the rows reversed. */
+function orderings<T>(rows: readonly T[]): T[][] {
+  const rotations = rows.map((_, i) => [...rows.slice(i), ...rows.slice(0, i)]);
+  return [...rotations, [...rows].reverse()];
+}
 
 function channel(name: (typeof channels)[number]['channel']): number | undefined {
   return channels.find((row) => row.channel === name)?.count;
@@ -124,6 +131,43 @@ describe('interactions by community', () => {
     expect(byCommunity.map((row) => perItem(row.interactions, row.posts))).toEqual([
       75, 63, 54, 47,
     ]);
+  });
+});
+
+describe('interactions by format (C-4)', () => {
+  it('sums to the 61 posts and to likes + comments, the per post computed', () => {
+    expect(sumOf(byFormat, (row) => row.posts)).toBe(61);
+    const interactions = sumOf(byFormat, (row) => row.interactions);
+    expect(interactions).toBe(3940);
+    expect(interactions).toBe((channel('likes') ?? 0) + (channel('comments') ?? 0));
+    expect(byFormat.map((row) => perItem(row.interactions, row.posts))).toEqual([96, 71, 48, 23]);
+  });
+});
+
+describe('highlights follow the values, not the order (C-6)', () => {
+  const perPost = (row: { posts: number; interactions: number }) =>
+    perItem(row.interactions, row.posts);
+
+  it('picks VIP as the community that yields most, in any order', () => {
+    for (const rows of orderings(byCommunity)) {
+      const top = topBy(rows, perPost);
+      expect(top?.id).toBe('c-vip');
+      expect(top ? perPost(top) : 0).toBe(75);
+    }
+  });
+
+  it('picks the 82% event as the best attendance, in any order', () => {
+    for (const rows of orderings(events.past)) {
+      const top = topBy(rows, (row) => percentOf(row.checkIns, row.confirmed));
+      expect(top?.id).toBe('e1');
+      expect(top ? Math.round(percentOf(top.checkIns, top.confirmed)) : 0).toBe(82);
+    }
+  });
+
+  it('picks likes as the top channel, in any order', () => {
+    for (const rows of orderings(channels)) {
+      expect(topBy(rows, (row) => row.count)?.channel).toBe('likes');
+    }
   });
 });
 
