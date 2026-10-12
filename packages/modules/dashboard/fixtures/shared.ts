@@ -74,7 +74,9 @@ export type NotMeasuredReason =
   | 'needs_product_page_views'
   | 'needs_usage_sessions'
   | 'needs_story_view_time'
-  | 'needs_waitlist';
+  | 'needs_waitlist'
+  | 'needs_access_expiry'
+  | 'needs_support_subject';
 
 /**
  * A metric the app does not collect yet: there is deliberately no value field, so no number can be

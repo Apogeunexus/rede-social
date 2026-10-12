@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tenantAdminPanel, tenantOwnerPanel } from '../fixtures';
+import { tenantAdminPanel, tenantOwnerPanel, tenantStaffPanel } from '../fixtures';
 import { attendancePercent, percentOf, perItem, sumOf } from '../ui/metrics';
 
 /**
@@ -19,6 +19,10 @@ const {
   reach,
   stories,
   publishing,
+  store,
+  moderation,
+  ordersByBand,
+  account,
 } = tenantOwnerPanel;
 
 function channel(name: (typeof channels)[number]['channel']): number | undefined {
@@ -281,8 +285,106 @@ describe('D-03: the example values of level 4', () => {
         'videoPlayback.watchedPercent',
         'videoPlayback.completionPercent',
         'events.waitlist',
+        'store.expiringAccess7d',
+        'store.renewal',
+        'store.conversion',
+        'support.bySubject',
       ].sort(),
     );
     for (const item of found) expect(typeof item.reason).toBe('string');
+  });
+});
+
+describe('store (Financeiro)', () => {
+  it('splits the 96 orders and R$ 8.940,00 across the products', () => {
+    const orders = sumOf(store.products, (row) => row.orders);
+    expect(orders).toBe(96);
+    expect(orders).toBe(Object.values(ordersByBand).reduce((total, n) => total + n, 0));
+    expect(orders).toBe(channel('orders'));
+    expect(sumOf(store.products, (row) => row.cents)).toBe(kpis.orderValue.cents);
+  });
+
+  it('uses level 5’s products, each with at least level 5’s 7-day orders', () => {
+    expect(store.products.map((row) => row.id).sort()).toEqual(
+      tenantAdminPanel.store.map((row) => row.id).sort(),
+    );
+    for (const row of store.products) {
+      const admin = tenantAdminPanel.store.find((other) => other.id === row.id);
+      expect(row.product).toBe(admin?.product);
+      expect(row.orders).toBeGreaterThanOrEqual(admin?.orders ?? Number.POSITIVE_INFINITY);
+    }
+  });
+
+  it('leaves Workshop gravado with no order, as level 6 says', () => {
+    const workshop = store.products.find((row) => row.product === 'Workshop gravado');
+    expect(workshop).toMatchObject({ orders: 0, cents: 0 });
+    expect(tenantStaffPanel.store.productsWithoutOrder30d.names).toContain('Workshop gravado');
+  });
+
+  it('prices each product as level 6’s recent purchases', () => {
+    for (const purchase of tenantStaffPanel.store.recentPurchases) {
+      if (purchase.amountCents === null) continue;
+      const row = store.products.find((other) => other.product === purchase.product);
+      expect((row?.cents ?? 0) / (row?.orders ?? 1)).toBe(purchase.amountCents);
+    }
+  });
+
+  it('keeps expiring access, renewal and conversion as examples that agree with the rest', () => {
+    expect(store.expiringAccess7d).toMatchObject({
+      example: true,
+      reason: 'needs_access_expiry',
+      value: tenantStaffPanel.store.expiringAccess7d,
+    });
+    expect(store.renewal).toMatchObject({ example: true, reason: 'needs_access_expiry' });
+    expect(store.renewal.value.renewed).toBeLessThanOrEqual(store.renewal.value.expired);
+    expect(Math.round(percentOf(store.renewal.value.renewed, store.renewal.value.expired))).toBe(
+      73,
+    );
+    expect(store.conversion).toMatchObject({ example: true, reason: 'needs_product_page_views' });
+    for (const row of store.conversion.value) {
+      expect(row.orders).toBe(store.products.find((other) => other.id === row.id)?.orders);
+      expect(row.visits).toBeGreaterThanOrEqual(row.orders);
+    }
+    expect(store.conversion.value).toHaveLength(store.products.length);
+  });
+});
+
+describe('support (Atendimento)', () => {
+  it('ends the weekly first-response median on level 5’s 1h40 and its -20 min', () => {
+    const { weeklyMedianMinutes, delta } = support.firstResponse;
+    expect(weeklyMedianMinutes).toHaveLength(8);
+    expect(weeklyMedianMinutes.at(-1)).toBe(tenantAdminPanel.kpis.firstResponseMedian.minutes);
+    expect(delta).toEqual(tenantAdminPanel.kpis.firstResponseMedian.delta);
+    expect((weeklyMedianMinutes.at(-2) ?? 0) - (weeklyMedianMinutes.at(-1) ?? 0)).toBe(
+      delta.amount,
+    );
+  });
+
+  it('opens no more conversations in 4 weeks than the support channel’s 30 days', () => {
+    expect(support.weeklyConversations).toHaveLength(8);
+    const lastFour = sumOf(support.weeklyConversations.slice(-4), (n) => n);
+    expect(lastFour).toBe(72);
+    expect(lastFour).toBeLessThanOrEqual(channel('support') ?? 0);
+  });
+
+  it('splits the 74 conversations by subject, as an example', () => {
+    expect(support.bySubject).toMatchObject({ example: true, reason: 'needs_support_subject' });
+    expect(sumOf(support.bySubject.value, (row) => row.conversations)).toBe(channel('support'));
+  });
+
+  it('answers the 72 not waiting, by at most the client’s team, never naming a member', () => {
+    const answered = sumOf(support.answeredByStaff, (row) => row.conversations);
+    expect(answered).toBe((channel('support') ?? 0) - support.awaiting.count);
+    expect(support.answeredByStaff.length).toBeLessThanOrEqual(account.admins + account.staff);
+    for (const row of support.answeredByStaff) {
+      expect(row.name).not.toMatch(/\b(Ana|Rui|Matos|João|Lia|Vieira|Souza)\b/);
+    }
+  });
+});
+
+describe('moderation', () => {
+  it('equals level 5’s removals, blocks and unblocks', () => {
+    const { removedComments, blocks, unblocks } = tenantAdminPanel.moderation;
+    expect(moderation).toEqual({ removedComments, blocks, unblocks });
   });
 });

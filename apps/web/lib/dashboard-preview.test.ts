@@ -165,26 +165,26 @@ describe('member list hrefs', () => {
 
 describe('parseOwnerArea', () => {
   it('lists the areas in tab order', () => {
-    expect(OWNER_AREAS).toEqual(['visao-geral', 'membros', 'conteudo', 'eventos']);
+    expect(OWNER_AREAS).toEqual([
+      'visao-geral',
+      'membros',
+      'conteudo',
+      'eventos',
+      'financeiro',
+      'atendimento',
+    ]);
   });
 
   it('returns an allow-listed area, and Visão geral without one', () => {
     expect(parseOwnerArea({})).toBe('visao-geral');
     expect(parseOwnerArea({ area: 'membros' })).toBe('membros');
     expect(parseOwnerArea({ area: 'conteudo' })).toBe('conteudo');
+    expect(parseOwnerArea({ area: 'atendimento' })).toBe('atendimento');
     for (const area of OWNER_AREAS) expect(parseOwnerArea({ area })).toBe(area);
   });
 
   it('falls back to Visão geral for anything else', () => {
-    for (const area of [
-      '',
-      'MEMBROS',
-      'xyz',
-      '__proto__',
-      'constructor',
-      'membros ',
-      'financeiro',
-    ]) {
+    for (const area of ['', 'MEMBROS', 'xyz', '__proto__', 'constructor', 'membros ', 'loja']) {
       expect(parseOwnerArea({ area }), JSON.stringify(area)).toBe('visao-geral');
     }
     expect(parseOwnerArea({ area: ['membros', 'membros'] })).toBe('visao-geral');

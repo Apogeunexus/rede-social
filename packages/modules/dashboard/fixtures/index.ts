@@ -53,6 +53,7 @@ export {
   type OwnerPastEvent,
   type OwnerUpcomingEvent,
   type OwnerWaitlistRow,
+  type SupportSubject,
   type TenantOwnerAttention,
   type TenantOwnerPanel,
   tenantOwnerPanel,

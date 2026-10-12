@@ -76,6 +76,9 @@ export interface OwnerWaitlistRow {
 
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
 
+/** What a support conversation is about (not recorded yet: the subject block is an example). */
+export type SupportSubject = 'access' | 'payment' | 'events' | 'content' | 'other';
+
 export interface TenantOwnerPanel {
   attention: TenantOwnerAttention[];
   kpis: {
@@ -164,11 +167,37 @@ export interface TenantOwnerPanel {
     /** Presences (check-ins + walk-ins) by the band the member was in the day before the event. */
     attendanceByBand: Record<EngagementBand, number>;
   };
+  /** Paid store orders of the last 30 days (`store` orders); money in integer cents. */
+  store: {
+    /** Orders and their registered value per product, level 5's ids. */
+    products: { id: string; product: string; orders: number; cents: number }[];
+    /** Orders against the month before. */
+    ordersDelta: Delta;
+    /** Example: time-limited accesses ending in 7 days (`expires_at` is never filled yet). */
+    expiringAccess7d: ReportValue<{ count: number; products: string[] }>;
+    /** Example: accesses that expired in 30 days and how many were bought again. */
+    renewal: ReportValue<{ expired: number; renewed: number }>;
+    /** Example: product page visits against orders (no page views are recorded yet). */
+    conversion: ReportValue<{ id: string; product: string; visits: number; orders: number }[]>;
+  };
   /** Support chat conversations (`chat_conversations` of kind support). */
   support: {
     /** Waiting for a first staff answer now, and how long the oldest has waited. */
     awaiting: { count: number; oldestHours: number };
+    /** Median minutes to the first staff answer per week, the last 8 weeks, oldest first. */
+    firstResponse: { delta: Delta; weeklyMedianMinutes: number[] };
+    /** Support conversations opened per week, the last 8 weeks, oldest first. */
+    weeklyConversations: number[];
+    /** Example: the conversations of the last 30 days by subject (no subject is recorded yet). */
+    bySubject: ReportValue<{ subject: SupportSubject; conversations: number }[]>;
+    /**
+     * Conversations answered per staff member in 30 days (`chat_messages.author_user_id`). Names of
+     * the client's own team only, never a member's.
+     */
+    answeredByStaff: { id: string; name: string; conversations: number }[];
   };
+  /** Moderation of the last 30 days (removed comments, blocks and unblocks). */
+  moderation: { removedComments: number; blocks: number; unblocks: number };
   /** Retention by joining month (`YYYY-MM`): % that interacted in each month after joining. */
   cohorts: { month: string; values: number[] }[];
   account: {
@@ -428,7 +457,24 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       inactive: 2,
     },
   },
-  support: { awaiting: { count: 2, oldestHours: 26 } },
+  store: {
+    products: [],
+    ordersDelta: { amount: 9, kind: 'count', direction: 'up', good: true, basis: 'previous_month' },
+    expiringAccess7d: { example: false, value: { count: 0, products: [] } },
+    renewal: { example: false, value: { expired: 0, renewed: 0 } },
+    conversion: { example: false, value: [] },
+  },
+  support: {
+    awaiting: { count: 2, oldestHours: 26 },
+    firstResponse: {
+      delta: { amount: 20, kind: 'minutes', direction: 'down', good: true, basis: 'none' },
+      weeklyMedianMinutes: [],
+    },
+    weeklyConversations: [],
+    bySubject: { example: false, value: [] },
+    answeredByStaff: [],
+  },
+  moderation: { removedComments: 0, blocks: 0, unblocks: 0 },
   cohorts: [
     { month: '2026-06', values: [100, 58, 46, 41, 38] },
     { month: '2026-07', values: [100, 55, 44, 40] },
