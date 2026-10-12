@@ -84,7 +84,9 @@ describe('D-05: the levels agree on the same numbers', () => {
 
   it("uses the client's 38% 'interagiu' on the platform row", () => {
     const igor = clients.find((row) => row.id === 'c-igor');
-    expect(igor?.interactedPercent).toBe(tenantOwnerPanel.kpis.interacting.percent);
+    expect(igor?.interactedPercent).toBe(
+      Math.round(interactedPercent(tenantOwnerPanel.engagement)),
+    );
     expect(igor?.interactedPercent).toBe(38);
   });
 
@@ -102,10 +104,6 @@ describe('tenantOwnerPanel engagement (level 4)', () => {
   it('sums the bands to the member KPI, and the novos to the new members', () => {
     expect(bandTotal(engagement)).toBe(kpis.members.count);
     expect(engagement.counts.new).toBe(kpis.members.newMembers);
-  });
-
-  it("derives the 'interagiu' KPI from the bands", () => {
-    expect(Math.round(interactedPercent(engagement))).toBe(kpis.interacting.percent);
   });
 
   it('counts every order in exactly one band', () => {

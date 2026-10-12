@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EngagementBands } from '../fixtures';
 import {
+  attendancePercent,
   type BandGroup,
   bandTotal,
   dailyAverageMinutes,
@@ -16,6 +17,8 @@ import {
   NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,
+  perItem,
+  sumOf,
   totalMinutes,
   totalViews,
   totalWatchedSeconds,
@@ -276,5 +279,30 @@ describe('totalViews / totalWatchedSeconds', () => {
   it('sum the rows', () => {
     expect(totalViews([{ views: 2 }, { views: 3 }])).toBe(5);
     expect(totalWatchedSeconds([{ watchedSeconds: 130 }, { watchedSeconds: 20 }])).toBe(150);
+  });
+});
+
+describe('sumOf / perItem / attendancePercent (level 4, 261012-o00)', () => {
+  it('sums the picked number of every row, 0 for no rows', () => {
+    expect(sumOf([], (row: { n: number }) => row.n)).toBe(0);
+    expect(sumOf([{ n: 2 }, { n: 3 }], (row) => row.n)).toBe(5);
+  });
+
+  it('rounds a total per item, 0 when there are no items', () => {
+    expect(perItem(3940, 61)).toBe(65);
+    expect(perItem(1650, 22)).toBe(75);
+    expect(perItem(5, 0)).toBe(0);
+  });
+
+  it('is check-ins over confirmed RSVPs, unrounded, 0 for no events', () => {
+    expect(attendancePercent([])).toBe(0);
+    const past = [
+      { confirmed: 100, checkIns: 82 },
+      { confirmed: 148, checkIns: 86 },
+      { confirmed: 50, checkIns: 32 },
+      { confirmed: 61, checkIns: 30 },
+    ];
+    expect(attendancePercent(past)).toBeCloseTo((230 / 359) * 100, 10);
+    expect(Math.round(attendancePercent(past))).toBe(64);
   });
 });

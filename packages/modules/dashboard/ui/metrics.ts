@@ -32,6 +32,23 @@ export function percentOf(part: number, whole: number): number {
   return (part / whole) * 100;
 }
 
+/** The picked number of every row, summed (0 for no rows). */
+export function sumOf<T>(_rows: readonly T[], _pick: (row: T) => number): number {
+  throw new Error('not implemented');
+}
+
+/** `total / count` rounded to a whole number ("65 por post"); 0 when `count` is not positive. */
+export function perItem(_total: number, _count: number): number {
+  throw new Error('not implemented');
+}
+
+/** Check-ins as 0–100 of the confirmed RSVPs over a list of events, unrounded (0 for no RSVPs). */
+export function attendancePercent(
+  _rows: readonly { confirmed: number; checkIns: number }[],
+): number {
+  throw new Error('not implemented');
+}
+
 /** "Interagiu" as 0–100 of the base, unrounded. */
 export function interactedPercent(bands: EngagementBands): number {
   return percentOf(interactedCount(bands), bandTotal(bands));

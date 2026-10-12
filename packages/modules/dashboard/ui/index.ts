@@ -14,6 +14,7 @@ export {
 } from './KpiCard';
 export { LineChart, type LineChartProps } from './LineChart';
 export {
+  attendancePercent,
   type BandGroup,
   bandTotal,
   dailyAverageMinutes,
@@ -29,6 +30,8 @@ export {
   NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,
+  perItem,
+  sumOf,
   totalMinutes,
   totalViews,
   totalWatchedSeconds,

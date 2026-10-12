@@ -51,14 +51,34 @@ export function previewLevelPath(slug: PreviewSlug): string {
 /** The "Dados de exemplo" tag's id: every disabled action in a panel points at it (aria-describedby). */
 export const PREVIEW_NOTE_ID = 'dashboard-preview-note';
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
+/**
+ * The client owner's panel areas (quick 261012-o00), in tab order: each slug is a `?area=` value on
+ * the level-4 page.
+ */
+export const OWNER_AREAS = ['visao-geral', 'membros'] as const;
+export type OwnerArea = (typeof OWNER_AREAS)[number];
+
+export const DEFAULT_OWNER_AREA: OwnerArea = 'visao-geral';
+
+/**
+ * The area the query asks for (untrusted). Not implemented yet.
+ */
+export function parseOwnerArea(_params: SearchParams): OwnerArea {
+  throw new Error('not implemented');
+}
+
+export function ownerAreaHref(_area: OwnerArea): string {
+  throw new Error('not implemented');
+}
+
 /** The staff functions the level-6 simulator can grant, in canonical (tab) order. */
 export const STAFF_FUNCTIONS = ['atendimento', 'moderacao', 'conteudo', 'loja'] as const;
 export type StaffFunction = (typeof STAFF_FUNCTIONS)[number];
 
 /** The reference's default person: support and moderation. */
 const DEFAULT_STAFF_FUNCTIONS: readonly StaffFunction[] = ['atendimento', 'moderacao'];
-
-type SearchParams = Record<string, string | string[] | undefined>;
 
 function isStaffFunction(value: unknown): value is StaffFunction {
   return (STAFF_FUNCTIONS as readonly unknown[]).includes(value);

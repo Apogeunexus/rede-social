@@ -6,8 +6,11 @@ import {
   memberCardAnchor,
   memberListHref,
   memberReportHref,
+  OWNER_AREAS,
+  ownerAreaHref,
   PREVIEW_LEVELS,
   parseMemberList,
+  parseOwnerArea,
   parseStaffFunctions,
   previewLevel,
 } from './dashboard-preview';
@@ -157,5 +160,30 @@ describe('member list hrefs', () => {
     expect(memberListHref('curtidas')).toBe('/painel-preview/membro?lista=curtidas#lista');
     expect(memberReportHref('curtidas')).toBe('/painel-preview/membro#atividade-curtidas');
     expect(memberCardAnchor('curtidas')).toBe('atividade-curtidas');
+  });
+});
+
+describe('parseOwnerArea', () => {
+  it('lists the areas in tab order', () => {
+    expect(OWNER_AREAS).toEqual(['visao-geral', 'membros']);
+  });
+
+  it('returns an allow-listed area, and Visão geral without one', () => {
+    expect(parseOwnerArea({})).toBe('visao-geral');
+    expect(parseOwnerArea({ area: 'membros' })).toBe('membros');
+    for (const area of OWNER_AREAS) expect(parseOwnerArea({ area })).toBe(area);
+  });
+
+  it('falls back to Visão geral for anything else', () => {
+    for (const area of ['', 'MEMBROS', 'xyz', '__proto__', 'constructor', 'membros ', 'conteudo']) {
+      expect(parseOwnerArea({ area }), JSON.stringify(area)).toBe('visao-geral');
+    }
+    expect(parseOwnerArea({ area: ['membros', 'membros'] })).toBe('visao-geral');
+    expect(parseOwnerArea({ area: undefined })).toBe('visao-geral');
+  });
+
+  it('links each area on the level-4 page', () => {
+    expect(ownerAreaHref('membros')).toBe('/painel-preview/dono-do-cliente?area=membros');
+    expect(ownerAreaHref('visao-geral')).toBe('/painel-preview/dono-do-cliente?area=visao-geral');
   });
 });

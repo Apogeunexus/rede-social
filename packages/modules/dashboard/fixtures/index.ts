@@ -49,6 +49,13 @@ export type {
   Tone,
 } from './shared';
 export {
+  type EventFormat,
+  type OwnerPastEvent,
+  type TenantOwnerAttention,
+  type TenantOwnerPanel,
+  tenantOwnerPanel,
+} from './tenant-owner';
+export {
   type MemberPanel,
   memberPanel,
   type PostType,
@@ -56,9 +63,7 @@ export {
   type StaffBlockKey,
   type TenantAdminAttention,
   type TenantAdminPanel,
-  type TenantOwnerPanel,
   type TenantStaffPanel,
   tenantAdminPanel,
-  tenantOwnerPanel,
   tenantStaffPanel,
 } from './tenant-panels';
