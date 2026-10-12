@@ -6,7 +6,7 @@ status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
 last_updated: "2026-10-09T13:28:29.451Z"
 last_activity: 2026-10-12
-last_activity_desc: Completed quick task 261012-gf5 (review fixes for the engagement metrics)
+last_activity_desc: Completed quick task 261012-h5t (member activity report)
 state_head: e572b716129ffa5c8903e124fffc296c12d96c04
 progress:
   total_phases: 17
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-25)
 Phase: 08.1 — Multi-Tenant Identity (INSERTED)
 Plan: 08.1-08 pending (contract release)
 Status: Release 1 pending merge, push and production deploy
-Last activity: 2026-10-12 - Completed quick task 261012-gf5: review fixes for the engagement metrics
+Last activity: 2026-10-12 - Completed quick task 261012-h5t: member activity report
 
 Progress: [█░░░░░░░░░] 6%
 
@@ -693,6 +693,7 @@ None yet.
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261012-h5t | Relatório "Sua atividade" do membro (tempo de uso, engajamento, visualizações) | 2026-10-12 | e5a0953b | complete | [261012-h5t-relatorio-sua-atividade-do-membro-com-te](./quick/261012-h5t-relatorio-sua-atividade-do-membro-com-te/) |
 | 261012-gf5 | Corrigir achados das revisões das métricas de engajamento (privacidade nível 3 + 7 ajustes de fluxo) | 2026-10-12 | 5fd6f08 | complete | [261012-gf5-corrigir-achados-das-revisoes-das-metric](./quick/261012-gf5-corrigir-achados-das-revisoes-das-metric/) |
 | 261012-fcr | Enriquecer métricas dos 7 painéis com faixas de engajamento e atividade (revisões: critic REJECTED por privacidade nível 3 → corrigido em 261012-gf5) | 2026-10-12 | 99ec927 | complete | [261012-fcr-enriquecer-metricas-dos-7-paineis-com-fa](./quick/261012-fcr-enriquecer-metricas-dos-7-paineis-com-fa/) |
 | 261011-ndw | Alertas viram sininho no cabeçalho do painel com lista ao clicar | 2026-10-11 | af9d496e | complete | [261011-ndw-alertas-viram-sininho-no-cabecalho-do-pa](./quick/261011-ndw-alertas-viram-sininho-no-cabecalho-do-pa/) |
