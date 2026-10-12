@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type EngagementBands, memberPanel } from '../fixtures';
 import {
+  type BandGroup,
   bandTotal,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
@@ -8,9 +9,11 @@ import {
   interactedCount,
   interactedPercent,
   isBelowPrivacyFloor,
+  isComplementBelowPrivacyFloor,
   isNewMember,
   MAX_FOR_YOU_CARDS,
   MIN_STREAK_WEEKS,
+  mergeBandsBelowFloor,
   NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,
@@ -105,6 +108,119 @@ describe('the privacy floor (D-02)', () => {
     expect(isBelowPrivacyFloor(0)).toBe(true);
     expect(isBelowPrivacyFloor(5)).toBe(false);
     expect(isBelowPrivacyFloor(37)).toBe(false);
+  });
+});
+
+function bands(
+  newCount: number,
+  superfan: number,
+  engaged: number,
+  occasional: number,
+  atRisk: number,
+  inactive: number,
+): EngagementBands {
+  return {
+    counts: { new: newCount, superfan, engaged, occasional, at_risk: atRisk, inactive },
+    newActivated: 0,
+  };
+}
+
+/** Every row ≥ the floor (unless it is the one all-bands row), rows sum to the base, band order kept. */
+function expectSafeGroups(input: EngagementBands, groups: BandGroup[]) {
+  expect(groups.reduce((sum, group) => sum + group.count, 0)).toBe(bandTotal(input));
+  expect(groups.flatMap((group) => group.bands)).toEqual(ENGAGEMENT_BAND_ORDER);
+  for (const group of groups) {
+    expect(group.count).toBe(group.bands.reduce((sum, band) => sum + input.counts[band], 0));
+    if (groups.length > 1) expect(group.count).toBeGreaterThanOrEqual(PRIVACY_FLOOR);
+  }
+}
+
+describe('mergeBandsBelowFloor (C-1: no band derivable by subtraction)', () => {
+  it('merges a small band with its smaller neighbour', () => {
+    const groups = mergeBandsBelowFloor(CORRIDA);
+    expect(groups).toEqual([
+      { bands: ['new'], count: 22 },
+      { bands: ['superfan', 'engaged'], count: 10 },
+      { bands: ['occasional'], count: 27 },
+      { bands: ['at_risk'], count: 96 },
+      { bands: ['inactive'], count: 155 },
+    ]);
+    expectSafeGroups(CORRIDA, groups);
+  });
+
+  it('merges the first band with its only neighbour', () => {
+    const input = bands(3, 10, 20, 30, 40, 50);
+    const groups = mergeBandsBelowFloor(input);
+    expect(groups).toEqual([
+      { bands: ['new', 'superfan'], count: 13 },
+      { bands: ['engaged'], count: 20 },
+      { bands: ['occasional'], count: 30 },
+      { bands: ['at_risk'], count: 40 },
+      { bands: ['inactive'], count: 50 },
+    ]);
+    expectSafeGroups(input, groups);
+  });
+
+  it('merges the last band with its only neighbour', () => {
+    const input = bands(10, 10, 20, 30, 40, 2);
+    const groups = mergeBandsBelowFloor(input);
+    expect(groups).toEqual([
+      { bands: ['new'], count: 10 },
+      { bands: ['superfan'], count: 10 },
+      { bands: ['engaged'], count: 20 },
+      { bands: ['occasional'], count: 30 },
+      { bands: ['at_risk', 'inactive'], count: 42 },
+    ]);
+    expectSafeGroups(input, groups);
+  });
+
+  it('keeps merging until two small neighbours reach the floor', () => {
+    const input = bands(40, 2, 1, 30, 50, 60);
+    const groups = mergeBandsBelowFloor(input);
+    expect(groups).toEqual([
+      { bands: ['new'], count: 40 },
+      { bands: ['superfan', 'engaged', 'occasional'], count: 33 },
+      { bands: ['at_risk'], count: 50 },
+      { bands: ['inactive'], count: 60 },
+    ]);
+    expectSafeGroups(input, groups);
+  });
+
+  it('leaves every band alone when all are at or above the floor', () => {
+    for (const input of [IGOR, PLATFORM]) {
+      const groups = mergeBandsBelowFloor(input);
+      expect(groups).toEqual(
+        ENGAGEMENT_BAND_ORDER.map((band) => ({ bands: [band], count: input.counts[band] })),
+      );
+      expectSafeGroups(input, groups);
+    }
+  });
+
+  it('merges an empty band like any other small band', () => {
+    const input = bands(20, 0, 30, 40, 50, 60);
+    const groups = mergeBandsBelowFloor(input);
+    expect(groups[0]).toEqual({ bands: ['new', 'superfan'], count: 20 });
+    expect(groups).toHaveLength(5);
+    expectSafeGroups(input, groups);
+  });
+
+  it('collapses a base under the floor into one row of all bands', () => {
+    const input = bands(1, 0, 1, 0, 1, 0);
+    expect(mergeBandsBelowFloor(input)).toEqual([{ bands: [...ENGAGEMENT_BAND_ORDER], count: 3 }]);
+  });
+});
+
+describe('isComplementBelowPrivacyFloor (C-2: no count derivable by complement)', () => {
+  it('is true when the part is shown but whole − part is under the floor', () => {
+    expect(isComplementBelowPrivacyFloor(13, 14)).toBe(true);
+    expect(isComplementBelowPrivacyFloor(14, 14)).toBe(true);
+    expect(isComplementBelowPrivacyFloor(5, 9)).toBe(true);
+  });
+
+  it('is false when the complement is at the floor or the part is already floored', () => {
+    expect(isComplementBelowPrivacyFloor(9, 14)).toBe(false);
+    expect(isComplementBelowPrivacyFloor(5, 10)).toBe(false);
+    expect(isComplementBelowPrivacyFloor(3, 14)).toBe(false);
   });
 });
 

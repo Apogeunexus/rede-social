@@ -14,6 +14,7 @@ export {
 } from './KpiCard';
 export { LineChart, type LineChartProps } from './LineChart';
 export {
+  type BandGroup,
   bandTotal,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
@@ -22,9 +23,11 @@ export {
   interactedCount,
   interactedPercent,
   isBelowPrivacyFloor,
+  isComplementBelowPrivacyFloor,
   isNewMember,
   MAX_FOR_YOU_CARDS,
   MIN_STREAK_WEEKS,
+  mergeBandsBelowFloor,
   NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,

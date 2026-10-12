@@ -51,6 +51,23 @@ export function isBelowPrivacyFloor(count: number): boolean {
   return count < PRIVACY_FLOOR;
 }
 
+/** One displayed row of a floored band list: one or more adjacent bands, summed. */
+export interface BandGroup {
+  bands: EngagementBand[];
+  count: number;
+}
+
+export function mergeBandsBelowFloor(
+  _bands: EngagementBands,
+  _floor: number = PRIVACY_FLOOR,
+): BandGroup[] {
+  throw new Error('not implemented');
+}
+
+export function isComplementBelowPrivacyFloor(_part: number, _whole: number): boolean {
+  throw new Error('not implemented');
+}
+
 /** A member counts as new (gets the "Novo" tag) for this many days after joining. */
 export const NEW_MEMBER_DAYS = 30;
 
