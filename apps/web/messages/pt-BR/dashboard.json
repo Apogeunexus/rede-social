@@ -85,7 +85,7 @@
     },
     "clientStatus": {
       "active": "Ativo",
-      "at_risk": "Em risco"
+      "at_risk": "Sem atividade da equipe"
     },
     "modules": {
       "feed": "Feed",
@@ -123,7 +123,7 @@
         },
         "atRisk": {
           "tag": "{count, plural, one {# cliente} other {# clientes}}",
-          "title": "{name} está em risco",
+          "title": "{name} está sem atividade da equipe",
           "detail": "{days, plural, one {# dia} other {# dias}} sem publicação da equipe"
         }
       },
@@ -152,7 +152,7 @@
           "status": "Status",
           "members": "Membros",
           "interacted": "Interagiu 30d",
-          "atRisk": "Em risco %",
+          "atRisk": "Membros em risco %",
           "engaged": "Engajados %",
           "posts": "Posts 30d",
           "media": "Mídia"
@@ -359,6 +359,7 @@
       },
       "formats": {
         "title": "Interações por post, por formato",
+        "summary": "{format} rende mais: {perPost} por post",
         "posts": "{count, plural, one {# post} other {# posts}}",
         "footnote": "Curtidas e comentários por post, em {count} posts nos últimos 30 dias."
       },
@@ -445,7 +446,7 @@
         "shares": "Compartilhamentos"
       },
       "videos": {
-        "title": "Vídeos e reels",
+        "title": "Vídeos, reels e stories",
         "columns": {
           "date": "Data",
           "kind": "Tipo",
@@ -458,6 +459,10 @@
         "watched": "% assistido",
         "completion": "Conclusão",
         "stories": "{count, plural, one {# story} other {# stories}}, média de {viewers} visualizações únicas ({percent})"
+      },
+      "notCollected": {
+        "title": "Métricas que dependem de coleta",
+        "summary": "{count, plural, one {# métrica} other {# métricas}}"
       },
       "events": {
         "title": "Eventos",
@@ -572,7 +577,8 @@
           "renew": "Renovar"
         },
         "news": {
-          "title": "Novidades em {community} desde sua última visita"
+          "title": "Novidades em {community} desde sua última visita",
+          "detail": "{count, plural, one {# publicação nova} other {# publicações novas}}"
         },
         "community": {
           "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"

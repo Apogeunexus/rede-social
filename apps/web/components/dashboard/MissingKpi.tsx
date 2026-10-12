@@ -9,8 +9,9 @@ export interface MissingKpiProps {
 }
 
 /**
- * The one way a metric the app does not collect yet is shown (D-03): a dashed card that reads
- * "Ainda não medido" and names what must be collected. There is no value to show by construction.
+ * A single metric the app does not collect yet (D-03): a dashed card that reads "Ainda não medido"
+ * and names what must be collected. There is no value to show by construction. Several of them on
+ * one panel are grouped in one closed list instead (level 5, "Métricas que dependem de coleta").
  */
 export function MissingKpi({ t, label, item }: MissingKpiProps) {
   return (

@@ -454,33 +454,56 @@ test('dono-do-cliente: engagement bands, movement, formats, buyers and the recov
   await expect(engaged).toContainText('Engajados');
   await expect(engaged).toContainText('22%');
 
-  await expect(sectionTitled(page, 'Quem compra')).toContainText(
-    '72% das compras vêm de 22% dos membros',
-  );
+  const formats = page.locator('details').filter({ hasText: 'Interações por post, por formato' });
+  const buyers = page.locator('details').filter({ hasText: 'Quem compra' });
+  for (const details of [formats, buyers]) {
+    await expect(details).not.toHaveAttribute('open');
+  }
+  await expect(formats.locator('summary')).toContainText('Vídeo rende mais: 96 por post');
+  await expect(buyers.locator('summary')).toContainText('72% das compras vêm de 22% dos membros');
 
   const titles = await h3Texts(page);
-  const at = (title: string) => titles.indexOf(title);
-  expect(at('Faixas de engajamento')).toBe(at('Membros que interagiram por semana') + 1);
-  expect(at('Interações por post, por formato')).toBe(at('Onde os membros interagem') + 1);
-  expect(at('Quem compra')).toBe(at('Interações por post, por formato') + 1);
+  expect(titles.indexOf('Faixas de engajamento')).toBe(
+    titles.indexOf('Membros que interagiram por semana') + 1,
+  );
+  const summaries = (await page.locator('summary').allTextContents()).map((text) => text.trim());
+  const formatsAt = summaries.findIndex((text) => text.startsWith('Interações por post'));
+  expect(formatsAt).toBeGreaterThanOrEqual(0);
+  expect(summaries[formatsAt + 1]?.startsWith('Quem compra')).toBe(true);
 
   const recover = page.getByText('Recuperar quem está em risco', { exact: true });
   await expect(recover).toBeVisible();
   await expect(page.getByText('168 em risco · 69 com push', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Avisar sobre o próximo evento' })).toBeDisabled();
-  const recoverBox = await recover.boundingBox();
-  const accountBox = await page.getByText('Conta', { exact: true }).boundingBox();
-  expect(recoverBox && accountBox && recoverBox.y < accountBox.y).toBe(true);
+  const recoverY = (await recover.boundingBox())?.y ?? Number.NaN;
+  const movesY =
+    (await bands.locator('summary').filter({ hasText: 'Ver movimentos' }).boundingBox())?.y ??
+    Number.NaN;
+  const channelsY =
+    (await page.getByRole('heading', { name: 'Onde os membros interagem' }).boundingBox())?.y ??
+    Number.NaN;
+  expect(recoverY).toBeGreaterThan(movesY);
+  expect(recoverY).toBeLessThan(channelsY);
 });
 
-test('admin-do-cliente: unmeasured metrics, videos and reels, at-risk entries', async ({
+test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, at-risk entries', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/admin-do-cliente');
 
-  await expect(page.getByText('Ainda não medido', { exact: true })).toHaveCount(6);
-  await expect(page.getByText('Precisa registrar as visualizações dos posts')).toHaveCount(2);
+  await expect(page.getByText('Ainda não medido', { exact: true })).toHaveCount(0);
+  const notCollected = page
+    .locator('details')
+    .filter({ hasText: 'Métricas que dependem de coleta' });
+  await expect(notCollected).not.toHaveAttribute('open');
+  await expect(notCollected.locator('summary')).toContainText('6 métricas');
+  await notCollected.locator('summary').click();
+  await expect(notCollected.getByRole('listitem')).toHaveCount(6);
+  await expect(notCollected.getByText('Precisa registrar as visualizações dos posts')).toHaveCount(
+    2,
+  );
+  await expect(notCollected.getByText('Precisa registrar a reprodução dos vídeos')).toHaveCount(2);
 
   const atRisk = kpiCard(page, 'Entraram em risco nesta semana');
   await expect(atRisk).toContainText('23');
@@ -490,16 +513,23 @@ test('admin-do-cliente: unmeasured metrics, videos and reels, at-risk entries', 
   await expect(kpiCard(page, 'Membros que interagiram')).toContainText('380');
 
   const titles = await h3Texts(page);
-  expect(titles.indexOf('Vídeos e reels')).toBe(
+  expect(titles.indexOf('Vídeos, reels e stories')).toBe(
     titles.indexOf('Posts que mais renderam (14 dias)') + 1,
   );
-  const videos = sectionTitled(page, 'Vídeos e reels');
+  const videos = sectionTitled(page, 'Vídeos, reels e stories');
   for (const clock of ['4:12', '0:41', '0:38']) {
     await expect(videos.getByRole('listitem').getByText(clock, { exact: true })).toBeVisible();
   }
   await expect(
     videos.getByText('4 stories, média de 310 visualizações únicas (25%)', { exact: true }),
   ).toBeVisible();
+
+  const videosBottom = await videos.evaluate((el) => el.getBoundingClientRect().bottom);
+  const groupY = (await notCollected.boundingBox())?.y ?? Number.NaN;
+  const eventsY =
+    (await page.locator('summary').filter({ hasText: 'Eventos' }).boundingBox())?.y ?? Number.NaN;
+  expect(groupY).toBeGreaterThanOrEqual(videosBottom);
+  expect(groupY).toBeLessThan(eventsY);
 });
 
 test("dono-da-plataforma: engagement, store sales, module usage and the clients' risk columns", async ({
@@ -511,8 +541,15 @@ test("dono-da-plataforma: engagement, store sales, module usage and the clients'
   const engaged = kpiCard(page, 'Membros engajados');
   await expect(engaged).toContainText('22%');
   await expect(engaged).toContainText('8,1 ações por membro ativo');
-  await expect(kpiCard(page, 'Vendas nas lojas dos clientes')).toContainText(/14\.380,00/);
+  const sales = kpiCard(page, 'Vendas nas lojas dos clientes');
+  await expect(sales).toContainText(/R\$\s14,4\smil/);
+  const salesValueHeight = (await sales.getByText(/14,4/).boundingBox())?.height ?? Number.NaN;
+  expect(salesValueHeight).toBeLessThan(40);
+  const grid = kpiCard(page, 'Clientes ativos').locator('..');
+  await expect(grid.locator(':scope > *')).toHaveCount(6);
+  await expect(grid).not.toContainText('Receita mensal');
   const revenue = kpiCard(page, 'Receita mensal');
+  await expect(revenue).toBeVisible();
   await expect(revenue).toContainText('Ainda não medido');
   await expect(revenue).toContainText('Precisa do faturamento por cliente');
 
@@ -530,14 +567,16 @@ test("dono-da-plataforma: engagement, store sales, module usage and the clients'
 
   const firstCard = sectionTitled(page, 'Clientes (piores primeiro)').getByRole('listitem').first();
   await expect(firstCard).toContainText('Clube Corrida Sul');
-  await expect(firstCard).toContainText('Em risco %');
+  await expect(firstCard).toContainText('Membros em risco %');
+  await expect(firstCard).toContainText('Sem atividade da equipe');
+  await expect(firstCard.getByText('Em risco', { exact: true })).toHaveCount(0);
   await expect(firstCard).toContainText('31%');
   await expect(firstCard).not.toContainText('Engajados %');
 
   await page.setViewportSize({ width: 900, height: 900 });
   const table = page.getByRole('table', { name: 'Clientes (piores primeiro)' });
   await expect(table).toBeVisible();
-  await expect(table.getByRole('columnheader', { name: 'Em risco %' })).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Membros em risco %' })).toBeVisible();
   await expect(table.getByRole('columnheader', { name: 'Engajados %' })).toBeVisible();
   const overflow = await horizontalOverflow(page);
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
@@ -670,6 +709,10 @@ test('membro: three cards by priority, presence and streak, no band', async ({ p
     0,
   );
   await expect(page.getByText('Liberada pela sua compra')).toHaveCount(0);
+  await expect(page.getByText(/acompanhante no encontro de hoje/)).toBeVisible();
+  await expect(page.getByText(/Seu acesso à VIP já foi liberado/)).toHaveCount(0);
+  await expect(page.getByText('Ainda não medido')).toHaveCount(0);
+  await expect(page.getByText('Precisa registrar')).toHaveCount(0);
 
   await expect(page.getByText('Presença nos encontros: 3 de 4', { exact: true })).toBeVisible();
   await expect(page.getByText('Sequência: 6 semanas', { exact: true })).toBeVisible();

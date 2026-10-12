@@ -22,7 +22,6 @@ import {
   formatPercent,
   kpiDelta,
 } from './format';
-import { MissingKpi } from './MissingKpi';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
@@ -64,9 +63,9 @@ function attentionItem(t: DashboardT, item: TenantAdminAttention): AttentionItem
 /**
  * Level 5, "Admin do cliente": what needs me today, and what worked this week? What needs attention
  * sits behind the header bell; the KPIs come first (with who slipped into "em risco" this week), then
- * the posts that performed best with the per-post metrics the app does not collect yet, videos and
- * reels with the stories' aggregate reach, and four closed sections (events, communities, store,
- * moderation).
+ * the posts that performed best, the period's videos, reels and stories (with the stories' aggregate
+ * reach), and five closed sections: the metrics the app does not collect yet (one line each: what it
+ * needs, never a value, D-03), events, communities, store and moderation.
  */
 export async function TenantAdminPanel() {
   const t = await getTranslations('dashboard');
@@ -88,6 +87,18 @@ export async function TenantAdminPanel() {
   const totalOrders = store.reduce((sum, row) => sum + row.orders, 0);
   const communityLabel = (row: (typeof communities)[number]) =>
     row.exclusive ? t('tenantAdmin.communities.exclusive', { name: row.name }) : row.name;
+  const notCollected = [
+    { key: 'reach', label: t('tenantAdmin.postMetrics.reach'), item: postMetrics.reach },
+    {
+      key: 'engagementPerView',
+      label: t('tenantAdmin.postMetrics.engagementPerView'),
+      item: postMetrics.engagementPerView,
+    },
+    { key: 'saves', label: t('tenantAdmin.postMetrics.saves'), item: postMetrics.saves },
+    { key: 'shares', label: t('tenantAdmin.postMetrics.shares'), item: postMetrics.shares },
+    { key: 'watched', label: t('tenantAdmin.videos.watched'), item: videos.watched },
+    { key: 'completion', label: t('tenantAdmin.videos.completion'), item: videos.completion },
+  ];
 
   return (
     <TenantColumn>
@@ -167,16 +178,6 @@ export async function TenantAdminPanel() {
             },
           }))}
         />
-        <KpiGrid>
-          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.reach')} item={postMetrics.reach} />
-          <MissingKpi
-            t={t}
-            label={t('tenantAdmin.postMetrics.engagementPerView')}
-            item={postMetrics.engagementPerView}
-          />
-          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.saves')} item={postMetrics.saves} />
-          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.shares')} item={postMetrics.shares} />
-        </KpiGrid>
       </PanelSection>
 
       <PanelSection title={t('tenantAdmin.videos.title')}>
@@ -200,10 +201,6 @@ export async function TenantAdminPanel() {
             },
           }))}
         />
-        <KpiGrid>
-          <MissingKpi t={t} label={t('tenantAdmin.videos.watched')} item={videos.watched} />
-          <MissingKpi t={t} label={t('tenantAdmin.videos.completion')} item={videos.completion} />
-        </KpiGrid>
         <p className="text-xs text-text-secondary">
           {t('tenantAdmin.videos.stories', {
             count: stories.count,
@@ -212,6 +209,20 @@ export async function TenantAdminPanel() {
           })}
         </p>
       </PanelSection>
+
+      <Collapsible
+        title={t('tenantAdmin.notCollected.title')}
+        summary={t('tenantAdmin.notCollected.summary', { count: notCollected.length })}
+      >
+        <ul className="flex flex-col gap-2">
+          {notCollected.map(({ key, label, item }) => (
+            <li key={key} className="flex flex-wrap gap-x-2 text-xs">
+              <span className="font-bold text-text">{label}</span>
+              <span className="text-text-secondary">{t(`notMeasuredReason.${item.reason}`)}</span>
+            </li>
+          ))}
+        </ul>
+      </Collapsible>
 
       <Collapsible
         title={t('tenantAdmin.events.title')}

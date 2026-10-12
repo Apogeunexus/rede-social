@@ -8,7 +8,7 @@ import { z } from 'zod';
  *
  * 1. **Money is integer CENTS end to end.** The API body, the `store_products.price_cents` column, the
  *    `store_orders.amount_cents` snapshot and every comparison are integers. The division by 100
- *    happens in ONE place, `formatBrl`, at the display edge.
+ *    happens in ONE file, here (`formatBrl`, `formatBrlCompact`), at the display edge.
  * 2. **`parseBrlToCents` never calls `parseFloat`.** "19,90" is split into its reais and centavos
  *    digits and added as integers, so no binary fraction (0.1 + 0.2) can ever reach a price.
  * 3. **The cap is the schema's job, not the parser's.** A value above `STORE_MAX_PRICE_CENTS` still
@@ -42,8 +42,19 @@ export function formatBrl(cents: number): string {
   return BRL.format(cents / 100);
 }
 
-export function formatBrlCompact(_cents: number): string {
-  throw new Error('not implemented');
+const BRL_COMPACT = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+/**
+ * A KPI total for a narrow card: `1438000` -> `R$ 14,4 mil`, `150000000` -> `R$ 1,5 mi`; below
+ * R$ 1.000 it is `formatBrl`. Both gaps are U+00A0, so the value never wraps mid-number.
+ */
+export function formatBrlCompact(cents: number): string {
+  return cents < 100_000 ? formatBrl(cents) : BRL_COMPACT.format(cents / 100);
 }
 
 /**

@@ -1,4 +1,4 @@
-import { formatBrl } from '@rede-social/contracts/money';
+import { formatBrlCompact } from '@rede-social/contracts/money';
 import {
   type PlatformOwnerAttention,
   platformOwnerPanel,
@@ -54,10 +54,10 @@ function attentionItem(t: DashboardT, item: PlatformOwnerAttention): AttentionIt
 
 /**
  * Level 1, "Dono da plataforma": is the client base growing, engaged and using the product, and does
- * the infrastructure cost fit the plan? KPIs (with "Membros engajados" computed from the bands and
- * the clients' store sales), the 12-month trend, the engagement bands, where the members are, module
- * adoption with real use, and the clients, worst first (highest "Em risco %"); what needs attention
- * sits behind the header bell.
+ * the infrastructure cost fit the plan? Six KPIs (with "Membros engajados" computed from the bands
+ * and the clients' store sales, compact) and the unmeasured revenue below them, the 12-month trend,
+ * the engagement bands, where the members are, module adoption with real use, and the clients, worst
+ * first (highest "Membros em risco %"); what needs attention sits behind the header bell.
  */
 export async function PlatformOwnerPanel() {
   const t = await getTranslations('dashboard');
@@ -125,7 +125,6 @@ export async function PlatformOwnerPanel() {
             minutes: formatCount(kpis.storage.videoMinutes),
           })}
         />
-        <MissingKpi t={t} label={t('platformOwner.kpi.revenue')} item={kpis.monthlyRevenue} />
         <KpiCard
           label={t('platformOwner.kpi.engaged')}
           value={formatPercent(engagedPercent(engagement))}
@@ -136,11 +135,13 @@ export async function PlatformOwnerPanel() {
         />
         <KpiCard
           label={t('platformOwner.kpi.storeSales')}
-          value={formatBrl(storeSalesCents)}
+          value={formatBrlCompact(storeSalesCents)}
           delta={kpiDelta(t, kpis.storeSales.delta)}
           note={t('platformOwner.kpi.storeSalesNote', { count: kpis.storeSales.byClient.length })}
         />
       </KpiGrid>
+      {/* Outside the grid: six cards fill three full rows on a phone, the placeholder spans below. */}
+      <MissingKpi t={t} label={t('platformOwner.kpi.revenue')} item={kpis.monthlyRevenue} />
 
       <div className="grid gap-6 @3xl:grid-cols-2">
         <PanelSection title={t('platformOwner.activeChart.title')}>

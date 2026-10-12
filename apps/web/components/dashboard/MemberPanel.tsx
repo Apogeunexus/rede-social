@@ -17,9 +17,10 @@ import { TenantColumn } from './TenantColumn';
  * Level 7, "Membro": what is there for me now that I must not miss? Not a new page in the app: the
  * profile header with the member's presence at events and weekly streak (from 2 weeks), then a
  * "Para você" block of at most three cards, by priority: the next event (with the check-in) > a
- * support reply (unread dot) > an access about to expire (renew) > news since the last visit (not
- * measured yet) > a community the member's purchase unlocked. A card whose data is absent is not a
- * candidate. Own data only: the member never sees their engagement band.
+ * support reply (unread dot) > an access about to expire (renew) > news since the last visit (once
+ * last visits are recorded) > a community the member's purchase unlocked. A card whose data is
+ * absent or not measured is not a candidate, so the member never sees "Ainda não medido". Own data
+ * only: the member never sees their engagement band.
  */
 export async function MemberPanel() {
   const t = await getTranslations('dashboard');
@@ -68,13 +69,12 @@ export async function MemberPanel() {
         />
       ) : null,
     news: () =>
-      newSinceLastVisit && typeof newSinceLastVisit.posts !== 'number' ? (
+      newSinceLastVisit && typeof newSinceLastVisit.posts === 'number' ? (
         <ActionCard
           key="news"
           icon={Sparkles}
           title={t('member.forYou.news.title', { community: newSinceLastVisit.community })}
-          detail={t(`notMeasuredReason.${newSinceLastVisit.posts.reason}`)}
-          pill={{ tone: 'neutral', text: t('notMeasured') }}
+          detail={t('member.forYou.news.detail', { count: newSinceLastVisit.posts })}
         />
       ) : null,
     community: () =>

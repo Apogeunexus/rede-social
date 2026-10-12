@@ -1,4 +1,4 @@
-import type { EngagementBand, EngagementBands } from '../fixtures/shared';
+import type { EngagementBand, EngagementBands, NotMeasured } from '../fixtures/shared';
 import type { MemberPanel } from '../fixtures/tenant-panels';
 
 /**
@@ -150,10 +150,17 @@ const FOR_YOU_FIELD: Record<ForYouCard, keyof MemberPanel['forYou']> = {
 
 export const MAX_FOR_YOU_CARDS = 3;
 
-/** The cards present in `forYou`, in priority order, at most `MAX_FOR_YOU_CARDS`. */
+function isNotMeasured(value: unknown): value is NotMeasured {
+  return typeof value === 'object' && value !== null && 'measured' in value && !value.measured;
+}
+
+/**
+ * The cards present in `forYou`, in priority order, at most `MAX_FOR_YOU_CARDS`. A card with no data,
+ * or with any unmeasured value, is not a candidate: a member never sees "Ainda não medido".
+ */
 export function selectForYouCards(forYou: MemberPanel['forYou']): ForYouCard[] {
-  return FOR_YOU_PRIORITY.filter((card) => forYou[FOR_YOU_FIELD[card]] !== undefined).slice(
-    0,
-    MAX_FOR_YOU_CARDS,
-  );
+  return FOR_YOU_PRIORITY.filter((card) => {
+    const data = forYou[FOR_YOU_FIELD[card]];
+    return data !== undefined && !Object.values(data).some(isNotMeasured);
+  }).slice(0, MAX_FOR_YOU_CARDS);
 }

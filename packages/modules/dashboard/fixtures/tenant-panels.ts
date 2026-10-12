@@ -503,7 +503,10 @@ export const memberPanel: MemberPanel = {
       place: 'Espaço Aurora, sala 2',
       startsInMinutes: 40,
     },
-    supportReply: { preview: 'Oi, Ana! Seu acesso à VIP já foi liberado.', unread: true },
+    supportReply: {
+      preview: 'Oi, Ana! Pode levar um acompanhante no encontro de hoje.',
+      unread: true,
+    },
     accessExpiring: { product: 'Comunidade VIP', daysLeft: 5 },
     newSinceLastVisit: {
       community: 'Comunidade VIP',

@@ -52,10 +52,11 @@ function LegendStroke({ dashed }: { dashed: boolean }) {
 /**
  * Level 4, "Dono do cliente": is the community growing, keeping its members and paying back? KPIs
  * (with "Engajados", computed from the bands), the 12-week trend against the 12 weeks before
- * (dashed), the engagement bands with who moved up or down, where members interact, interactions per
- * post by format, who buys (orders by band), retention by joining month (one number on a phone, the
- * cohort heatmap from md), a card to win back the members in risk, and the account, closed. Segments
- * are counts only: no member is named (D-02).
+ * (dashed), the engagement bands with who moved up or down, right after them a card to win back the
+ * members in risk, where members interact, then closed: interactions per post by format and who buys
+ * (orders by band), each with its headline as the summary; retention by joining month (one number on
+ * a phone, the cohort heatmap from md), and the account, closed. Segments are counts only: no member
+ * is named (D-02).
  */
 export async function TenantOwnerPanel() {
   const t = await getTranslations('dashboard');
@@ -77,6 +78,7 @@ export async function TenantOwnerPanel() {
   const engaged = formatPercent(engagedPercent(engagement));
   const flows = [...movement.flows].sort((a, b) => b.members - a.members);
   const formats = [...byFormat].sort((a, b) => b.perPost - a.perPost);
+  const topFormat = formats[0];
   const formatPosts = byFormat.reduce((sum, row) => sum + row.posts, 0);
   const totalOrders = ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + ordersByBand[band], 0);
 
@@ -197,6 +199,16 @@ export async function TenantOwnerPanel() {
         </Collapsible>
       </PanelSection>
 
+      <ActionCard
+        icon={HeartHandshake}
+        title={t('tenantOwner.recover.title')}
+        detail={t('tenantOwner.recover.detail', {
+          atRisk: formatCount(engagement.counts.at_risk),
+          withPush: formatCount(atRiskWithPush),
+        })}
+        action={<PreviewAction variant="outline">{t('tenantOwner.recover.action')}</PreviewAction>}
+      />
+
       <PanelSection title={t('tenantOwner.channels.title')}>
         <BarList
           rows={channels.map((row, i) => ({
@@ -209,31 +221,39 @@ export async function TenantOwnerPanel() {
         />
       </PanelSection>
 
-      <PanelSection title={t('tenantOwner.formats.title')}>
-        <BarList
-          rows={formats.map((row, i) => ({
-            id: row.type,
-            label: t(`postTypes.${row.type}`),
-            value: row.perPost,
-            display: formatCount(row.perPost),
-            rate: t('tenantOwner.formats.posts', { count: row.posts }),
-            highlight: i === 0,
-          }))}
-        />
-        <p className="text-xs text-text-secondary">
-          {t('tenantOwner.formats.footnote', { count: formatPosts })}
-        </p>
-      </PanelSection>
-
-      <PanelSection title={t('tenantOwner.buyers.title')}>
-        <p className="text-sm text-text">
-          {t('tenantOwner.buyers.sentence', {
-            orders: formatPercent(
-              percentOf(ordersByBand.superfan + ordersByBand.engaged, totalOrders),
-            ),
-            members: engaged,
+      {topFormat ? (
+        <Collapsible
+          title={t('tenantOwner.formats.title')}
+          summary={t('tenantOwner.formats.summary', {
+            format: t(`postTypes.${topFormat.type}`),
+            perPost: formatCount(topFormat.perPost),
           })}
-        </p>
+        >
+          <BarList
+            rows={formats.map((row, i) => ({
+              id: row.type,
+              label: t(`postTypes.${row.type}`),
+              value: row.perPost,
+              display: formatCount(row.perPost),
+              rate: t('tenantOwner.formats.posts', { count: row.posts }),
+              highlight: i === 0,
+            }))}
+          />
+          <p className="text-xs text-text-secondary">
+            {t('tenantOwner.formats.footnote', { count: formatPosts })}
+          </p>
+        </Collapsible>
+      ) : null}
+
+      <Collapsible
+        title={t('tenantOwner.buyers.title')}
+        summary={t('tenantOwner.buyers.sentence', {
+          orders: formatPercent(
+            percentOf(ordersByBand.superfan + ordersByBand.engaged, totalOrders),
+          ),
+          members: engaged,
+        })}
+      >
         <BarList
           max={totalOrders}
           rows={ENGAGEMENT_BAND_ORDER.map((band) => ({
@@ -246,7 +266,7 @@ export async function TenantOwnerPanel() {
           }))}
         />
         <p className="text-xs text-text-secondary">{t('tenantOwner.buyers.footnote')}</p>
-      </PanelSection>
+      </Collapsible>
 
       <PanelSection title={t('tenantOwner.retention.title')}>
         {latest && latestMonthOne !== undefined ? (
@@ -276,16 +296,6 @@ export async function TenantOwnerPanel() {
           <p className="text-xs text-text-secondary">{t('tenantOwner.retention.footnote')}</p>
         </div>
       </PanelSection>
-
-      <ActionCard
-        icon={HeartHandshake}
-        title={t('tenantOwner.recover.title')}
-        detail={t('tenantOwner.recover.detail', {
-          atRisk: formatCount(engagement.counts.at_risk),
-          withPush: formatCount(atRiskWithPush),
-        })}
-        action={<PreviewAction variant="outline">{t('tenantOwner.recover.action')}</PreviewAction>}
-      />
 
       <Collapsible
         title={t('tenantOwner.account.title')}
