@@ -1,19 +1,19 @@
 ---
-gsd_state_version: "1.0"
-current_phase: "08.1"
+gsd_state_version: 1.0
+current_phase: 08.1
 current_phase_name: Multi-Tenant Identity (INSERTED)
 status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
-last_updated: "2026-10-09T13:28:29.451Z"
+last_updated: "2026-10-12T17:30:06.910Z"
 last_activity: 2026-10-12
 last_activity_desc: Completed quick task 261012-j2w (member panel starts at the activity report)
-state_head: e572b716129ffa5c8903e124fffc296c12d96c04
+state_head: 8a85b2ea5da1e6b77a559f75ee81ed2a8784c6d7
 progress:
   total_phases: 17
-  completed_phases: 1
+  completed_phases: 4
   total_plans: 145
   completed_plans: 140
-  percent: 6
+  percent: 24
 ---
 
 # Project State
@@ -728,6 +728,7 @@ None yet.
 | 261007-kyp | Install gate: PWA obrigatório em celular/tablet fora do modo standalone | 2026-10-07 | 6cb98d8 | — | [261007-kyp-install-gate-pwa-obrigat-rio-em-celular-](./quick/261007-kyp-install-gate-pwa-obrigat-rio-em-celular-/) |
 | 261007-n1g | Event schedule (cronograma) persisted in events.schedule jsonb with a shape CHECK, API create/edit/detail, form sends it as its own field, legacy text-in-description read fallback | 2026-10-07 | 2b9e26f | Passed | [261007-n1g-persist-event-schedule-cronograma-in-a-n](./quick/261007-n1g-persist-event-schedule-cronograma-in-a-n/) |
 | 261009-8fz | Stop exposing the public schema through the Supabase Data API: PostgREST serves only the empty `data_api_closed` schema (08.2 review CR-01 follow-up); production closes on the next deploy (config push), verify with the DEPLOY.md curl proof | 2026-10-09 | 63b91e0 | — | [261009-8fz-stop-exposing-the-public-schema-through-](./quick/261009-8fz-stop-exposing-the-public-schema-through-/) |
+| 36 | Opt-in DASHBOARD_PREVIEW_ENABLED=1 para mostrar os painéis num deploy de demonstração | 2026-10-12 | 8a85b2ea | — | — |
 
 ### Roadmap Evolution
 
