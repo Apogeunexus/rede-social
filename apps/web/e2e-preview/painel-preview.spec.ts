@@ -688,29 +688,32 @@ test('equipe-do-cliente: per-function metrics', async ({ page }) => {
   await expect(page.getByText('Ainda não medido', { exact: true })).toHaveCount(1);
 });
 
-test('membro: three cards by priority, presence and streak, no band', async ({ page }) => {
+test('membro: the panel starts at Sua atividade; presence and streak, no band', async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/membro');
 
-  const order = [
-    page.getByText('Encontro mensal · hoje 19h', { exact: true }),
-    page.getByText('O suporte respondeu', { exact: true }),
-    page.getByText('Seu acesso vence em 5 dias', { exact: true }),
-  ];
-  const ys: number[] = [];
-  for (const card of order) {
-    await expect(card).toBeVisible();
-    ys.push((await card.boundingBox())?.y ?? Number.NaN);
+  await expect(page.getByRole('heading', { name: 'Para você', exact: true })).toHaveCount(0);
+  for (const text of [
+    'Ana Souza',
+    'Dr. Igor Alves',
+    'Perfil',
+    'Encontro mensal · hoje 19h',
+    'O suporte respondeu',
+  ]) {
+    await expect(page.getByText(text, { exact: true })).toHaveCount(0);
   }
-  expect(ys[0]).toBeLessThan(ys[1] ?? Number.NaN);
-  expect(ys[1]).toBeLessThan(ys[2] ?? Number.NaN);
-  await expect(page.getByRole('button', { name: 'Renovar' })).toBeDisabled();
-  await expect(page.getByText('Novidades em Comunidade VIP desde sua última visita')).toHaveCount(
-    0,
-  );
-  await expect(page.getByText('Liberada pela sua compra')).toHaveCount(0);
-  await expect(page.getByText(/acompanhante no encontro de hoje/)).toBeVisible();
-  await expect(page.getByText(/Seu acesso à VIP já foi liberado/)).toHaveCount(0);
+  await expect(page.getByText(/Membro desde/)).toHaveCount(0);
+  for (const button of ['Renovar', 'Fazer check-in']) {
+    await expect(page.getByRole('button', { name: button })).toHaveCount(0);
+  }
+  await expect(
+    sectionTitled(page, 'Sua atividade').locator('xpath=preceding-sibling::*'),
+  ).toHaveCount(0);
+  const headings = (await page.getByRole('heading').allTextContents()).map((text) => text.trim());
+  expect(headings[headings.indexOf('Membro') + 1]).toBe('Sua atividade');
+
   await expect(page.getByText('Ainda não medido')).toHaveCount(0);
   await expect(page.getByText('Precisa registrar')).toHaveCount(0);
 
@@ -736,10 +739,6 @@ test('membro: Sua atividade report', async ({ page }) => {
 
   const title = page.getByRole('heading', { level: 3, name: 'Sua atividade', exact: true });
   await expect(title).toBeVisible();
-  const forYou = page.getByRole('heading', { level: 3, name: 'Para você', exact: true });
-  const titleY = (await title.boundingBox())?.y ?? Number.NaN;
-  const forYouY = (await forYou.boundingBox())?.y ?? Number.NaN;
-  expect(titleY).toBeGreaterThan(forYouY);
   const report = sectionTitled(page, 'Sua atividade');
   // Each block states its own window: four 7-day blocks, presence over 30 days.
   await expect(report.getByText('Últimos 7 dias', { exact: true })).toHaveCount(4);
@@ -941,6 +940,8 @@ for (const list of MEMBER_LIST_CASES) {
     for (const heading of ['Para você', 'Sua atividade']) {
       await expect(page.getByRole('heading', { name: heading, exact: true })).toHaveCount(0);
     }
+    await expect(page.locator('#lista').locator('xpath=preceding-sibling::*')).toHaveCount(0);
+    await expect(page.getByText(/Membro desde/)).toHaveCount(0);
     await expect(page.getByText('Precisa registrar')).toHaveCount(0);
     await expect(page.getByText('Ainda não medido')).toHaveCount(0);
     if (list.slug === 'stories') {
