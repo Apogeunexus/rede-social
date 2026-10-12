@@ -321,13 +321,19 @@ const ALERT_LEVELS = [
     onlyOnce: 'Escola Horizonte: domínio',
   },
   {
+    level: 'dono-do-cliente',
+    count: 3,
+    name: 'Alertas, 3, 1 urgente',
+    onlyOnce: '8 vagas restantes',
+  },
+  {
     level: 'admin-do-cliente',
     count: 3,
     name: 'Alertas, 3, 1 urgente',
     onlyOnce: 'Fixe nos destaques se quiser manter',
   },
 ];
-const NO_ALERT_LEVELS = ['suporte-da-plataforma', 'dono-do-cliente', 'equipe-do-cliente', 'membro'];
+const NO_ALERT_LEVELS = ['suporte-da-plataforma', 'equipe-do-cliente', 'membro'];
 const ALERT_VIEWPORTS = [
   { name: '1440x900', width: 1440, height: 900, framed: true },
   { name: '390px', width: 390, height: 844, framed: false },
@@ -414,14 +420,14 @@ test('levels without alerts show no bell', async ({ page }) => {
  * Engagement and activity metrics (quick 261012-fcr). Sections are scoped by their heading because
  * "Engajados" is both a KPI and a band label.
  */
-function sectionTitled(page: Page, title: string) {
+function sectionTitled(page: Page | Locator, title: string) {
   return page
     .getByRole('heading', { name: title, exact: true })
     .locator('xpath=ancestor::section[1]');
 }
 
 /** The KPI card whose label is exactly `label`. */
-function kpiCard(page: Page, label: string) {
+function kpiCard(page: Page | Locator, label: string) {
   return page.getByText(label, { exact: true }).locator('..');
 }
 
@@ -429,13 +435,176 @@ async function h3Texts(page: Page) {
   return (await page.locator('h3').allTextContents()).map((text) => text.trim());
 }
 
-test('dono-do-cliente: engagement bands, movement, formats, buyers and the recovery card', async ({
-  page,
-}) => {
+/**
+ * Level 4 in six areas (quick 261012-o00). Tab names repeat inside the areas ("Membros" is also a
+ * KPI label, "Eventos" a community and a subject), so every lookup inside an area is scoped to it.
+ */
+function ownerArea(page: Page) {
+  return page.locator('[data-owner-area]');
+}
+
+function ownerTabs(page: Page) {
+  return page.getByRole('navigation', { name: 'Áreas do painel' });
+}
+
+const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: number }[] = [
+  {
+    slug: 'visao-geral',
+    tab: 'Visão geral',
+    heading: 'Membros que interagiram por semana',
+    pills: 0,
+  },
+  { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 0 },
+];
+
+test('dono-do-cliente: the area tabs', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/dono-do-cliente');
+  const links = ownerTabs(page).getByRole('link');
+  expect((await links.allTextContents()).map((text) => text.trim())).toEqual(
+    OWNER_AREA_CASES.map((area) => area.tab),
+  );
+  for (const [i, area] of OWNER_AREA_CASES.entries()) {
+    expect(await links.nth(i).getAttribute('href')).toMatch(new RegExp(`\\?area=${area.slug}$`));
+  }
+  await expect(ownerTabs(page).locator('[aria-current="page"]')).toHaveCount(1);
+  await expect(ownerTabs(page).getByRole('link', { name: 'Visão geral' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
 
-  const bands = sectionTitled(page, 'Faixas de engajamento');
+  for (const area of OWNER_AREA_CASES) {
+    await ownerTabs(page).getByRole('link', { name: area.tab, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`\\?area=${area.slug}$`));
+    await expect(
+      ownerTabs(page).getByRole('link', { name: area.tab, exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+    await expect(ownerTabs(page).locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      ownerArea(page).getByRole('heading', { level: 3, name: area.heading, exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('[data-alerts-bell]')).toHaveCount(1);
+    await expect(page.getByText('30 dias', { exact: true })).toBeVisible();
+    await expect(ownerArea(page).getByText('exemplo', { exact: true })).toHaveCount(area.pills);
+    await expect(page.getByText('Ainda não medido')).toHaveCount(0);
+    await expect(page.getByText('Precisa registrar')).toHaveCount(0);
+  }
+});
+
+test('dono-do-cliente: an unknown area falls back to Visão geral', async ({ page }) => {
+  for (const query of ['?area=xyz', '?area=MEMBROS', '?area=']) {
+    await page.goto(`/painel-preview/dono-do-cliente${query}`);
+    await expect(ownerTabs(page).getByRole('link', { name: 'Visão geral' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(
+      ownerArea(page).getByRole('heading', { name: 'Membros que interagiram por semana' }),
+    ).toBeVisible();
+  }
+});
+
+test.describe('dono-do-cliente without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('a tab is a plain link to its area', async ({ page }) => {
+    await page.goto('/painel-preview/dono-do-cliente');
+    await ownerTabs(page).getByRole('link', { name: 'Membros', exact: true }).click();
+    await expect(page).toHaveURL(/\?area=membros$/);
+    await expect(ownerArea(page).getByRole('heading', { name: 'Crescimento' })).toBeVisible();
+  });
+});
+
+test('dono-do-cliente: tabs wrap at 360 px with a visible focus ring', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente');
+  const row = ownerTabs(page).locator('ul');
+  const size = await row.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+  expect(size.scroll).toBeLessThanOrEqual(size.client);
+  const overflow = await horizontalOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+
+  const links = ownerTabs(page).getByRole('link');
+  await links.first().focus();
+  await page.keyboard.press('Tab');
+  await expect(links.nth(1)).toBeFocused();
+  expect(await links.nth(1).evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+});
+
+for (const area of OWNER_AREA_CASES) {
+  for (const width of PHONE_WIDTHS) {
+    test(`dono-do-cliente ?area=${area.slug} at ${width}px: no horizontal scroll`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/painel-preview/dono-do-cliente?area=${area.slug}`);
+      await expect(ownerArea(page)).toBeVisible();
+      await openAllDetails(page);
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    });
+  }
+
+  test(`dono-do-cliente ?area=${area.slug} at 1440x900: inside the phone`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/painel-preview/dono-do-cliente?area=${area.slug}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    await openAllDetails(page);
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible')).toHaveCount(0);
+  });
+}
+
+test('dono-do-cliente: Visão geral', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente');
+  const area = ownerArea(page);
+
+  const cards = kpiCard(area, 'Membros').locator('..').locator(':scope > *');
+  await expect(cards).toHaveCount(6);
+  const expected: [string, string | RegExp][] = [
+    ['Membros', '1.240'],
+    ['Engajados', '22%'],
+    ['Interações por post', '65'],
+    ['Comparecimento em eventos', '64%'],
+    ['Vendas do mês', /R\$\s8\.940,00/],
+    ['Conversas aguardando resposta', '2'],
+  ];
+  for (const [i, [label, value]] of expected.entries()) {
+    await expect(cards.nth(i).locator('span').first()).toHaveText(label);
+    await expect(cards.nth(i)).toContainText(value);
+  }
+  await expect(cards.nth(0)).toContainText('+96 novos');
+  await expect(kpiCard(area, 'Engajados')).toContainText('9,3 ações por membro ativo');
+  await expect(
+    area.getByText('38% da base interagiu nos últimos 30 dias (471 de 1.240).', { exact: true }),
+  ).toBeVisible();
+
+  const last = area.locator('summary').last();
+  await expect(last).toContainText('Conta');
+  await expect(last).toContainText('Plano Pro');
+  await expect(last.locator('xpath=ancestor::details[1]')).not.toHaveAttribute('open');
+  await expect(
+    area.getByRole('link', { name: 'Ver operação do dia (painel do admin)' }),
+  ).toBeVisible();
+});
+
+test('dono-do-cliente ?area=membros', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=membros');
+  const area = ownerArea(page);
+
+  await expect(kpiCard(area, 'Entraram')).toContainText('96');
+  await expect(kpiCard(area, 'Saíram')).toContainText('9');
+  await expect(
+    area.getByText('Saldo de +87 membros em 30 dias (+8% vs. 30 dias antes).', { exact: true }),
+  ).toBeVisible();
+
+  const bands = sectionTitled(area, 'Faixas de engajamento');
   const bandRows = bands.getByRole('listitem');
   await expect(bandRows).toHaveCount(6);
   const bandTexts = await bandRows.allTextContents();
@@ -443,47 +612,24 @@ test('dono-do-cliente: engagement bands, movement, formats, buyers and the recov
     expect(bandTexts[i]).toContain(label);
   });
   await expect(bands.getByText('Novos: 54 ativados de 96.')).toBeVisible();
-  await expect(kpiCard(page, 'Subiram')).toContainText('77');
-  await expect(kpiCard(page, 'Caíram')).toContainText('171');
+  await expect(kpiCard(area, 'Subiram')).toContainText('77');
+  await expect(kpiCard(area, 'Caíram')).toContainText('171');
 
   await bands.getByText('Ver movimentos', { exact: true }).click();
   await expect(bands.locator('details').getByRole('listitem')).toHaveCount(4);
 
-  const engaged = page.getByText('9,3 ações por membro ativo', { exact: true }).locator('..');
-  await expect(engaged).toBeVisible();
-  await expect(engaged).toContainText('Engajados');
-  await expect(engaged).toContainText('22%');
-
-  const formats = page.locator('details').filter({ hasText: 'Interações por post, por formato' });
-  const buyers = page.locator('details').filter({ hasText: 'Quem compra' });
-  for (const details of [formats, buyers]) {
-    await expect(details).not.toHaveAttribute('open');
-  }
-  await expect(formats.locator('summary')).toContainText('Vídeo rende mais: 96 por post');
-  await expect(buyers.locator('summary')).toContainText('72% das compras vêm de 22% dos membros');
-
-  const titles = await h3Texts(page);
-  expect(titles.indexOf('Faixas de engajamento')).toBe(
-    titles.indexOf('Membros que interagiram por semana') + 1,
-  );
-  const summaries = (await page.locator('summary').allTextContents()).map((text) => text.trim());
-  const formatsAt = summaries.findIndex((text) => text.startsWith('Interações por post'));
-  expect(formatsAt).toBeGreaterThanOrEqual(0);
-  expect(summaries[formatsAt + 1]?.startsWith('Quem compra')).toBe(true);
-
-  const recover = page.getByText('Recuperar quem está em risco', { exact: true });
+  const recover = area.getByText('168 em risco · 69 com push', { exact: true });
   await expect(recover).toBeVisible();
-  await expect(page.getByText('168 em risco · 69 com push', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Avisar sobre o próximo evento' })).toBeDisabled();
+  await expect(area.getByRole('button', { name: 'Avisar sobre o próximo evento' })).toBeDisabled();
   const recoverY = (await recover.boundingBox())?.y ?? Number.NaN;
   const movesY =
     (await bands.locator('summary').filter({ hasText: 'Ver movimentos' }).boundingBox())?.y ??
     Number.NaN;
-  const channelsY =
-    (await page.getByRole('heading', { name: 'Onde os membros interagem' }).boundingBox())?.y ??
+  const retentionY =
+    (await area.getByRole('heading', { name: 'Retenção por mês de entrada' }).boundingBox())?.y ??
     Number.NaN;
   expect(recoverY).toBeGreaterThan(movesY);
-  expect(recoverY).toBeLessThan(channelsY);
+  expect(recoverY).toBeLessThan(retentionY);
 });
 
 test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, at-risk entries', async ({

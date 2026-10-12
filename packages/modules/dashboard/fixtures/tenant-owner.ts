@@ -53,14 +53,8 @@ export interface TenantOwnerPanel {
   attention: TenantOwnerAttention[];
   kpis: {
     members: { count: number; newMembers: number; delta: Delta };
-    interacting: { percent: number; delta: Delta; series: number[] };
-    newMemberRetention: {
-      percent: number;
-      delta: Delta;
-      joinedMonth: string;
-      returnedMonth: string;
-    };
-    eventAttendance: { percent: number; delta: Delta };
+    /** The percent is computed from `events.past` (`attendancePercent`); only its change lives here. */
+    eventAttendance: { delta: Delta };
     orderValue: { cents: number; delta: Delta };
     /** The "Engajados" share is computed from `engagement`; only its change and the actions rate live here. */
     engaged: { delta: Delta; actionsPerActiveMember: number };
@@ -127,31 +121,37 @@ export interface TenantOwnerPanel {
 }
 
 export const tenantOwnerPanel: TenantOwnerPanel = {
-  attention: [],
+  attention: [
+    {
+      id: 'o-support',
+      kind: 'support_waiting',
+      severity: 'danger',
+      conversations: 2,
+      oldestHours: 26,
+    },
+    {
+      id: 'o-event',
+      kind: 'event_today',
+      severity: 'warning',
+      event: 'Encontro mensal',
+      startsAtHour: 19,
+      confirmed: 92,
+      capacity: 100,
+    },
+    { id: 'o-at-risk', kind: 'entered_at_risk', severity: 'warning', members: 23, withPush: 9 },
+  ],
   kpis: {
     members: {
       count: 1240,
       newMembers: 96,
       delta: { amount: 8, kind: 'percent', direction: 'up', good: true, basis: 'previous_30_days' },
     },
-    interacting: {
-      percent: 38,
-      delta: { amount: 3, kind: 'points', direction: 'down', good: false, basis: 'none' },
-      series: [31, 33, 36, 35, 39, 41, 40, 42, 41, 39, 37, 38],
-    },
-    newMemberRetention: {
-      percent: 41,
-      delta: { amount: 4, kind: 'points', direction: 'up', good: true, basis: 'none' },
-      joinedMonth: '2026-09',
-      returnedMonth: '2026-10',
-    },
     eventAttendance: {
-      percent: 72,
       delta: { amount: 5, kind: 'points', direction: 'up', good: true, basis: 'none' },
     },
     orderValue: {
       cents: 894000,
-      delta: { amount: 12, kind: 'percent', direction: 'up', good: true, basis: 'none' },
+      delta: { amount: 12, kind: 'percent', direction: 'up', good: true, basis: 'previous_month' },
     },
     engaged: {
       delta: { amount: 2, kind: 'points', direction: 'down', good: false, basis: 'none' },
@@ -173,14 +173,19 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     ],
   },
   atRiskWithPush: 69,
-  growth: { joined: 0, left: 0, weeklyJoined: [] },
+  growth: { joined: 96, left: 9, weeklyJoined: [14, 17, 15, 19, 18, 21, 16, 19, 20, 22, 23, 28] },
   byFormat: [
     { type: 'video', posts: 18, perPost: 96 },
     { type: 'gallery', posts: 15, perPost: 71 },
     { type: 'text', posts: 20, perPost: 48 },
     { type: 'link', posts: 8, perPost: 23 },
   ],
-  byCommunity: [],
+  byCommunity: [
+    { id: 'c-vip', name: 'VIP', exclusive: true, posts: 22, interactions: 1650 },
+    { id: 'c-geral', name: 'Geral', exclusive: false, posts: 25, interactions: 1580 },
+    { id: 'c-iniciantes', name: 'Iniciantes', exclusive: false, posts: 8, interactions: 430 },
+    { id: 'c-eventos', name: 'Eventos', exclusive: false, posts: 6, interactions: 280 },
+  ],
   ordersByBand: { new: 9, superfan: 31, engaged: 38, occasional: 14, at_risk: 3, inactive: 1 },
   weeklyInteracting: {
     current: [310, 330, 360, 352, 391, 410, 402, 425, 418, 396, 372, 380],
@@ -189,12 +194,55 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
   channels: [
     { channel: 'likes', count: 3100 },
     { channel: 'comments', count: 840 },
-    { channel: 'attendance', count: 310 },
+    { channel: 'attendance', count: 236 },
     { channel: 'orders', count: 96 },
     { channel: 'support', count: 74 },
   ],
-  events: { past: [] },
-  support: { awaiting: { count: 0, oldestHours: 0 } },
+  events: {
+    past: [
+      {
+        id: 'e1',
+        name: 'Encontro set.',
+        format: 'in_person',
+        date: '2026-09-19',
+        capacity: 100,
+        confirmed: 100,
+        checkIns: 82,
+        walkIns: 6,
+      },
+      {
+        id: 'e2',
+        name: 'Live de dúvidas',
+        format: 'online',
+        date: '2026-09-24',
+        capacity: null,
+        confirmed: 148,
+        checkIns: 86,
+        walkIns: 0,
+      },
+      {
+        id: 'e3',
+        name: 'Workshop',
+        format: 'in_person',
+        date: '2026-10-01',
+        capacity: 50,
+        confirmed: 50,
+        checkIns: 32,
+        walkIns: 0,
+      },
+      {
+        id: 'e4',
+        name: 'Aula aberta',
+        format: 'online',
+        date: '2026-10-07',
+        capacity: null,
+        confirmed: 61,
+        checkIns: 30,
+        walkIns: 0,
+      },
+    ],
+  },
+  support: { awaiting: { count: 2, oldestHours: 26 } },
   cohorts: [
     { month: '2026-06', values: [100, 58, 46, 41, 38] },
     { month: '2026-07', values: [100, 55, 44, 40] },

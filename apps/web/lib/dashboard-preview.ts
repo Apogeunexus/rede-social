@@ -62,15 +62,22 @@ export type OwnerArea = (typeof OWNER_AREAS)[number];
 
 export const DEFAULT_OWNER_AREA: OwnerArea = 'visao-geral';
 
-/**
- * The area the query asks for (untrusted). Not implemented yet.
- */
-export function parseOwnerArea(_params: SearchParams): OwnerArea {
-  throw new Error('not implemented');
+function isOwnerArea(value: unknown): value is OwnerArea {
+  return (OWNER_AREAS as readonly unknown[]).includes(value);
 }
 
-export function ownerAreaHref(_area: OwnerArea): string {
-  throw new Error('not implemented');
+/**
+ * The area the query asks for (untrusted): `area` only when it is a single string that is exactly an
+ * allow-listed slug, else Visão geral. Only these constants ever reach markup or URLs.
+ */
+export function parseOwnerArea(params: SearchParams): OwnerArea {
+  const raw = params.area;
+  return typeof raw === 'string' && isOwnerArea(raw) ? raw : DEFAULT_OWNER_AREA;
+}
+
+/** The tab link of an area (Visão geral too; the bare level path also renders it). */
+export function ownerAreaHref(area: OwnerArea): string {
+  return `${previewLevelPath('dono-do-cliente')}?area=${area}`;
 }
 
 /** The staff functions the level-6 simulator can grant, in canonical (tab) order. */

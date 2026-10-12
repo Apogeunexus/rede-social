@@ -16,6 +16,7 @@ import {
   dashboardPreviewEnabled,
   type PreviewSlug,
   parseMemberList,
+  parseOwnerArea,
   parseStaffFunctions,
   previewLevel,
 } from '@/lib/dashboard-preview';
@@ -41,7 +42,7 @@ const PANELS: Record<PreviewSlug, (query: SearchParams) => ReactNode> = {
   'dono-da-plataforma': () => <PlatformOwnerPanel />,
   'admin-da-plataforma': () => <PlatformAdminPanel />,
   'suporte-da-plataforma': () => <PlatformSupportPanel />,
-  'dono-do-cliente': () => <TenantOwnerPanel />,
+  'dono-do-cliente': (query) => <TenantOwnerPanel area={parseOwnerArea(query)} />,
   'admin-do-cliente': () => <TenantAdminPanel />,
   'equipe-do-cliente': (query) => <TenantStaffPanel {...parseStaffFunctions(query)} />,
   membro: (query) => <MemberPanel list={parseMemberList(query)} />,

@@ -33,20 +33,23 @@ export function percentOf(part: number, whole: number): number {
 }
 
 /** The picked number of every row, summed (0 for no rows). */
-export function sumOf<T>(_rows: readonly T[], _pick: (row: T) => number): number {
-  throw new Error('not implemented');
+export function sumOf<T>(rows: readonly T[], pick: (row: T) => number): number {
+  return rows.reduce((total, row) => total + pick(row), 0);
 }
 
 /** `total / count` rounded to a whole number ("65 por post"); 0 when `count` is not positive. */
-export function perItem(_total: number, _count: number): number {
-  throw new Error('not implemented');
+export function perItem(total: number, count: number): number {
+  return count > 0 ? Math.round(total / count) : 0;
 }
 
 /** Check-ins as 0–100 of the confirmed RSVPs over a list of events, unrounded (0 for no RSVPs). */
 export function attendancePercent(
-  _rows: readonly { confirmed: number; checkIns: number }[],
+  rows: readonly { confirmed: number; checkIns: number }[],
 ): number {
-  throw new Error('not implemented');
+  return percentOf(
+    sumOf(rows, (row) => row.checkIns),
+    sumOf(rows, (row) => row.confirmed),
+  );
 }
 
 /** "Interagiu" as 0–100 of the base, unrounded. */

@@ -327,24 +327,57 @@
         "subtitle": "Visão do dono",
         "period": "30 dias"
       },
+      "areas": {
+        "label": "Áreas do painel",
+        "overview": "Visão geral",
+        "members": "Membros"
+      },
+      "alerts": {
+        "support_waiting": {
+          "tag": "{hours}h",
+          "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
+          "detail": "A mais antiga espera há {hours} horas"
+        },
+        "event_today": {
+          "tag": "Hoje {hour}h",
+          "title": "{event}: {confirmed} de {capacity} vagas",
+          "detail": "{left, plural, one {# vaga restante} other {# vagas restantes}}"
+        },
+        "entered_at_risk": {
+          "tag": "7 dias",
+          "title": "{count, plural, one {# membro entrou} other {# membros entraram}} em risco nesta semana",
+          "detail": "{count} com push"
+        }
+      },
       "kpi": {
         "members": "Membros",
         "membersNote": "+{count} novos",
-        "interacting": "Membros que interagiram",
-        "retention": "Retenção de novos",
-        "retentionNote": "entraram em {joined}, voltaram em {returned}",
         "attendance": "Comparecimento em eventos",
         "attendanceNote": "check-in ÷ confirmados",
-        "orderValue": "Valor de pedidos",
+        "orderValue": "Vendas do mês",
         "orderValueNote": "valor registrado, sem pagamento real",
-        "engaged": "Engajados"
+        "engaged": "Engajados",
+        "perPost": "Interações por post",
+        "perPostNote": "curtidas e comentários em {posts} posts",
+        "awaiting": "Conversas aguardando resposta",
+        "awaitingNote": "mais antiga: {hours}h"
       },
       "weekly": {
         "title": "Membros que interagiram por semana",
         "label": "Membros que interagiram por semana: as últimas 12 semanas e as 12 anteriores",
         "week": "S{week}",
         "current": "Últimas 12 semanas",
-        "previous": "12 semanas anteriores"
+        "previous": "12 semanas anteriores",
+        "share": "{percent} da base interagiu nos últimos 30 dias ({count} de {total})."
+      },
+      "growth": {
+        "title": "Crescimento",
+        "joined": "Entraram",
+        "left": "Saíram",
+        "note": "nos últimos 30 dias",
+        "balance": "Saldo de {balance} membros em 30 dias ({percent} vs. 30 dias antes).",
+        "weeklyTitle": "Novos membros por semana",
+        "weeklyLabel": "Novos membros por semana: as últimas 12 semanas"
       },
       "channels": {
         "title": "Onde os membros interagem",

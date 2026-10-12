@@ -52,6 +52,13 @@ export function formatChange(ratio: number): string {
   return CHANGE.format(ratio);
 }
 
+const SIGNED = new Intl.NumberFormat('pt-BR', { signDisplay: 'exceptZero' });
+
+/** A signed count: `87` -> `+87`, `-3` -> `-3`, `0` -> `0`. */
+export function formatSignedCount(value: number): string {
+  return SIGNED.format(value);
+}
+
 const MEGABYTES = new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'megabyte' });
 
 /** `41` -> `41 MB`. */
