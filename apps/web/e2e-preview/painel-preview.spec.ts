@@ -457,15 +457,24 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
   { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 0 },
   { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 7 },
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 1 },
+  { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
+  { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
 ];
 
 test('dono-do-cliente: the area tabs', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/dono-do-cliente');
   const links = ownerTabs(page).getByRole('link');
-  expect((await links.allTextContents()).map((text) => text.trim())).toEqual(
-    OWNER_AREA_CASES.map((area) => area.tab),
-  );
+  const names = (await links.allTextContents()).map((text) => text.trim());
+  expect(names).toEqual([
+    'Visão geral',
+    'Membros',
+    'Conteúdo',
+    'Eventos',
+    'Financeiro',
+    'Atendimento',
+  ]);
+  expect(names).toEqual(OWNER_AREA_CASES.map((area) => area.tab));
   for (const [i, area] of OWNER_AREA_CASES.entries()) {
     expect(await links.nth(i).getAttribute('href')).toMatch(new RegExp(`\\?area=${area.slug}$`));
   }
@@ -718,6 +727,76 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await attendance.locator('summary').click();
   await expect(attendance.getByRole('listitem')).toHaveCount(4);
   await expect(attendance).toContainText('+6 pessoas sem inscrição no Encontro set.');
+});
+
+test('dono-do-cliente ?area=financeiro', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=financeiro');
+  const area = ownerArea(page);
+
+  const value = kpiCard(area, 'Valor registrado');
+  await expect(value).toContainText(/R\$\s8\.940,00/);
+  await expect(value).toContainText('12% vs. mês anterior');
+  await expect(kpiCard(area, 'Pedidos')).toContainText('96');
+  await expect(
+    area.getByText(
+      'Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+
+  const revenue = areaDetails(page, 'Receita por produto');
+  await expect(revenue).not.toHaveAttribute('open');
+  await expect(revenue.locator('summary')).toContainText(/Comunidade VIP lidera: R\$\s4\.137,00/);
+  const buyers = areaDetails(page, 'Quem compra');
+  await expect(buyers).not.toHaveAttribute('open');
+  await expect(buyers.locator('summary')).toContainText('72% das compras vêm de 22% dos membros');
+
+  for (const label of ['Acessos que vencem em 7 dias', 'Taxa de renovação']) {
+    await expect(kpiCard(area, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+  }
+  await expect(kpiCard(area, 'Taxa de renovação')).toContainText('73%');
+  const conversion = areaDetails(page, 'Conversão por produto');
+  await expect(conversion).not.toHaveAttribute('open');
+  await expect(conversion.locator('summary').getByText('exemplo', { exact: true })).toHaveCount(1);
+});
+
+test('dono-do-cliente ?area=atendimento', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=atendimento');
+  const area = ownerArea(page);
+
+  await expect(kpiCard(area, 'Aguardando resposta')).toContainText('2');
+  await expect(kpiCard(area, 'Espera mais antiga')).toContainText('26 h');
+  const median = kpiCard(area, 'Mediana da semana');
+  await expect(median).toContainText('1h40');
+  await expect(median).toContainText('20 min');
+
+  await expect(areaDetails(page, 'Atendimentos por semana').locator('summary')).toContainText(
+    '72 nas últimas 4 semanas',
+  );
+  await expect(
+    areaDetails(page, 'Atendimentos por assunto')
+      .locator('summary')
+      .getByText('exemplo', { exact: true }),
+  ).toHaveCount(1);
+
+  const team = areaDetails(page, 'Equipe');
+  await expect(team).not.toHaveAttribute('open');
+  await expect(team.locator('summary')).toContainText(
+    '72 conversas respondidas por 3 pessoas em 30 dias',
+  );
+  await team.locator('summary').click();
+  for (const name of ['Marina Costa', 'Paulo Reis', 'Bia Lopes']) {
+    await expect(team.getByText(name, { exact: true })).toBeVisible();
+  }
+  await expect(areaDetails(page, 'Moderação').locator('summary')).toContainText(
+    'taxa de remoção 0,2%',
+  );
+
+  await openAllDetails(page);
+  const body = (await area.textContent()) ?? '';
+  expect(body).not.toMatch(/\b(Ana|Rui|João|Lia|Vieira|Souza|Matos)\b/);
 });
 
 test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, at-risk entries', async ({

@@ -57,7 +57,14 @@ type SearchParams = Record<string, string | string[] | undefined>;
  * The client owner's panel areas (quick 261012-o00), in tab order: each slug is a `?area=` value on
  * the level-4 page.
  */
-export const OWNER_AREAS = ['visao-geral', 'membros', 'conteudo', 'eventos'] as const;
+export const OWNER_AREAS = [
+  'visao-geral',
+  'membros',
+  'conteudo',
+  'eventos',
+  'financeiro',
+  'atendimento',
+] as const;
 export type OwnerArea = (typeof OWNER_AREAS)[number];
 
 export const DEFAULT_OWNER_AREA: OwnerArea = 'visao-geral';

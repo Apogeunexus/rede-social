@@ -11,8 +11,10 @@ import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-prev
 import { type DashboardT, formatCount } from './format';
 import { OwnerContent } from './OwnerContent';
 import { OwnerEvents } from './OwnerEvents';
+import { OwnerFinance } from './OwnerFinance';
 import { OwnerMembers } from './OwnerMembers';
 import { OwnerOverview } from './OwnerOverview';
+import { OwnerSupport } from './OwnerSupport';
 import { PanelHeader } from './PanelHeader';
 import { TenantColumn } from './TenantColumn';
 
@@ -56,6 +58,8 @@ const AREAS = {
   membros: { labelKey: 'tenantOwner.areas.members', Area: OwnerMembers },
   conteudo: { labelKey: 'tenantOwner.areas.content', Area: OwnerContent },
   eventos: { labelKey: 'tenantOwner.areas.events', Area: OwnerEvents },
+  financeiro: { labelKey: 'tenantOwner.areas.finance', Area: OwnerFinance },
+  atendimento: { labelKey: 'tenantOwner.areas.support', Area: OwnerSupport },
 } satisfies Record<OwnerArea, { labelKey: string; Area: () => Promise<ReactNode> }>;
 
 export interface TenantOwnerPanelProps {

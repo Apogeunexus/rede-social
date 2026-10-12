@@ -77,7 +77,9 @@
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
       "needs_usage_sessions": "Precisa registrar as sessões de uso do app",
       "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela",
-      "needs_waitlist": "Precisa registrar a lista de espera dos eventos"
+      "needs_waitlist": "Precisa registrar a lista de espera dos eventos",
+      "needs_access_expiry": "Precisa preencher o vencimento dos acessos",
+      "needs_support_subject": "Precisa registrar o assunto de cada atendimento"
     },
     "example": "exemplo",
     "belowFloor": "menos de {floor}",
@@ -334,7 +336,9 @@
         "overview": "Visão geral",
         "members": "Membros",
         "content": "Conteúdo",
-        "events": "Eventos"
+        "events": "Eventos",
+        "finance": "Financeiro",
+        "support": "Atendimento"
       },
       "alerts": {
         "support_waiting": {
@@ -461,6 +465,61 @@
         "title": "Quem vai aos eventos",
         "sentence": "{presences} das presenças vêm de {members} dos membros (superfãs e engajados).",
         "footnote": "Cada presença conta na faixa de quem foi no dia anterior ao evento."
+      },
+      "sales": {
+        "title": "Vendas do mês",
+        "value": "Valor registrado",
+        "orders": "Pedidos",
+        "notice": "Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido."
+      },
+      "revenue": {
+        "title": "Receita por produto",
+        "summary": "{product} lidera: {value}",
+        "orders": "{count, plural, =0 {nenhum pedido} one {# pedido} other {# pedidos}}"
+      },
+      "access": {
+        "title": "Acessos e renovação",
+        "expiring": "Acessos que vencem em 7 dias",
+        "renewal": "Taxa de renovação",
+        "renewalNote": "{renewed} de {expired} renovaram em 30 dias"
+      },
+      "conversion": {
+        "title": "Conversão por produto",
+        "summary": "visitas à página → compra",
+        "rate": "{orders} de {visits} visitas"
+      },
+      "queue": {
+        "title": "Fila agora",
+        "awaiting": "Aguardando resposta",
+        "oldest": "Espera mais antiga"
+      },
+      "firstResponse": {
+        "title": "Tempo da 1ª resposta",
+        "median": "Mediana da semana",
+        "chartLabel": "Mediana da 1ª resposta por semana: as últimas 8 semanas"
+      },
+      "volume": {
+        "title": "Atendimentos por semana",
+        "summary": "{count} nas últimas 4 semanas",
+        "chartLabel": "Conversas de atendimento por semana: as últimas 8 semanas"
+      },
+      "subjects": {
+        "title": "Atendimentos por assunto",
+        "access": "Acesso e login",
+        "payment": "Pagamentos e compras",
+        "events": "Eventos",
+        "content": "Conteúdo",
+        "other": "Outros"
+      },
+      "team": {
+        "title": "Equipe",
+        "summary": "{count} conversas respondidas por {people} pessoas em 30 dias"
+      },
+      "moderation": {
+        "title": "Moderação",
+        "summary": "taxa de remoção {rate}",
+        "rate": "Taxa de remoção",
+        "rateNote": "{removed} de {total} comentários em 30 dias"
       },
       "channels": {
         "title": "Onde os membros interagem",
