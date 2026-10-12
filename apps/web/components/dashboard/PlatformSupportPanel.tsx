@@ -3,8 +3,10 @@ import {
   bandTotal,
   Collapsible,
   isBelowPrivacyFloor,
+  isComplementBelowPrivacyFloor,
   KpiCard,
   KpiGrid,
+  mergeBandsBelowFloor,
   PRIVACY_FLOOR,
   percentOf,
   ToneLabel,
@@ -46,13 +48,23 @@ function activityDelta(perHour: number, averagePerHour: number): Delta {
  * reason, the KPIs (invites, novos who never acted, activity vs the average), the configuration and
  * the engagement bands (both closed), the last errors with the push reach (open), and the two ways
  * out — escalate, or review one's own registered accesses. Every count of the client's members or
- * devices under 5 reads "menos de 5" (D-02).
+ * devices under 5 reads "menos de 5" (D-02); a band under 5 is merged with a neighbour so the exact
+ * total cannot give it back (C-1), and "novos que nunca agiram" hides a complement under 5 (C-2).
  */
 export async function PlatformSupportPanel() {
   const t = await getTranslations('dashboard');
   const moduleName = await moduleNamer(t);
   const { client, access, kpis, configuration, errors24h, engagement, pushReachPercent } =
     platformSupportPanel;
+  // An exact "em risco" percent next to a merged row would give the neighbour back by subtraction.
+  const atRiskAlone = mergeBandsBelowFloor(engagement).find(
+    (group) => group.bands.length === 1 && group.bands[0] === 'at_risk',
+  );
+  const neverActed = kpis.newNeverActed7d;
+  const neverActedHidesComplement = isComplementBelowPrivacyFloor(
+    neverActed.count,
+    neverActed.joined,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,10 +145,17 @@ export async function PlatformSupportPanel() {
         />
         <KpiCard
           label={t('platformSupport.kpi.neverActed')}
-          value={formatFloored(t, kpis.newNeverActed7d.count)}
-          note={t('platformSupport.kpi.neverActedNote', {
-            joined: formatFloored(t, kpis.newNeverActed7d.joined),
-          })}
+          value={
+            neverActedHidesComplement
+              ? t('platformSupport.kpi.neverActedAllBut', { floor: PRIVACY_FLOOR })
+              : formatFloored(t, neverActed.count)
+          }
+          note={t(
+            neverActedHidesComplement
+              ? 'platformSupport.kpi.neverActedJoined'
+              : 'platformSupport.kpi.neverActedNote',
+            { joined: formatFloored(t, neverActed.joined) },
+          )}
         />
         <KpiCard
           label={t('platformSupport.kpi.activity')}
@@ -179,9 +198,13 @@ export async function PlatformSupportPanel() {
 
       <Collapsible
         title={t('platformSupport.engagement.title')}
-        summary={t('platformSupport.engagement.summary', {
-          percent: formatPercent(percentOf(engagement.counts.at_risk, bandTotal(engagement))),
-        })}
+        {...(atRiskAlone
+          ? {
+              summary: t('platformSupport.engagement.summary', {
+                percent: formatPercent(percentOf(atRiskAlone.count, bandTotal(engagement))),
+              }),
+            }
+          : {})}
       >
         <BandsBarList t={t} bands={engagement} floor />
         <p className="text-xs text-text-secondary">

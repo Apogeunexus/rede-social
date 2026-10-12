@@ -171,6 +171,13 @@ export function bandLabel(t: DashboardT, band: EngagementBand | 'active'): strin
   return t(`bands.${band}`);
 }
 
+/** Merged bands -> one label: `['superfan', 'engaged']` -> `Superfãs e engajados`. */
+export function bandGroupLabel(t: DashboardT, bands: readonly EngagementBand[]): string {
+  const [first, ...rest] = bands;
+  if (first === undefined) return '';
+  return formatList([bandLabel(t, first), ...rest.map((band) => t(`bands.lower.${band}`))]);
+}
+
 /** `Ana Souza` -> `AS`, `M. Vieira` -> `MV`: the first letter of the first and last words. */
 export function initials(name: string): string {
   const words = name.split(/\s+/).filter(Boolean);

@@ -3,17 +3,18 @@ import {
   BarList,
   bandTotal,
   ENGAGEMENT_BAND_ORDER,
-  isBelowPrivacyFloor,
+  mergeBandsBelowFloor,
   percentOf,
 } from '@rede-social/module-dashboard/ui';
-import { bandLabel, type DashboardT, formatCount, formatFloored, formatPercent } from './format';
+import { bandGroupLabel, bandLabel, type DashboardT, formatCount, formatPercent } from './format';
 
 export interface BandsBarListProps {
   t: DashboardT;
   bands: EngagementBands;
   /**
-   * Platform support (D-02): a band under the privacy floor reads "menos de 5", with an empty bar and
-   * no percent, so neither the width nor a rate can give the true count away.
+   * Platform support (D-02, C-1): a band under the privacy floor is merged with a neighbour into one
+   * row ("Superfãs e engajados"), so every row is ≥ 5 and the rows still sum to the exact total —
+   * no band can be read directly or recovered by subtracting the others from the total.
    */
   floor?: boolean;
 }
@@ -24,21 +25,25 @@ export interface BandsBarListProps {
  */
 export function BandsBarList({ t, bands, floor = false }: BandsBarListProps) {
   const total = bandTotal(bands);
-  return (
-    <BarList
-      max={bandTotal(bands)}
-      rows={ENGAGEMENT_BAND_ORDER.map((band) => {
+  const rows = floor
+    ? mergeBandsBelowFloor(bands).map((group) => ({
+        id: group.bands.join('-'),
+        label: bandGroupLabel(t, group.bands),
+        value: group.count,
+        display: formatCount(group.count),
+        rate: formatPercent(percentOf(group.count, total)),
+        highlight: group.bands.includes('at_risk'),
+      }))
+    : ENGAGEMENT_BAND_ORDER.map((band) => {
         const count = bands.counts[band];
-        const hidden = floor && isBelowPrivacyFloor(count);
         return {
           id: band,
           label: bandLabel(t, band),
-          value: hidden ? 0 : count,
-          display: hidden ? formatFloored(t, count) : formatCount(count),
-          ...(hidden ? {} : { rate: formatPercent(percentOf(count, total)) }),
+          value: count,
+          display: formatCount(count),
+          rate: formatPercent(percentOf(count, total)),
           highlight: band === 'at_risk',
         };
-      })}
-    />
-  );
+      });
+  return <BarList max={total} rows={rows} />;
 }

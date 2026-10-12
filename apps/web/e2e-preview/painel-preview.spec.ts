@@ -566,7 +566,7 @@ test('admin-da-plataforma: push reach, the active-members step and stalled video
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
 });
 
-test("suporte-da-plataforma: aggregates only, counts under 5 read 'menos de 5'", async ({
+test('suporte-da-plataforma: aggregates only, small bands merged, no count under 5 derivable', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -574,8 +574,10 @@ test("suporte-da-plataforma: aggregates only, counts under 5 read 'menos de 5'",
 
   await expect(kpiCard(page, 'Convites não aceitos')).toContainText('37');
   const neverActed = kpiCard(page, 'Novos que nunca agiram (7 dias)');
-  await expect(neverActed).toContainText('13');
-  await expect(neverActed).toContainText('de 14 que entraram');
+  await expect(neverActed).toContainText('Todos, exceto menos de 5');
+  await expect(neverActed).toContainText('14 entraram');
+  await expect(neverActed).not.toContainText('13');
+  await expect(neverActed).not.toContainText('que entraram');
   const activity = kpiCard(page, 'Atividade 24h vs. média');
   await expect(activity).toContainText('2/h');
   await expect(activity).toContainText('média: 6/h');
@@ -590,10 +592,21 @@ test("suporte-da-plataforma: aggregates only, counts under 5 read 'menos de 5'",
   const engagement = page.locator('details').filter({ hasText: 'Engajamento (agregado)' });
   await engagement.locator('summary').click();
   await expect(engagement.locator('summary')).toContainText('31% em risco');
-  const superfans = engagement.getByRole('listitem').filter({ hasText: 'Superfãs' });
-  await expect(superfans).toHaveText(/Superfãs\s*menos de 5/);
-  await expect(superfans).not.toContainText('2');
-  await expect(superfans.locator('[data-bar-fill]')).toHaveAttribute('style', /width:\s*0%/);
+  const rows = engagement.getByRole('listitem');
+  await expect(rows).toHaveCount(5);
+  const counts = await rows.evaluateAll((items) =>
+    items.map((item) =>
+      Number((item.children[2]?.firstChild?.textContent ?? '').trim().replaceAll('.', '')),
+    ),
+  );
+  for (const count of counts) expect(count).toBeGreaterThanOrEqual(5);
+  const membersText = (await kpiCard(page, 'Membros').textContent()) ?? '';
+  const members = Number(/\d[\d.]*/.exec(membersText)?.[0].replaceAll('.', ''));
+  expect(members).toBe(310);
+  expect(counts.reduce((sum, count) => sum + count, 0)).toBe(members);
+  await expect(rows.filter({ hasText: 'Superfãs e engajados' })).toContainText('10');
+  await expect(engagement.getByRole('list')).not.toContainText('menos de 5');
+  await expect(engagement.getByText(/aparece somada à faixa vizinha/)).toBeVisible();
 
   await expect(
     page.getByText('Menos de 5 aparelhos recusaram a notificação', { exact: true }),

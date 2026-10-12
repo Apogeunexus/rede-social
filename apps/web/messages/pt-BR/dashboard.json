@@ -249,6 +249,8 @@
         "pendingInvites": "Convites não aceitos",
         "neverActed": "Novos que nunca agiram (7 dias)",
         "neverActedNote": "de {joined} que entraram",
+        "neverActedAllBut": "Todos, exceto menos de {floor}",
+        "neverActedJoined": "{joined} entraram",
         "activity": "Atividade 24h vs. média",
         "activityValue": "{count}/h",
         "activityNote": "média: {average}/h"
@@ -263,7 +265,7 @@
       "engagement": {
         "title": "Engajamento (agregado)",
         "summary": "{percent} em risco",
-        "footnote": "Só números agregados; contagens abaixo de {floor} aparecem como “menos de {floor}”."
+        "footnote": "Só números agregados; uma faixa com menos de {floor} membros aparece somada à faixa vizinha."
       },
       "errors": {
         "title": "Erros nas últimas 24h",
@@ -298,6 +300,14 @@
       "at_risk": "Em risco",
       "inactive": "Inativos",
       "active": "Ativos",
+      "lower": {
+        "new": "novos",
+        "superfan": "superfãs",
+        "engaged": "engajados",
+        "occasional": "ocasionais",
+        "at_risk": "em risco",
+        "inactive": "inativos"
+      },
       "flow": "{from} → {to}",
       "footnote": "Cada membro conta em uma faixa, pelos dias com alguma ação nos últimos 30 dias.",
       "newActivated": "Novos: {activated} ativados de {total}."

@@ -57,15 +57,54 @@ export interface BandGroup {
   count: number;
 }
 
+/**
+ * The bands as rows where no row is under `floor` (C-1). Hiding a small band is not enough when the
+ * exact total sits next to the others: the total minus the shown bands gives it back. So a small band
+ * is merged with a neighbour instead — the smallest small group first (lowest index on a tie), into
+ * its only neighbour at either end, else into the smaller of its two neighbours (the previous on a
+ * tie) — until every row reaches the floor. The rows still sum to the exact total and keep band
+ * order. A whole base under the floor ends as one row, which equals the total already shown.
+ */
 export function mergeBandsBelowFloor(
-  _bands: EngagementBands,
-  _floor: number = PRIVACY_FLOOR,
+  bands: EngagementBands,
+  floor: number = PRIVACY_FLOOR,
 ): BandGroup[] {
-  throw new Error('not implemented');
+  const groups: BandGroup[] = ENGAGEMENT_BAND_ORDER.map((band) => ({
+    bands: [band],
+    count: bands.counts[band],
+  }));
+  while (groups.length > 1) {
+    let smallest = -1;
+    let smallestCount = floor;
+    groups.forEach((group, index) => {
+      if (group.count < smallestCount) {
+        smallest = index;
+        smallestCount = group.count;
+      }
+    });
+    if (smallest < 0) break;
+    const previous = groups[smallest - 1];
+    const next = groups[smallest + 1];
+    const into =
+      next === undefined || (previous !== undefined && previous.count <= next.count)
+        ? smallest - 1
+        : smallest + 1;
+    const [first, second] = into < smallest ? [into, smallest] : [smallest, into];
+    const a = groups[first];
+    const b = groups[second];
+    if (a === undefined || b === undefined) break;
+    groups.splice(first, 2, { bands: [...a.bands, ...b.bands], count: a.count + b.count });
+  }
+  return groups;
 }
 
-export function isComplementBelowPrivacyFloor(_part: number, _whole: number): boolean {
-  throw new Error('not implemented');
+/**
+ * Whether showing `part` of `whole` would give away a count under the floor by complement (C-2):
+ * "13 de 14" reveals the 1 who did act. True when `part` itself is shown (≥ floor) but
+ * `whole − part` is under it, 0 included. When `part` is already floored the complement is a range.
+ */
+export function isComplementBelowPrivacyFloor(part: number, whole: number): boolean {
+  return !isBelowPrivacyFloor(part) && isBelowPrivacyFloor(whole - part);
 }
 
 /** A member counts as new (gets the "Novo" tag) for this many days after joining. */
