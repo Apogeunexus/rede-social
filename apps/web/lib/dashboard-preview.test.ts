@@ -105,7 +105,20 @@ describe('parseStaffFunctions', () => {
 });
 
 describe('parseMemberList', () => {
+  it('lists the slugs in canonical order', () => {
+    expect(MEMBER_LISTS).toEqual([
+      'curtidas',
+      'comentarios',
+      'salvamentos',
+      'compartilhamentos',
+      'stories',
+    ]);
+  });
+
   it('returns an allow-listed slug', () => {
+    for (const slug of ['comentarios', 'salvamentos', 'compartilhamentos', 'stories'] as const) {
+      expect(parseMemberList({ lista: slug })).toBe(slug);
+    }
     for (const slug of MEMBER_LISTS) expect(parseMemberList({ lista: slug })).toBe(slug);
     expect(parseMemberList({ lista: 'curtidas' })).toBe('curtidas');
   });

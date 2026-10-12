@@ -3,6 +3,7 @@ import {
   memberActivityLists,
   memberPanel,
   memberPostTable,
+  previewTenant,
   type RelativeMoment,
   spreadMoments,
 } from '../fixtures';
@@ -102,6 +103,120 @@ describe('memberActivityLists.likes (D-04)', () => {
       expect(row.when.daysAgo).toBeGreaterThanOrEqual(1);
       expect(row.when.daysAgo).toBeLessThanOrEqual(7);
     }
+  });
+});
+
+/** The last-seen moment of a table post: every action on it carries that moment. */
+const seenOf = new Map(
+  memberPostTable.map((post, i) => [post.id, spreadMoments(memberPostTable.length)[i]]),
+);
+
+describe('memberActivityLists.comments (D-04)', () => {
+  const { comments, likes } = memberActivityLists;
+  const { engagement, byCommunity } = memberPanel.activity;
+
+  it('agrees with the Comentários card: measured, 12 rows', () => {
+    expect(comments.example).toBe(false);
+    expect(comments.example).toBe(engagement.comments.example);
+    expect(comments.value).toHaveLength(engagement.comments.value.count);
+    expect(comments.value).toHaveLength(12);
+  });
+
+  it('comments once on 12 table posts: 6 VIP, 4 Geral, 2 Eventos, at their last-seen moment', () => {
+    const ids = comments.value.map((row) => row.post.id);
+    expect(new Set(ids).size).toBe(12);
+    for (const row of comments.value) {
+      expect(tableIds.has(row.post.id)).toBe(true);
+      expect(row.when).toEqual(seenOf.get(row.post.id));
+      expect(row.text.length).toBeLessThanOrEqual(90);
+    }
+    expect(new Set(comments.value.map((row) => row.id)).size).toBe(12);
+    expect(countBy(comments.value, (row) => row.post.community)).toEqual({
+      'Comunidade VIP': 6,
+      Geral: 4,
+      Eventos: 2,
+    });
+    expect(isNewestFirst(comments.value.map((row) => row.when))).toBe(true);
+  });
+
+  it('likes + comments per community equal "Onde você mais participa"', () => {
+    const liked = countBy(likes.value, (row) => row.community);
+    const commented = countBy(comments.value, (row) => row.post.community);
+    for (const row of byCommunity.value) {
+      expect((liked[row.name] ?? 0) + (commented[row.name] ?? 0)).toBe(row.interactions);
+    }
+    expect(byCommunity.value.map((row) => row.interactions)).toEqual([31, 19, 8]);
+  });
+});
+
+describe('memberActivityLists.saves and shares (example lists)', () => {
+  const { saves, shares } = memberActivityLists;
+  const { engagement } = memberPanel.activity;
+
+  it('saves: 9 example rows at table indices 2..58 step 7, newest first', () => {
+    expect(saves.example).toBe(true);
+    expect(saves.example).toBe(engagement.saves.example);
+    if (saves.example) expect(saves.reason).toBe('needs_saves');
+    expect(saves.value).toHaveLength(engagement.saves.value.count);
+    expect(saves.value.map((row) => row.id)).toEqual([
+      'p03',
+      'p10',
+      'p17',
+      'p24',
+      'p31',
+      'p38',
+      'p45',
+      'p52',
+      'p59',
+    ]);
+    for (const row of saves.value) expect(row.when).toEqual(seenOf.get(row.id));
+    expect(isNewestFirst(saves.value.map((row) => row.when))).toBe(true);
+  });
+
+  it('shares: 3 example rows at indices 5, 25, 45 via link, native, link', () => {
+    expect(shares.example).toBe(true);
+    expect(shares.example).toBe(engagement.shares.example);
+    if (shares.example) expect(shares.reason).toBe('needs_shares');
+    expect(shares.value).toHaveLength(engagement.shares.value.count);
+    expect(shares.value.map((row) => [row.id, row.via])).toEqual([
+      ['p06', 'link'],
+      ['p26', 'native'],
+      ['p46', 'link'],
+    ]);
+    for (const row of shares.value) expect(row.when).toEqual(seenOf.get(row.id));
+    expect(isNewestFirst(shares.value.map((row) => row.when))).toBe(true);
+  });
+});
+
+describe('memberActivityLists.stories (measured list, example time per story)', () => {
+  const { stories } = memberActivityLists;
+  const { seen } = memberPanel.activity;
+
+  it('agrees with the Stories vistos card: measured, 23 rows', () => {
+    expect(stories.example).toBe(false);
+    expect(stories.example).toBe(seen.stories.example);
+    expect(stories.value).toHaveLength(seen.stories.value);
+    expect(stories.value).toHaveLength(23);
+    expect(new Set(stories.value.map((row) => row.id)).size).toBe(23);
+  });
+
+  it('authors are the creator or a community, never another member', () => {
+    const allowed = [previewTenant.displayName, ...COMMUNITIES];
+    for (const row of stories.value) expect(allowed).toContain(row.author);
+  });
+
+  it('every time on screen is an example of 5..15 s', () => {
+    for (const row of stories.value) {
+      expect(row.seconds.example).toBe(true);
+      if (row.seconds.example) expect(row.seconds.reason).toBe('needs_story_view_time');
+      expect(row.seconds.value).toBeGreaterThanOrEqual(5);
+      expect(row.seconds.value).toBeLessThanOrEqual(15);
+    }
+  });
+
+  it('is newest first, inside the window', () => {
+    expect(isNewestFirst(stories.value.map((row) => row.when))).toBe(true);
+    for (const row of stories.value) expect(row.when.daysAgo).toBeGreaterThanOrEqual(1);
   });
 });
 
