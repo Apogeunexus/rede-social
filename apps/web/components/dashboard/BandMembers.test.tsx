@@ -116,7 +116,8 @@ describe('A-3: a band over 10 says the list is capped', () => {
     const superfans = band(container, 'Superfãs');
     expect(superfans.querySelectorAll('li')).toHaveLength(3);
     expect(superfans.textContent).not.toContain('Os 10 com atividade mais recente');
-    expect(superfans.textContent).not.toContain('e mais');
+    // "Comunidade que mais interage" holds "mais" too: only "e mais <n>" is the overflow line.
+    expect(superfans.textContent).not.toMatch(/e mais \d/);
     expect(seeAll(superfans)).toBeUndefined();
   });
 });

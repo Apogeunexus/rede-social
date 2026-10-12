@@ -1,6 +1,6 @@
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import type { RelativeMoment } from './platform-panels';
-import type { EngagementBand, EngagementBands } from './shared';
+import type { EngagementBand, EngagementBands, ReportValue } from './shared';
 import { tenantOwnerPanel } from './tenant-owner';
 
 /**
@@ -19,14 +19,19 @@ export const OWNER_BAND_LIST_LIMIT = 10;
 /** The preview's today: the Encontro mensal day of the owner's event_today alert. */
 export const PREVIEW_TODAY = '2026-10-12';
 
-/** One row of a band list. `topCommunityId` is set only on the whole base. */
+/**
+ * One row of a band list (the member card, quick 261012-qer B-1). `lastActive` is the scope's;
+ * `topCommunityId` and `dailyMinutes` are the member's own, in every scope.
+ */
 export interface OwnerBandMember {
   id: string;
   name: string;
   /** ISO date the member joined. */
   memberSince: string;
   lastActive: RelativeMoment;
-  topCommunityId?: string;
+  topCommunityId: string;
+  /** Average minutes in the app per day: an example (no usage sessions are recorded yet). */
+  dailyMinutes: ReportValue<number>;
 }
 
 /** What the bands count: the whole base, one community's members, or one event's registrants. */
@@ -48,6 +53,7 @@ export interface OwnerRosterMember {
   band: EngagementBand;
   lastActive: RelativeMoment;
   topCommunityId: string;
+  dailyMinutes: ReportValue<number>;
   communities: Record<string, { band: EngagementBand; lastActive: RelativeMoment }>;
   /** The panel events the member RSVP'd "vou" to, oldest first. */
   eventIds: string[];
@@ -159,6 +165,16 @@ const WHOLE_DAYS: Record<EngagementBand, (j: number) => number> = {
   inactive: (j) => 64 + 9 * j,
 };
 
+/** The example daily minutes by band and slot: superfãs the most, inactive none. */
+const DAILY_MINUTES: Record<EngagementBand, (j: number) => number> = {
+  new: (j) => 18 + 2 * j,
+  superfan: (j) => 45 + 3 * j,
+  engaged: (j) => 25 + 2 * j,
+  occasional: (j) => 8 + j,
+  at_risk: (j) => 2 + (j % 3),
+  inactive: () => 0,
+};
+
 /** Days since the last action in a community where the member sits one band lower. */
 const DROPPED_DAYS: Record<Exclude<EngagementBand, 'new'>, (whole: number, j: number) => number> = {
   superfan: (whole) => whole + 5,
@@ -228,6 +244,7 @@ function buildMember(bandIndex: number, j: number): UnregisteredMember {
     band,
     lastActive: { daysAgo: wholeDays, time },
     topCommunityId: at(eligible, j % eligible.length),
+    dailyMinutes: { example: true, reason: 'needs_usage_sessions', value: DAILY_MINUTES[band](j) },
     communities,
   };
 }
@@ -285,28 +302,22 @@ function byRecency(a: OwnerBandMember, b: OwnerBandMember): number {
 /**
  * The members of `band` in a scope (an id the fixture does not have throws): the
  * `OWNER_BAND_LIST_LIMIT` most recent, with the scope's last action, and how many more the band count
- * holds. An event's registrants sit in their whole-base band, with their whole-base last action. Only
- * the whole base says where each member interacts most.
+ * holds. An event's registrants sit in their whole-base band, with their whole-base last action.
  */
 export function ownerBandList(scope: OwnerBandScope, band: EngagementBand): OwnerBandList {
   const count = scopeBands(scope).counts[band];
   const members = ownerBandRoster
     .flatMap((row): OwnerBandMember[] => {
+      const { id, name, memberSince, topCommunityId, dailyMinutes } = row;
+      const card = { id, name, memberSince, topCommunityId, dailyMinutes };
       if (scope.kind !== 'community') {
         if (row.band !== band) return [];
         if (scope.kind === 'event' && !row.eventIds.includes(scope.id)) return [];
-        const { id, name, memberSince, lastActive, topCommunityId } = row;
-        return [
-          scope.kind === 'member'
-            ? { id, name, memberSince, lastActive, topCommunityId }
-            : { id, name, memberSince, lastActive },
-        ];
+        return [{ ...card, lastActive: row.lastActive }];
       }
       const entry = row.communities[scope.id];
       if (entry?.band !== band) return [];
-      return [
-        { id: row.id, name: row.name, memberSince: row.memberSince, lastActive: entry.lastActive },
-      ];
+      return [{ ...card, lastActive: entry.lastActive }];
     })
     .sort(byRecency)
     .slice(0, OWNER_BAND_LIST_LIMIT);

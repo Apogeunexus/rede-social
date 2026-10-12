@@ -554,9 +554,16 @@
       },
       "bandMembers": {
         "summary": "{count} · {percent}",
-        "line": "Membro desde {since} · última atividade {when}",
-        "top": "Interage mais em {community}",
-        "more": "e mais {count, plural, one {# membro} other {# membros}}"
+        "underOnePercent": "menos de 1%",
+        "since": "Membro desde:",
+        "lastActive": "Última atividade:",
+        "topCommunity": "Comunidade que mais interage:",
+        "dailyTime": "Tempo médio diário:",
+        "when": "{days, plural, =0 {hoje às {time}} =1 {ontem às {time}} other {há # dias}}",
+        "recent": "Os {count} com atividade mais recente",
+        "more": "e mais {count, plural, one {# membro} other {# membros}}",
+        "seeAll": "Ver todos",
+        "empty": "Nenhum membro nesta faixa."
       },
       "formats": {
         "title": "Interações por post, por formato",
