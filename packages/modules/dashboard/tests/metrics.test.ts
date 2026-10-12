@@ -20,6 +20,8 @@ import {
   percentOf,
   selectForYouCards,
   totalMinutes,
+  totalViews,
+  totalWatchedSeconds,
   vsMedian,
 } from '../ui/metrics';
 
@@ -309,5 +311,17 @@ describe('totalMinutes / dailyAverageMinutes', () => {
   it('rounds the average to whole minutes', () => {
     expect(totalMinutes([{ minutes: 10 }, { minutes: 11 }])).toBe(21);
     expect(dailyAverageMinutes([{ minutes: 10 }, { minutes: 11 }])).toBe(11);
+  });
+});
+
+describe('totalViews / totalWatchedSeconds', () => {
+  it('are 0 for no rows', () => {
+    expect(totalViews([])).toBe(0);
+    expect(totalWatchedSeconds([])).toBe(0);
+  });
+
+  it('sum the rows', () => {
+    expect(totalViews([{ views: 2 }, { views: 3 }])).toBe(5);
+    expect(totalWatchedSeconds([{ watchedSeconds: 130 }, { watchedSeconds: 20 }])).toBe(150);
   });
 });

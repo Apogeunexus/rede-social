@@ -7,6 +7,7 @@ import {
   type RelativeMoment,
   spreadMoments,
 } from '../fixtures';
+import { totalViews, totalWatchedSeconds } from '../ui/metrics';
 
 /**
  * The drill-down lists behind the member report (quick 261012-hqr). Each list must agree with the
@@ -217,6 +218,111 @@ describe('memberActivityLists.stories (measured list, example time per story)', 
   it('is newest first, inside the window', () => {
     expect(isNewestFirst(stories.value.map((row) => row.when))).toBe(true);
     for (const row of stories.value) expect(row.when.daysAgo).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('memberActivityLists.posts (D-04)', () => {
+  const { posts } = memberActivityLists;
+  const { seen } = memberPanel.activity;
+
+  it('agrees with the Posts vistos card: 60 example rows summing to 128 views', () => {
+    expect(posts.example).toBe(true);
+    expect(posts.example).toBe(seen.posts.example);
+    if (posts.example) expect(posts.reason).toBe('needs_post_views');
+    expect(posts.value).toHaveLength(60);
+    expect(posts.value).toHaveLength(seen.posts.value.posts);
+    expect(totalViews(posts.value)).toBe(128);
+    expect(totalViews(posts.value)).toBe(seen.posts.value.views);
+  });
+
+  it('holds every table post once, each seen at least once', () => {
+    expect(new Set(posts.value.map((row) => row.id))).toEqual(tableIds);
+    for (const row of posts.value) {
+      expect(row.views).toBeGreaterThanOrEqual(1);
+      expect(row.lastSeen).toEqual(seenOf.get(row.id));
+    }
+  });
+
+  it('is sorted by views, most first, ties most recent first', () => {
+    const tableIndex = new Map(memberPostTable.map((post, i) => [post.id, i]));
+    posts.value.forEach((row, i) => {
+      const previous = posts.value[i - 1];
+      if (!previous) return;
+      expect(previous.views).toBeGreaterThanOrEqual(row.views);
+      if (previous.views === row.views) {
+        expect(tableIndex.get(previous.id)).toBeLessThan(tableIndex.get(row.id) ?? -1);
+      }
+    });
+  });
+
+  it('every post the member acted on is one they saw', () => {
+    const seenIds = new Set(posts.value.map((row) => row.id));
+    const { likes, comments, saves, shares } = memberActivityLists;
+    for (const id of [
+      ...likes.value.map((row) => row.id),
+      ...comments.value.map((row) => row.post.id),
+      ...saves.value.map((row) => row.id),
+      ...shares.value.map((row) => row.id),
+    ]) {
+      expect(seenIds.has(id)).toBe(true);
+    }
+  });
+});
+
+describe('memberActivityLists.videos (D-04)', () => {
+  const { videos } = memberActivityLists;
+  const { seen } = memberPanel.activity;
+
+  it('agrees with the Vídeos e reels cards: 41 example rows, 72 whole minutes', () => {
+    expect(videos.example).toBe(true);
+    expect(videos.example).toBe(seen.videos.example);
+    if (videos.example) expect(videos.reason).toBe('needs_video_playback');
+    expect(videos.value).toHaveLength(seen.videos.value.count);
+    expect(videos.value).toHaveLength(41);
+    const seconds = totalWatchedSeconds(videos.value);
+    expect(seconds).toBe(4320);
+    expect(seconds).toBe(seen.videos.value.minutes * 60);
+    expect(seconds % 60).toBe(0);
+  });
+
+  it('every row is plausible and the list is most watched first', () => {
+    videos.value.forEach((row, i) => {
+      expect(row.watchedSeconds).toBeGreaterThan(0);
+      expect(row.watchedSeconds).toBeLessThanOrEqual(row.durationSeconds * row.plays);
+      expect(row.title.length).toBeLessThanOrEqual(50);
+      expect(COMMUNITIES).toContain(row.community);
+      const previous = videos.value[i - 1];
+      if (previous) expect(previous.watchedSeconds).toBeGreaterThanOrEqual(row.watchedSeconds);
+    });
+    expect(new Set(videos.value.map((row) => row.id)).size).toBe(41);
+    expect(new Set(videos.value.map((row) => row.title)).size).toBe(41);
+  });
+
+  it('has 16 videos and 25 reels, and the D-03 sample row', () => {
+    expect(countBy(videos.value, (row) => row.kind)).toEqual({ video: 16, reel: 25 });
+    expect(
+      videos.value.filter(
+        (row) => row.durationSeconds === 252 && row.plays === 2 && row.watchedSeconds === 130,
+      ),
+    ).toHaveLength(1);
+  });
+});
+
+describe('memberActivityLists example flags', () => {
+  it('saves, shares, posts and videos are examples; likes, comments and stories are measured', () => {
+    const entries = Object.entries(memberActivityLists);
+    expect(
+      entries
+        .filter(([, list]) => list.example)
+        .map(([key]) => key)
+        .sort(),
+    ).toEqual(['posts', 'saves', 'shares', 'videos']);
+    expect(
+      entries
+        .filter(([, list]) => !list.example)
+        .map(([key]) => key)
+        .sort(),
+    ).toEqual(['comments', 'likes', 'stories']);
   });
 });
 

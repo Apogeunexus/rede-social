@@ -111,12 +111,21 @@ describe('parseMemberList', () => {
       'comentarios',
       'salvamentos',
       'compartilhamentos',
+      'posts-vistos',
+      'videos',
       'stories',
     ]);
   });
 
   it('returns an allow-listed slug', () => {
-    for (const slug of ['comentarios', 'salvamentos', 'compartilhamentos', 'stories'] as const) {
+    for (const slug of [
+      'comentarios',
+      'salvamentos',
+      'compartilhamentos',
+      'posts-vistos',
+      'videos',
+      'stories',
+    ] as const) {
       expect(parseMemberList({ lista: slug })).toBe(slug);
     }
     for (const slug of MEMBER_LISTS) expect(parseMemberList({ lista: slug })).toBe(slug);
