@@ -2,6 +2,7 @@ import { tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
 import {
   ActionCard,
   BarList,
+  bandTotal,
   CohortHeatmap,
   Collapsible,
   KpiCard,
@@ -9,12 +10,14 @@ import {
   LineChart,
   percentOf,
 } from '@rede-social/module-dashboard/ui';
-import { Card } from '@rede-social/ui';
+import { Card, Chip } from '@rede-social/ui';
 import { HeartHandshake } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import { OWNER_BANDS_ANCHOR, ownerMembersHref } from '@/lib/owner-communities';
 import { BandsBarList } from './BandsBarList';
 import {
   bandLabel,
+  communityLabel,
   formatChange,
   formatCount,
   formatMonthAbbrev,
@@ -23,15 +26,26 @@ import {
 } from './format';
 import { PanelSection, PreviewAction } from './PanelSection';
 
+/** An allow-listed community's row and bands; a missing entry is a fixture bug, so it fails loud. */
+function communityScope(id: string) {
+  const community = tenantOwnerPanel.byCommunity.find((row) => row.id === id);
+  const entry = tenantOwnerPanel.communityEngagement.find((row) => row.id === id);
+  if (!community || !entry) throw new Error(`no engagement bands for community ${id}`);
+  return { community, bands: entry.bands };
+}
+
 /**
  * Level 4, "Membros": growth (who joined and left in 30 days, the balance against the members KPI's
  * change, new members per week), the engagement bands with who moved up or down, right after them
  * a card to win back the members in risk, then retention by joining month (one number on a phone,
  * the cohort heatmap from `@3xl`). Counts only: no member is named.
  */
-export async function OwnerMembers() {
+export async function OwnerMembers({ community }: { community: string | null }) {
   const t = await getTranslations('dashboard');
-  const { kpis, growth, cohorts, engagement, movement, atRiskWithPush } = tenantOwnerPanel;
+  const { kpis, growth, cohorts, engagement, byCommunity, movement, atRiskWithPush } =
+    tenantOwnerPanel;
+  const scope = community ? communityScope(community) : null;
+  const scopeBands = scope?.bands ?? engagement;
   const balance = growth.joined - growth.left;
   const latest = cohorts.at(-1);
   const latestMonthOne = latest?.values[1];
@@ -75,12 +89,36 @@ export async function OwnerMembers() {
         </Card>
       </PanelSection>
 
-      <PanelSection title={t('bands.title')}>
-        <BandsBarList t={t} bands={engagement} />
+      <PanelSection id={OWNER_BANDS_ANCHOR} title={t('bands.title')}>
+        <nav aria-label={t('tenantOwner.bandScope.label')}>
+          <ul className="flex flex-wrap gap-2">
+            <li>
+              <Chip href={ownerMembersHref(null)} active={community === null}>
+                {t('tenantOwner.bandScope.all')}
+              </Chip>
+            </li>
+            {byCommunity.map((row) => (
+              <li key={row.id}>
+                <Chip href={ownerMembersHref(row.id)} active={row.id === community}>
+                  {communityLabel(t, row)}
+                </Chip>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        {scope ? (
+          <p className="text-xs text-text-secondary">
+            {t('tenantOwner.bandScope.note', {
+              community: communityLabel(t, scope.community),
+              count: bandTotal(scope.bands),
+            })}
+          </p>
+        ) : null}
+        <BandsBarList t={t} bands={scopeBands} />
         <p className="text-xs text-text-secondary">
           {t('bands.newActivated', {
-            activated: formatCount(engagement.newActivated),
-            total: formatCount(engagement.counts.new),
+            activated: formatCount(scopeBands.newActivated),
+            total: formatCount(scopeBands.counts.new),
           })}{' '}
           {t('bands.footnote')}
         </p>
@@ -96,6 +134,9 @@ export async function OwnerMembers() {
             note={t('tenantOwner.movement.note')}
           />
         </KpiGrid>
+        {scope ? (
+          <p className="text-xs text-text-secondary">{t('tenantOwner.bandScope.movementNote')}</p>
+        ) : null}
         <Collapsible
           title={t('tenantOwner.movement.flowsTitle')}
           summary={t('tenantOwner.movement.flowsSummary', { count: flows.length })}

@@ -60,11 +60,16 @@ const AREAS = {
   eventos: { labelKey: 'tenantOwner.areas.events', Area: OwnerEvents },
   financeiro: { labelKey: 'tenantOwner.areas.finance', Area: OwnerFinance },
   atendimento: { labelKey: 'tenantOwner.areas.support', Area: OwnerSupport },
-} satisfies Record<OwnerArea, { labelKey: string; Area: () => Promise<ReactNode> }>;
+} satisfies Record<OwnerArea, { labelKey: string; Area: AreaComponent }>;
+
+/** An area component; only Membros reads the community scope, the others take no props. */
+type AreaComponent = (props: { community: string | null }) => Promise<ReactNode>;
 
 export interface TenantOwnerPanelProps {
   /** The open area (allow-listed by `parseOwnerArea`). */
   area: OwnerArea;
+  /** The bands' community scope (allow-listed by `parseOwnerCommunity`); null = Toda a base. */
+  community: string | null;
 }
 
 /**
@@ -73,9 +78,9 @@ export interface TenantOwnerPanelProps {
  * with no JavaScript, wrapping on a phone) picks the area through `?area=`. Each area is its own
  * server component. Segments are counts only: no member is named (D-02 of 261012-fcr).
  */
-export async function TenantOwnerPanel({ area }: TenantOwnerPanelProps) {
+export async function TenantOwnerPanel({ area, community }: TenantOwnerPanelProps) {
   const t = await getTranslations('dashboard');
-  const { Area } = AREAS[area];
+  const Area: AreaComponent = AREAS[area].Area;
 
   return (
     <TenantColumn>
@@ -104,7 +109,7 @@ export async function TenantOwnerPanel({ area }: TenantOwnerPanelProps) {
       </nav>
 
       <div data-owner-area={area} className="flex flex-col gap-6">
-        <Area />
+        <Area community={community} />
       </div>
     </TenantColumn>
   );

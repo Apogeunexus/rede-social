@@ -266,29 +266,36 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     {
       id: 'c-vip',
       bands: {
-        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
-        newActivated: 0,
+        counts: { new: 14, superfan: 38, engaged: 61, occasional: 33, at_risk: 22, inactive: 18 },
+        newActivated: 11,
       },
     },
     {
       id: 'c-geral',
       bands: {
-        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
-        newActivated: 0,
+        counts: {
+          new: 96,
+          superfan: 41,
+          engaged: 150,
+          occasional: 170,
+          at_risk: 190,
+          inactive: 593,
+        },
+        newActivated: 48,
       },
     },
     {
       id: 'c-iniciantes',
       bands: {
-        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
-        newActivated: 0,
+        counts: { new: 96, superfan: 6, engaged: 38, occasional: 104, at_risk: 120, inactive: 876 },
+        newActivated: 31,
       },
     },
     {
       id: 'c-eventos',
       bands: {
-        counts: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
-        newActivated: 0,
+        counts: { new: 96, superfan: 3, engaged: 22, occasional: 88, at_risk: 97, inactive: 934 },
+        newActivated: 14,
       },
     },
   ],

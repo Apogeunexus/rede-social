@@ -32,6 +32,8 @@ export interface PanelSectionProps {
   prominent?: boolean;
   children: ReactNode;
   className?: string;
+  /** The section's anchor id (a link can land on it). */
+  id?: string;
 }
 
 /** A titled block of a panel (h3 under the level's h2, or h4 inside another section). */
@@ -43,9 +45,10 @@ export function PanelSection({
   prominent = false,
   children,
   className,
+  id,
 }: PanelSectionProps) {
   return (
-    <section className={cn('flex min-w-0 flex-col gap-3', className)}>
+    <section id={id} className={cn('flex min-w-0 flex-col gap-3', className)}>
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3">
         <SectionTitle
           as={as}

@@ -524,6 +524,18 @@ test.describe('dono-do-cliente without JavaScript', () => {
     await expect(page).toHaveURL(/\?area=membros$/);
     await expect(ownerArea(page).getByRole('heading', { name: 'Crescimento' })).toBeVisible();
   });
+
+  test('a band scope is a plain link to its community', async ({ page }) => {
+    await page.goto('/painel-preview/dono-do-cliente?area=membros');
+    await bandScope(page).getByRole('link', { name: 'Geral' }).click();
+    await expect(page).toHaveURL(/\?area=membros&comunidade=geral#faixas$/);
+    await expect(
+      ownerArea(page).getByText(
+        'Geral: 1.240 membros com acesso. Contam só as ações feitas nesta comunidade.',
+        { exact: true },
+      ),
+    ).toBeVisible();
+  });
 });
 
 test('dono-do-cliente: tabs wrap at 360 px with a visible focus ring', async ({ page }) => {
@@ -617,7 +629,7 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
   ).toBeVisible();
 
   const bands = sectionTitled(area, 'Faixas de engajamento');
-  const bandRows = bands.getByRole('listitem');
+  const bandRows = bandBarRows(bands);
   await expect(bandRows).toHaveCount(6);
   const bandTexts = await bandRows.allTextContents();
   ['Novos', 'Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos'].forEach((label, i) => {
@@ -628,7 +640,7 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
   await expect(kpiCard(area, 'Caíram')).toContainText('171');
 
   await bands.getByText('Ver movimentos', { exact: true }).click();
-  await expect(bands.locator('details').getByRole('listitem')).toHaveCount(4);
+  await expect(areaDetails(page, 'Ver movimentos').getByRole('listitem')).toHaveCount(4);
 
   const recover = area.getByText('168 em risco · 69 com push', { exact: true });
   await expect(recover).toBeVisible();
@@ -642,6 +654,141 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
     Number.NaN;
   expect(recoverY).toBeGreaterThan(movesY);
   expect(recoverY).toBeLessThan(retentionY);
+});
+
+/** The rows of the bands' bar list (the scope selector's items are list items too). */
+function bandBarRows(bands: Locator) {
+  return bands.locator('ul:has([data-bar-fill])').first().getByRole('listitem');
+}
+
+/** The scope selector of the bands (quick 261012-pkd D-01). */
+function bandScope(page: Page) {
+  return page.getByRole('navigation', { name: 'Recorte das faixas' });
+}
+
+const BAND_SCOPES = ['Toda a base', 'Comunidade VIP', 'Geral', 'Iniciantes', 'Eventos'];
+
+test('dono-do-cliente membros: the scope selector', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=membros');
+  const area = ownerArea(page);
+  const bands = sectionTitled(area, 'Faixas de engajamento');
+  const links = bandScope(page).getByRole('link');
+  expect((await links.allTextContents()).map((text) => text.trim())).toEqual(BAND_SCOPES);
+  const hrefs = [
+    /\?area=membros#faixas$/,
+    /\?area=membros&comunidade=vip#faixas$/,
+    /\?area=membros&comunidade=geral#faixas$/,
+    /\?area=membros&comunidade=iniciantes#faixas$/,
+    /\?area=membros&comunidade=eventos#faixas$/,
+  ];
+  for (const [i, href] of hrefs.entries()) {
+    expect(await links.nth(i).getAttribute('href')).toMatch(href);
+  }
+  await expect(bandScope(page).getByRole('link', { name: 'Toda a base' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+
+  await bandScope(page).getByRole('link', { name: 'Comunidade VIP' }).click();
+  await expect(page).toHaveURL(/\?area=membros&comunidade=vip#faixas$/);
+  await expect(ownerTabs(page).getByRole('link', { name: 'Membros', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(ownerTabs(page).locator('[aria-current="page"]')).toHaveCount(1);
+  await expect(bandScope(page).getByRole('link', { name: 'Comunidade VIP' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(bandScope(page).locator('[aria-current="page"]')).toHaveCount(1);
+
+  await expect(
+    bands.getByText(
+      'Comunidade VIP: 186 membros com acesso. Contam só as ações feitas nesta comunidade.',
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(bands.getByText('Novos: 11 ativados de 14.')).toBeVisible();
+  await expect(
+    bands.getByText('Subiram e Caíram contam toda a base.', { exact: true }),
+  ).toBeVisible();
+  await expect(kpiCard(area, 'Subiram')).toContainText('77');
+  await expect(kpiCard(area, 'Caíram')).toContainText('171');
+  await expect(kpiCard(area, 'Entraram')).toContainText('96');
+  const rows = bandBarRows(bands);
+  await expect(rows.nth(0)).toContainText('14');
+  await expect(rows.nth(0)).toContainText('8%');
+  await expect(rows.nth(4)).toContainText('Em risco');
+  await expect(rows.nth(4)).toContainText('22');
+  await expect(rows.nth(4)).toContainText('12%');
+
+  await bandScope(page).getByRole('link', { name: 'Toda a base' }).click();
+  await expect(page).toHaveURL(/\?area=membros#faixas$/);
+  await expect(bands.getByText('membros com acesso')).toHaveCount(0);
+  await expect(bands.getByText('Subiram e Caíram contam toda a base.')).toHaveCount(0);
+  await expect(bands.getByText('Novos: 54 ativados de 96.')).toBeVisible();
+
+  await page.setViewportSize({ width: 360, height: 844 });
+  const row = bandScope(page).locator('ul');
+  const size = await row.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+  expect(size.scroll).toBeLessThanOrEqual(size.client);
+});
+
+test('dono-do-cliente membros: an unknown comunidade falls back to Toda a base', async ({
+  page,
+}) => {
+  for (const query of [
+    'comunidade=xyz',
+    'comunidade=VIP',
+    'comunidade=c-vip',
+    'comunidade=',
+    'comunidade=vip&comunidade=geral',
+  ]) {
+    await page.goto(`/painel-preview/dono-do-cliente?area=membros&${query}`);
+    const bands = sectionTitled(ownerArea(page), 'Faixas de engajamento');
+    await expect(bandScope(page).getByRole('link', { name: 'Toda a base' }), query).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(bands.getByText('Novos: 54 ativados de 96.')).toBeVisible();
+    await expect(bands.getByText('membros com acesso')).toHaveCount(0);
+  }
+});
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente membros comunidade=vip at ${width}px: no horizontal scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/painel-preview/dono-do-cliente?area=membros&comunidade=vip');
+    await expect(ownerArea(page)).toBeVisible();
+    await openAllDetails(page);
+    const overflow = await horizontalOverflow(page);
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+  });
+}
+
+test('dono-do-cliente membros comunidade=vip at 1440x900: inside the phone', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/painel-preview/dono-do-cliente?area=membros&comunidade=vip');
+  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+  await openAllDetails(page);
+  const metrics = await screenMetrics(page);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  const overflow = await pageOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+  expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+  await expect(page.locator('[data-phone-screen]').locator('table:visible')).toHaveCount(0);
+
+  // The #faixas anchor scrolls the phone screen (not the window) down to the bands.
+  await bandScope(page).getByRole('link', { name: 'Geral' }).click();
+  await expect(page).toHaveURL(/comunidade=geral#faixas$/);
+  const heading = ownerArea(page).getByRole('heading', { name: 'Faixas de engajamento' });
+  await expect(heading).toBeInViewport();
+  await expect
+    .poll(() => page.locator('[data-phone-screen]').evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(0);
 });
 
 /** A closed collapsible of the open area, by its title. */

@@ -189,6 +189,16 @@ export function bandLabel(t: DashboardT, band: EngagementBand | 'active'): strin
   return t(`bands.${band}`);
 }
 
+/** A client community -> its scope label: the exclusive VIP reads `Comunidade VIP`, the others by name. */
+export function communityLabel(
+  t: DashboardT,
+  community: { name: string; exclusive: boolean },
+): string {
+  return community.exclusive
+    ? t('tenantOwner.bandScope.exclusive', { name: community.name })
+    : community.name;
+}
+
 /** Merged bands -> one label: `['superfan', 'engaged']` -> `Superfãs e engajados`. */
 export function bandGroupLabel(t: DashboardT, bands: readonly EngagementBand[]): string {
   const [first, ...rest] = bands;
