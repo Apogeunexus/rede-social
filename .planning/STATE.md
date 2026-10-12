@@ -4,10 +4,10 @@ current_phase: 08.1
 current_phase_name: Multi-Tenant Identity (INSERTED)
 status: planning
 stopped_at: Phase 08.2 complete (UAT 7/7, security 54/54); next 08.1-08 contract release after merge, push and production deploy
-last_updated: "2026-10-12T17:30:06.910Z"
+last_updated: "2026-10-12T21:14:40.737Z"
 last_activity: 2026-10-12
-last_activity_desc: Completed quick task 261012-o00 (six-area client owner panel)
-state_head: 8a85b2ea5da1e6b77a559f75ee81ed2a8784c6d7
+last_activity_desc: Completed quick task 261012-oxi (owner panel review fixes)
+state_head: b69777f7114feabb06c1c7cc556f882c98a8db5a
 progress:
   total_phases: 17
   completed_phases: 4
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-09-25)
 Phase: 08.1 — Multi-Tenant Identity (INSERTED)
 Plan: 08.1-08 pending (contract release)
 Status: Release 1 pending merge, push and production deploy
-Last activity: 2026-10-12 - Completed quick task 261012-o00: six-area client owner panel
+Last activity: 2026-10-12 - Completed quick task 261012-oxi: owner panel review fixes
 
 Progress: [█░░░░░░░░░] 6%
 
@@ -693,6 +693,7 @@ None yet.
 
 | # | Description | Date | Commit | Status | Directory |
 |---|-------------|------|--------|--------|-----------|
+| 261012-oxi | Correções das revisões do painel do dono em seis áreas | 2026-10-12 | e181dfc | complete | [261012-oxi-corrigir-achados-das-revisoes-do-painel-](./quick/261012-oxi-corrigir-achados-das-revisoes-do-painel-/) |
 | 261012-o00 | Painel do dono do cliente em seis áreas com abas (Visão geral, Membros, Conteúdo, Eventos, Financeiro, Atendimento) | 2026-10-12 | 919ceb6 | complete | [261012-o00-painel-do-dono-do-cliente-em-seis-areas-](./quick/261012-o00-painel-do-dono-do-cliente-em-seis-areas-/) |
 | 261012-j2w | Painel do membro começa em "Sua atividade" (sem cabeçalho e sem "Para você") | 2026-10-12 | c9742e0 | complete | [261012-j2w-remover-cabecalho-do-perfil-e-para-voce-](./quick/261012-j2w-remover-cabecalho-do-perfil-e-para-voce-/) |
 | 261012-hqr | Listas detalhadas ao tocar nas métricas do relatório do membro | 2026-10-12 | bcf683f7 | complete | [261012-hqr-listas-detalhadas-ao-tocar-nas-metricas-](./quick/261012-hqr-listas-detalhadas-ao-tocar-nas-metricas-/) |
@@ -730,6 +731,7 @@ None yet.
 | 261007-n1g | Event schedule (cronograma) persisted in events.schedule jsonb with a shape CHECK, API create/edit/detail, form sends it as its own field, legacy text-in-description read fallback | 2026-10-07 | 2b9e26f | Passed | [261007-n1g-persist-event-schedule-cronograma-in-a-n](./quick/261007-n1g-persist-event-schedule-cronograma-in-a-n/) |
 | 261009-8fz | Stop exposing the public schema through the Supabase Data API: PostgREST serves only the empty `data_api_closed` schema (08.2 review CR-01 follow-up); production closes on the next deploy (config push), verify with the DEPLOY.md curl proof | 2026-10-09 | 63b91e0 | — | [261009-8fz-stop-exposing-the-public-schema-through-](./quick/261009-8fz-stop-exposing-the-public-schema-through-/) |
 | 36 | Opt-in DASHBOARD_PREVIEW_ENABLED=1 para mostrar os painéis num deploy de demonstração | 2026-10-12 | 8a85b2ea | — | — |
+| 39 | Nível 5 passa a dizer check-in ÷ inscritos, igual ao nível 4 | 2026-10-12 | b69777f7 | — | — |
 
 ### Roadmap Evolution
 
