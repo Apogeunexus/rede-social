@@ -1,23 +1,35 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import { previewTenant, tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
 import {
+  ActionCard,
   BarList,
   CohortHeatmap,
   Collapsible,
+  ENGAGEMENT_BAND_ORDER,
+  engagedPercent,
   KpiCard,
   KpiGrid,
   LineChart,
+  percentOf,
   Sparkline,
   ToneLabel,
 } from '@rede-social/module-dashboard/ui';
 import { Card } from '@rede-social/ui';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, HeartHandshake } from 'lucide-react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { previewLevelPath } from '@/lib/dashboard-preview';
-import { formatCount, formatMonthAbbrev, formatPercent, kpiDelta } from './format';
+import { BandsBarList } from './BandsBarList';
+import {
+  bandLabel,
+  formatCount,
+  formatDecimal,
+  formatMonthAbbrev,
+  formatPercent,
+  kpiDelta,
+} from './format';
 import { PanelHeader } from './PanelHeader';
-import { PanelSection } from './PanelSection';
+import { PanelSection, PreviewAction } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
 
 /** A legend swatch that repeats the line's own stroke, so the series differ by pattern, not colour. */
@@ -38,16 +50,35 @@ function LegendStroke({ dashed }: { dashed: boolean }) {
 }
 
 /**
- * Level 4, "Dono do cliente": is the community growing, keeping its members and paying back? KPIs,
- * the 12-week trend against the 12 weeks before (dashed), where members interact, retention by
- * joining month (one number on a phone, the cohort heatmap from md) and the account, closed.
+ * Level 4, "Dono do cliente": is the community growing, keeping its members and paying back? KPIs
+ * (with "Engajados", computed from the bands), the 12-week trend against the 12 weeks before
+ * (dashed), the engagement bands with who moved up or down, where members interact, interactions per
+ * post by format, who buys (orders by band), retention by joining month (one number on a phone, the
+ * cohort heatmap from md), a card to win back the members in risk, and the account, closed. Segments
+ * are counts only: no member is named (D-02).
  */
 export async function TenantOwnerPanel() {
   const t = await getTranslations('dashboard');
-  const { kpis, weeklyInteracting, channels, cohorts, account } = tenantOwnerPanel;
+  const {
+    kpis,
+    weeklyInteracting,
+    channels,
+    cohorts,
+    account,
+    engagement,
+    movement,
+    atRiskWithPush,
+    byFormat,
+    ordersByBand,
+  } = tenantOwnerPanel;
   const latest = cohorts.at(-1);
   const latestMonthOne = latest?.values[1];
   const columnCount = Math.max(0, ...cohorts.map((c) => c.values.length));
+  const engaged = formatPercent(engagedPercent(engagement));
+  const flows = [...movement.flows].sort((a, b) => b.members - a.members);
+  const formats = [...byFormat].sort((a, b) => b.perPost - a.perPost);
+  const formatPosts = byFormat.reduce((sum, row) => sum + row.posts, 0);
+  const totalOrders = ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + ordersByBand[band], 0);
 
   return (
     <TenantColumn>
@@ -91,6 +122,14 @@ export async function TenantOwnerPanel() {
           delta={kpiDelta(t, kpis.orderValue.delta)}
           note={t('tenantOwner.kpi.orderValueNote')}
         />
+        <KpiCard
+          label={t('tenantOwner.kpi.engaged')}
+          value={engaged}
+          delta={kpiDelta(t, kpis.engaged.delta)}
+          note={t('actionsPerActiveMember', {
+            actions: formatDecimal(kpis.engaged.actionsPerActiveMember, 1),
+          })}
+        />
       </KpiGrid>
 
       <PanelSection title={t('tenantOwner.weekly.title')}>
@@ -118,6 +157,46 @@ export async function TenantOwnerPanel() {
         </Card>
       </PanelSection>
 
+      <PanelSection title={t('bands.title')}>
+        <BandsBarList t={t} bands={engagement} />
+        <p className="text-xs text-text-secondary">
+          {t('bands.newActivated', {
+            activated: formatCount(engagement.newActivated),
+            total: formatCount(engagement.counts.new),
+          })}{' '}
+          {t('bands.footnote')}
+        </p>
+        <KpiGrid>
+          <KpiCard
+            label={t('tenantOwner.movement.up')}
+            value={formatCount(movement.up)}
+            note={t('tenantOwner.movement.note')}
+          />
+          <KpiCard
+            label={t('tenantOwner.movement.down')}
+            value={formatCount(movement.down)}
+            note={t('tenantOwner.movement.note')}
+          />
+        </KpiGrid>
+        <Collapsible
+          title={t('tenantOwner.movement.flowsTitle')}
+          summary={t('tenantOwner.movement.flowsSummary', { count: flows.length })}
+        >
+          <BarList
+            rows={flows.map((flow) => ({
+              id: `${flow.from}-${flow.to}`,
+              label: t('bands.flow', {
+                from: bandLabel(t, flow.from),
+                to: bandLabel(t, flow.to),
+              }),
+              value: flow.members,
+              display: formatCount(flow.members),
+              highlight: flow.to === 'at_risk',
+            }))}
+          />
+        </Collapsible>
+      </PanelSection>
+
       <PanelSection title={t('tenantOwner.channels.title')}>
         <BarList
           rows={channels.map((row, i) => ({
@@ -128,6 +207,45 @@ export async function TenantOwnerPanel() {
             highlight: i === 0,
           }))}
         />
+      </PanelSection>
+
+      <PanelSection title={t('tenantOwner.formats.title')}>
+        <BarList
+          rows={formats.map((row, i) => ({
+            id: row.type,
+            label: t(`postTypes.${row.type}`),
+            value: row.perPost,
+            display: formatCount(row.perPost),
+            rate: t('tenantOwner.formats.posts', { count: row.posts }),
+            highlight: i === 0,
+          }))}
+        />
+        <p className="text-xs text-text-secondary">
+          {t('tenantOwner.formats.footnote', { count: formatPosts })}
+        </p>
+      </PanelSection>
+
+      <PanelSection title={t('tenantOwner.buyers.title')}>
+        <p className="text-sm text-text">
+          {t('tenantOwner.buyers.sentence', {
+            orders: formatPercent(
+              percentOf(ordersByBand.superfan + ordersByBand.engaged, totalOrders),
+            ),
+            members: engaged,
+          })}
+        </p>
+        <BarList
+          max={totalOrders}
+          rows={ENGAGEMENT_BAND_ORDER.map((band) => ({
+            id: band,
+            label: bandLabel(t, band),
+            value: ordersByBand[band],
+            display: formatCount(ordersByBand[band]),
+            rate: formatPercent(percentOf(ordersByBand[band], totalOrders)),
+            highlight: band === 'superfan' || band === 'engaged',
+          }))}
+        />
+        <p className="text-xs text-text-secondary">{t('tenantOwner.buyers.footnote')}</p>
       </PanelSection>
 
       <PanelSection title={t('tenantOwner.retention.title')}>
@@ -158,6 +276,16 @@ export async function TenantOwnerPanel() {
           <p className="text-xs text-text-secondary">{t('tenantOwner.retention.footnote')}</p>
         </div>
       </PanelSection>
+
+      <ActionCard
+        icon={HeartHandshake}
+        title={t('tenantOwner.recover.title')}
+        detail={t('tenantOwner.recover.detail', {
+          atRisk: formatCount(engagement.counts.at_risk),
+          withPush: formatCount(atRiskWithPush),
+        })}
+        action={<PreviewAction variant="outline">{t('tenantOwner.recover.action')}</PreviewAction>}
+      />
 
       <Collapsible
         title={t('tenantOwner.account.title')}

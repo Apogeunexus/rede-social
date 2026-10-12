@@ -9,17 +9,20 @@ import {
   Collapsible,
   KpiCard,
   KpiGrid,
+  percentOf,
   ResponsiveTable,
 } from '@rede-social/module-dashboard/ui';
 import { getTranslations } from 'next-intl/server';
 import {
   type DashboardT,
+  formatClock,
   formatCount,
   formatDayMonth,
   formatDuration,
   formatPercent,
   kpiDelta,
 } from './format';
+import { MissingKpi } from './MissingKpi';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
@@ -60,12 +63,25 @@ function attentionItem(t: DashboardT, item: TenantAdminAttention): AttentionItem
 
 /**
  * Level 5, "Admin do cliente": what needs me today, and what worked this week? What needs attention
- * sits behind the header bell; the KPIs come first, then the posts that performed best, and four
- * closed sections (events, communities, store, moderation).
+ * sits behind the header bell; the KPIs come first (with who slipped into "em risco" this week), then
+ * the posts that performed best with the per-post metrics the app does not collect yet, videos and
+ * reels with the stories' aggregate reach, and four closed sections (events, communities, store,
+ * moderation).
  */
 export async function TenantAdminPanel() {
   const t = await getTranslations('dashboard');
-  const { attention, kpis, topPosts, events, communities, store, moderation } = tenantAdminPanel;
+  const {
+    attention,
+    kpis,
+    topPosts,
+    postMetrics,
+    videos,
+    stories,
+    events,
+    communities,
+    store,
+    moderation,
+  } = tenantAdminPanel;
   const topCommunity = communities[0];
   const moderationActions =
     moderation.removedComments + moderation.blocks + moderation.unblocks + moderation.roleChanges;
@@ -102,11 +118,18 @@ export async function TenantAdminPanel() {
           label={t('tenantAdmin.kpi.newMembers')}
           value={formatCount(kpis.newMembers.count)}
           delta={kpiDelta(t, kpis.newMembers.delta)}
+          note={t('tenantAdmin.kpi.newMembersNote', {
+            activated: formatCount(kpis.newMembers.activated),
+            total: formatCount(kpis.newMembers.count),
+            percent: formatPercent(percentOf(kpis.newMembers.activated, kpis.newMembers.count)),
+          })}
         />
         <KpiCard
-          label={t('tenantAdmin.kpi.perPost')}
-          value={formatCount(kpis.interactionsPerPost.count)}
-          delta={kpiDelta(t, kpis.interactionsPerPost.delta)}
+          label={t('tenantAdmin.kpi.enteredAtRisk')}
+          value={formatCount(kpis.enteredAtRisk.count)}
+          note={t('tenantAdmin.kpi.enteredAtRiskNote', {
+            count: formatCount(kpis.enteredAtRisk.withPush),
+          })}
         />
         <KpiCard
           label={t('tenantAdmin.kpi.orders')}
@@ -144,6 +167,50 @@ export async function TenantAdminPanel() {
             },
           }))}
         />
+        <KpiGrid>
+          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.reach')} item={postMetrics.reach} />
+          <MissingKpi
+            t={t}
+            label={t('tenantAdmin.postMetrics.engagementPerView')}
+            item={postMetrics.engagementPerView}
+          />
+          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.saves')} item={postMetrics.saves} />
+          <MissingKpi t={t} label={t('tenantAdmin.postMetrics.shares')} item={postMetrics.shares} />
+        </KpiGrid>
+      </PanelSection>
+
+      <PanelSection title={t('tenantAdmin.videos.title')}>
+        <ResponsiveTable
+          caption={t('tenantAdmin.videos.title')}
+          columns={[
+            { key: 'date', header: t('tenantAdmin.videos.columns.date') },
+            { key: 'kind', header: t('tenantAdmin.videos.columns.kind') },
+            {
+              key: 'duration',
+              header: t('tenantAdmin.videos.columns.duration'),
+              numeric: true,
+            },
+          ]}
+          rows={videos.rows.map((video) => ({
+            id: video.id,
+            cells: {
+              date: formatDayMonth(video.date),
+              kind: t(`tenantAdmin.videos.kinds.${video.kind}`),
+              duration: formatClock(t, video.durationSeconds),
+            },
+          }))}
+        />
+        <KpiGrid>
+          <MissingKpi t={t} label={t('tenantAdmin.videos.watched')} item={videos.watched} />
+          <MissingKpi t={t} label={t('tenantAdmin.videos.completion')} item={videos.completion} />
+        </KpiGrid>
+        <p className="text-xs text-text-secondary">
+          {t('tenantAdmin.videos.stories', {
+            count: stories.count,
+            viewers: formatCount(stories.averageUniqueViewers),
+            percent: formatPercent(percentOf(stories.averageUniqueViewers, stories.memberBase)),
+          })}
+        </p>
       </PanelSection>
 
       <Collapsible

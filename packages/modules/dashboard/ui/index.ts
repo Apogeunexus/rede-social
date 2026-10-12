@@ -14,6 +14,14 @@ export {
 } from './KpiCard';
 export { LineChart, type LineChartProps } from './LineChart';
 export {
+  bandTotal,
+  ENGAGEMENT_BAND_ORDER,
+  engagedPercent,
+  interactedCount,
+  interactedPercent,
+  percentOf,
+} from './metrics';
+export {
   ResponsiveTable,
   type ResponsiveTableProps,
   type TableColumn,

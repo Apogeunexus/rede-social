@@ -1,4 +1,9 @@
-import type { Delta, KpiHint, RelativeMoment } from '@rede-social/module-dashboard/fixtures';
+import type {
+  Delta,
+  EngagementBand,
+  KpiHint,
+  RelativeMoment,
+} from '@rede-social/module-dashboard/fixtures';
 import type { KpiDelta } from '@rede-social/module-dashboard/ui';
 import { getTranslations } from 'next-intl/server';
 import { moduleLabelResolver } from '@/lib/registry';
@@ -129,6 +134,19 @@ export function formatDuration(t: DashboardT, minutes: number): string {
     hours: Math.floor(minutes / 60),
     minutes: String(minutes % 60).padStart(2, '0'),
   });
+}
+
+/** `252` seconds -> `4:12` (a video's length). */
+export function formatClock(t: DashboardT, seconds: number): string {
+  return t('clock', {
+    minutes: Math.floor(seconds / 60),
+    seconds: String(seconds % 60).padStart(2, '0'),
+  });
+}
+
+/** An engagement band (or `active`, any of the three active bands) -> its catalog name. */
+export function bandLabel(t: DashboardT, band: EngagementBand | 'active'): string {
+  return t(`bands.${band}`);
 }
 
 /** `Ana Souza` -> `AS`, `M. Vieira` -> `MV`: the first letter of the first and last words. */

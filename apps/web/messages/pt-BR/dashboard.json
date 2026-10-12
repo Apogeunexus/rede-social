@@ -66,6 +66,15 @@
       "bad": "piorou"
     },
     "notMeasured": "Ainda não medido",
+    "notMeasuredReason": {
+      "needs_billing_per_client": "Precisa do faturamento por cliente",
+      "needs_post_views": "Precisa registrar as visualizações dos posts",
+      "needs_saves": "Precisa registrar os salvamentos",
+      "needs_shares": "Precisa registrar os compartilhamentos",
+      "needs_video_playback": "Precisa registrar a reprodução dos vídeos",
+      "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
+      "needs_last_visit": "Precisa registrar a última visita de cada membro"
+    },
     "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
     "daysAgo": "há {days, plural, one {# dia} other {# dias}}",
     "plans": {
@@ -248,6 +257,21 @@
       }
     },
     "duration": "{hours}h{minutes}",
+    "clock": "{minutes}:{seconds}",
+    "actionsPerActiveMember": "{actions} ações por membro ativo",
+    "bands": {
+      "title": "Faixas de engajamento",
+      "new": "Novos",
+      "superfan": "Superfãs",
+      "engaged": "Engajados",
+      "occasional": "Ocasionais",
+      "at_risk": "Em risco",
+      "inactive": "Inativos",
+      "active": "Ativos",
+      "flow": "{from} → {to}",
+      "footnote": "Cada membro conta em uma faixa, pelos dias com alguma ação nos últimos 30 dias.",
+      "newActivated": "Novos: {activated} ativados de {total}."
+    },
     "postTypes": {
       "video": "Vídeo",
       "gallery": "Galeria",
@@ -268,7 +292,8 @@
         "attendance": "Comparecimento em eventos",
         "attendanceNote": "check-in ÷ confirmados",
         "orderValue": "Valor de pedidos",
-        "orderValueNote": "valor registrado, sem pagamento real"
+        "orderValueNote": "valor registrado, sem pagamento real",
+        "engaged": "Engajados"
       },
       "weekly": {
         "title": "Membros que interagiram por semana",
@@ -284,6 +309,28 @@
         "attendance": "Presenças",
         "orders": "Pedidos",
         "support": "Suporte"
+      },
+      "movement": {
+        "up": "Subiram",
+        "down": "Caíram",
+        "note": "de faixa em 30 dias, sem contar novos",
+        "flowsTitle": "Ver movimentos",
+        "flowsSummary": "os {count} maiores"
+      },
+      "formats": {
+        "title": "Interações por post, por formato",
+        "posts": "{count, plural, one {# post} other {# posts}}",
+        "footnote": "Curtidas e comentários por post, em {count} posts nos últimos 30 dias."
+      },
+      "buyers": {
+        "title": "Quem compra",
+        "sentence": "{orders} das compras vêm de {members} dos membros (superfãs e engajados).",
+        "footnote": "Cada pedido conta na faixa de quem comprou no dia anterior à compra."
+      },
+      "recover": {
+        "title": "Recuperar quem está em risco",
+        "detail": "{atRisk} em risco · {withPush} com push",
+        "action": "Avisar sobre o próximo evento"
       },
       "retention": {
         "title": "Retenção por mês de entrada",
@@ -334,7 +381,9 @@
         "firstResponse": "1ª resposta (mediana)",
         "interacting": "Membros que interagiram",
         "newMembers": "Novos membros",
-        "perPost": "Interações por post",
+        "newMembersNote": "{activated} de {total} ativados ({percent})",
+        "enteredAtRisk": "Entraram em risco nesta semana",
+        "enteredAtRiskNote": "{count} com push",
         "orders": "Pedidos",
         "ordersNote": "+{count} acessos liberados à mão"
       },
@@ -348,6 +397,27 @@
           "likes": "Curtidas",
           "comments": "Coment."
         }
+      },
+      "postMetrics": {
+        "reach": "Alcance",
+        "engagementPerView": "Engajamento por visualização",
+        "saves": "Salvamentos",
+        "shares": "Compartilhamentos"
+      },
+      "videos": {
+        "title": "Vídeos e reels",
+        "columns": {
+          "date": "Data",
+          "kind": "Tipo",
+          "duration": "Duração"
+        },
+        "kinds": {
+          "video": "Vídeo",
+          "reel": "Reel"
+        },
+        "watched": "% assistido",
+        "completion": "Conclusão",
+        "stories": "{count, plural, one {# story} other {# stories}}, média de {viewers} visualizações únicas ({percent})"
       },
       "events": {
         "title": "Eventos",

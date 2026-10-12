@@ -392,3 +392,95 @@ test('levels without alerts show no bell', async ({ page }) => {
     await expect(page.getByRole('button', { name: /^Alertas/ })).toHaveCount(0);
   }
 });
+
+/**
+ * Engagement and activity metrics (quick 261012-fcr). Sections are scoped by their heading because
+ * "Engajados" is both a KPI and a band label.
+ */
+function sectionTitled(page: Page, title: string) {
+  return page
+    .getByRole('heading', { name: title, exact: true })
+    .locator('xpath=ancestor::section[1]');
+}
+
+/** The KPI card whose label is exactly `label`. */
+function kpiCard(page: Page, label: string) {
+  return page.getByText(label, { exact: true }).locator('..');
+}
+
+async function h3Texts(page: Page) {
+  return (await page.locator('h3').allTextContents()).map((text) => text.trim());
+}
+
+test('dono-do-cliente: engagement bands, movement, formats, buyers and the recovery card', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente');
+
+  const bands = sectionTitled(page, 'Faixas de engajamento');
+  const bandRows = bands.getByRole('listitem');
+  await expect(bandRows).toHaveCount(6);
+  const bandTexts = await bandRows.allTextContents();
+  ['Novos', 'Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos'].forEach((label, i) => {
+    expect(bandTexts[i]).toContain(label);
+  });
+  await expect(bands.getByText('Novos: 54 ativados de 96.')).toBeVisible();
+  await expect(kpiCard(page, 'Subiram')).toContainText('77');
+  await expect(kpiCard(page, 'Caíram')).toContainText('171');
+
+  await bands.getByText('Ver movimentos', { exact: true }).click();
+  await expect(bands.locator('details').getByRole('listitem')).toHaveCount(4);
+
+  const engaged = page.getByText('9,3 ações por membro ativo', { exact: true }).locator('..');
+  await expect(engaged).toBeVisible();
+  await expect(engaged).toContainText('Engajados');
+  await expect(engaged).toContainText('22%');
+
+  await expect(sectionTitled(page, 'Quem compra')).toContainText(
+    '72% das compras vêm de 22% dos membros',
+  );
+
+  const titles = await h3Texts(page);
+  const at = (title: string) => titles.indexOf(title);
+  expect(at('Faixas de engajamento')).toBe(at('Membros que interagiram por semana') + 1);
+  expect(at('Interações por post, por formato')).toBe(at('Onde os membros interagem') + 1);
+  expect(at('Quem compra')).toBe(at('Interações por post, por formato') + 1);
+
+  const recover = page.getByText('Recuperar quem está em risco', { exact: true });
+  await expect(recover).toBeVisible();
+  await expect(page.getByText('168 em risco · 69 com push', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Avisar sobre o próximo evento' })).toBeDisabled();
+  const recoverBox = await recover.boundingBox();
+  const accountBox = await page.getByText('Conta', { exact: true }).boundingBox();
+  expect(recoverBox && accountBox && recoverBox.y < accountBox.y).toBe(true);
+});
+
+test('admin-do-cliente: unmeasured metrics, videos and reels, at-risk entries', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/admin-do-cliente');
+
+  await expect(page.getByText('Ainda não medido', { exact: true })).toHaveCount(6);
+  await expect(page.getByText('Precisa registrar as visualizações dos posts')).toHaveCount(2);
+
+  const atRisk = kpiCard(page, 'Entraram em risco nesta semana');
+  await expect(atRisk).toContainText('23');
+  await expect(atRisk).toContainText('9 com push');
+  await expect(page.getByText('Interações por post')).toHaveCount(0);
+  await expect(page.getByText('15 de 28 ativados (54%)', { exact: true })).toBeVisible();
+  await expect(kpiCard(page, 'Membros que interagiram')).toContainText('380');
+
+  const titles = await h3Texts(page);
+  expect(titles.indexOf('Vídeos e reels')).toBe(
+    titles.indexOf('Posts que mais renderam (14 dias)') + 1,
+  );
+  const videos = sectionTitled(page, 'Vídeos e reels');
+  for (const clock of ['4:12', '0:41', '0:38']) {
+    await expect(videos.getByRole('listitem').getByText(clock, { exact: true })).toBeVisible();
+  }
+  await expect(
+    videos.getByText('4 stories, média de 310 visualizações únicas (25%)', { exact: true }),
+  ).toBeVisible();
+});

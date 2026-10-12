@@ -1,5 +1,5 @@
 import { previewTenant } from './preview-tenant';
-import type { Delta, KpiHint } from './shared';
+import type { Delta, KpiHint, NotMeasured } from './shared';
 
 /**
  * The three platform levels: fictional numbers in the shape the platform metrics endpoints will
@@ -49,7 +49,7 @@ export interface PlatformOwnerPanel {
     members: { count: number; delta: Delta; interactedPercent: number };
     storage: { usedGb: number; planGb: number; delta: Delta; videoMinutes: number };
     /** Not measured yet: the card says why instead of inventing a number. */
-    monthlyRevenue: { measured: false; reason: 'needs_billing_per_client' };
+    monthlyRevenue: NotMeasured;
   };
   attention: PlatformOwnerAttention[];
   /** `YYYY-MM`, oldest first. */
@@ -116,11 +116,11 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
     count: ACTIVE_CLIENTS_SERIES[i] ?? 0,
   })),
   membersByClient: [
-    { id: 'c-igor', kind: 'client', name: previewTenant.displayName, members: 5230 },
-    { id: 'c-aurora', kind: 'client', name: 'Instituto Aurora', members: 1520 },
-    { id: 'c-lab', kind: 'client', name: 'Rede Lab', members: 760 },
-    { id: 'c-horizonte', kind: 'client', name: 'Escola Horizonte', members: 510 },
-    { id: 'others', kind: 'others', clients: 8, members: 410 },
+    { id: 'c-aurora', kind: 'client', name: 'Instituto Aurora', members: 3110 },
+    { id: 'c-lab', kind: 'client', name: 'Rede Lab', members: 1760 },
+    { id: 'c-igor', kind: 'client', name: previewTenant.displayName, members: 1240 },
+    { id: 'c-horizonte', kind: 'client', name: 'Escola Horizonte', members: 1210 },
+    { id: 'others', kind: 'others', clients: 8, members: 1110 },
   ],
   moduleAdoption: [
     { module: 'feed', percent: 100 },
@@ -146,7 +146,7 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       name: 'Escola Horizonte',
       plan: 'pilot',
       status: 'active',
-      members: 510,
+      members: 1210,
       interactedPercent: 27,
       posts30d: 6,
       mediaMb: 88,
@@ -156,7 +156,7 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       name: 'Rede Lab',
       plan: 'pilot',
       status: 'active',
-      members: 760,
+      members: 1760,
       interactedPercent: 35,
       posts30d: 14,
       mediaMb: 120,
@@ -166,7 +166,7 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       name: 'Instituto Aurora',
       plan: 'pro',
       status: 'active',
-      members: 1520,
+      members: 3110,
       interactedPercent: 44,
       posts30d: 22,
       mediaMb: 190,
@@ -176,8 +176,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       name: previewTenant.displayName,
       plan: 'pro',
       status: 'active',
-      members: 5230,
-      interactedPercent: 46,
+      members: 1240,
+      interactedPercent: 38,
       posts30d: 61,
       mediaMb: 402,
     },

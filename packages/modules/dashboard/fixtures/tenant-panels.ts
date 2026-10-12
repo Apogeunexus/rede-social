@@ -1,5 +1,5 @@
 import type { RelativeMoment } from './platform-panels';
-import type { Delta } from './shared';
+import type { Delta, EngagementBand, EngagementBands, NotMeasured } from './shared';
 
 /**
  * The four tenant-side levels, all for the preview tenant (`previewTenant.displayName`): fictional
@@ -24,7 +24,26 @@ export interface TenantOwnerPanel {
     };
     eventAttendance: { percent: number; delta: Delta };
     orderValue: { cents: number; delta: Delta };
+    /** The "Engajados" share is computed from `engagement`; only its change and the actions rate live here. */
+    engaged: { delta: Delta; actionsPerActiveMember: number };
   };
+  /** The members in the six engagement bands, last 30 days. */
+  engagement: EngagementBands;
+  /**
+   * Band today vs 30 days ago, novos excluded: how many moved up or down, and the biggest flows
+   * (`active` = any of superfã, engajado or ocasional).
+   */
+  movement: {
+    up: number;
+    down: number;
+    flows: { from: EngagementBand | 'active'; to: EngagementBand; members: number }[];
+  };
+  /** Members in risk who have push on (reachable by a notification). */
+  atRiskWithPush: number;
+  /** Likes + comments per post by format, posts of the last 30 days. */
+  byFormat: { type: PostType; posts: number; perPost: number }[];
+  /** Orders of the last 30 days by the band the buyer was in the day before the order. */
+  ordersByBand: Record<EngagementBand, number>;
   /** Members who interacted per week, oldest first, and the 12 weeks before them. */
   weeklyInteracting: { current: number[]; previous: number[] };
   /** Interactions by channel in the period. */
@@ -70,7 +89,33 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       cents: 894000,
       delta: { amount: 12, kind: 'percent', direction: 'up', good: true, basis: 'none' },
     },
+    engaged: {
+      delta: { amount: 2, kind: 'points', direction: 'down', good: false, basis: 'none' },
+      actionsPerActiveMember: 9.3,
+    },
   },
+  engagement: {
+    counts: { new: 96, superfan: 62, engaged: 205, occasional: 150, at_risk: 168, inactive: 559 },
+    newActivated: 54,
+  },
+  movement: {
+    up: 77,
+    down: 171,
+    flows: [
+      { from: 'at_risk', to: 'inactive', members: 64 },
+      { from: 'active', to: 'at_risk', members: 57 },
+      { from: 'engaged', to: 'occasional', members: 41 },
+      { from: 'occasional', to: 'engaged', members: 38 },
+    ],
+  },
+  atRiskWithPush: 69,
+  byFormat: [
+    { type: 'video', posts: 18, perPost: 96 },
+    { type: 'gallery', posts: 15, perPost: 71 },
+    { type: 'text', posts: 20, perPost: 48 },
+    { type: 'link', posts: 8, perPost: 23 },
+  ],
+  ordersByBand: { new: 9, superfan: 31, engaged: 38, occasional: 14, at_risk: 3, inactive: 1 },
   weeklyInteracting: {
     current: [310, 330, 360, 352, 391, 410, 402, 425, 418, 396, 372, 380],
     previous: [280, 290, 300, 310, 305, 330, 340, 335, 350, 345, 360, 355],
@@ -126,10 +171,27 @@ export interface TenantAdminPanel {
     awaitingReply: { count: number; oldestHours: number };
     firstResponseMedian: { minutes: number; delta: Delta };
     interacting: { count: number; delta: Delta };
-    newMembers: { count: number; delta: Delta };
-    interactionsPerPost: { count: number; delta: Delta };
+    /** `activated`: the novos with at least one counted action. */
+    newMembers: { count: number; activated: number; delta: Delta };
+    /** Members who went from an active band to "em risco" this week. */
+    enteredAtRisk: { count: number; withPush: number };
     orders: { count: number; delta: Delta; manualGrants: number };
   };
+  /** Per-post figures the app does not collect yet (no post views, saves or shares tables). */
+  postMetrics: {
+    reach: NotMeasured;
+    engagementPerView: NotMeasured;
+    saves: NotMeasured;
+    shares: NotMeasured;
+  };
+  /** Videos and reels of the period, newest first; playback is not recorded yet. */
+  videos: {
+    rows: { id: string; date: string; kind: 'video' | 'reel'; durationSeconds: number }[];
+    watched: NotMeasured;
+    completion: NotMeasured;
+  };
+  /** Stories of the period: unique viewers per story on average (aggregate, never who viewed). */
+  stories: { count: number; averageUniqueViewers: number; memberBase: number };
   /** Last 14 days, best first. */
   topPosts: {
     id: string;
@@ -177,23 +239,37 @@ export const tenantAdminPanel: TenantAdminPanel = {
       delta: { amount: 20, kind: 'minutes', direction: 'down', good: true, basis: 'none' },
     },
     interacting: {
-      count: 412,
+      count: 380,
       delta: { amount: 7, kind: 'percent', direction: 'up', good: true, basis: 'none' },
     },
     newMembers: {
       count: 28,
+      activated: 15,
       delta: { amount: 5, kind: 'count', direction: 'up', good: true, basis: 'none' },
     },
-    interactionsPerPost: {
-      count: 64,
-      delta: { amount: 11, kind: 'count', direction: 'up', good: true, basis: 'none' },
-    },
+    enteredAtRisk: { count: 23, withPush: 9 },
     orders: {
       count: 14,
       delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
       manualGrants: 3,
     },
   },
+  postMetrics: {
+    reach: { measured: false, reason: 'needs_post_views' },
+    engagementPerView: { measured: false, reason: 'needs_post_views' },
+    saves: { measured: false, reason: 'needs_saves' },
+    shares: { measured: false, reason: 'needs_shares' },
+  },
+  videos: {
+    rows: [
+      { id: 'reel-1', date: '2026-10-09', kind: 'reel', durationSeconds: 41 },
+      { id: 'p1', date: '2026-10-08', kind: 'video', durationSeconds: 252 },
+      { id: 'reel-2', date: '2026-10-05', kind: 'reel', durationSeconds: 38 },
+    ],
+    watched: { measured: false, reason: 'needs_video_playback' },
+    completion: { measured: false, reason: 'needs_video_playback' },
+  },
+  stories: { count: 4, averageUniqueViewers: 310, memberBase: 1240 },
   topPosts: [
     { id: 'p1', date: '2026-10-08', type: 'video', community: 'Geral', likes: 96, comments: 31 },
     { id: 'p2', date: '2026-10-06', type: 'gallery', community: 'VIP', likes: 70, comments: 12 },
