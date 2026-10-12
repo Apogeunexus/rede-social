@@ -14,6 +14,12 @@ export {
   type WatchedVideo,
 } from './member-lists';
 export {
+  OWNER_BAND_LIST_LIMIT,
+  type OwnerBandList,
+  type OwnerBandMember,
+  ownerBandList,
+} from './owner-members';
+export {
   type ActivationStep,
   type ClientPlan,
   type ClientStatus,
