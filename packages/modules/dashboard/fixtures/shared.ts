@@ -16,6 +16,7 @@ export type DeltaBasis =
   | 'previous_24h'
   | 'yesterday'
   | 'last_7_days'
+  | 'average_30_days'
   | 'none';
 
 /**

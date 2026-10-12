@@ -1,3 +1,4 @@
+import { formatBrl } from '@rede-social/contracts/money';
 import {
   type PlatformOwnerAttention,
   platformOwnerPanel,
@@ -5,6 +6,7 @@ import {
 import {
   type AttentionItem,
   BarList,
+  engagedPercent,
   KpiCard,
   KpiGrid,
   LineChart,
@@ -12,8 +14,9 @@ import {
   Sparkline,
   ToneLabel,
 } from '@rede-social/module-dashboard/ui';
-import { Card } from '@rede-social/ui';
+import { Card, SectionTitle } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
+import { BandsBarList } from './BandsBarList';
 import {
   type DashboardT,
   formatCount,
@@ -24,6 +27,7 @@ import {
   kpiDelta,
   moduleNamer,
 } from './format';
+import { MissingKpi } from './MissingKpi';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection } from './PanelSection';
 
@@ -49,15 +53,25 @@ function attentionItem(t: DashboardT, item: PlatformOwnerAttention): AttentionIt
 }
 
 /**
- * Level 1, "Dono da plataforma": is the client base growing and using the product, and does the
- * infrastructure cost fit the plan? KPIs, the 12-month trend, where the members are, module adoption
- * and the clients, worst first; what needs attention sits behind the header bell.
+ * Level 1, "Dono da plataforma": is the client base growing, engaged and using the product, and does
+ * the infrastructure cost fit the plan? KPIs (with "Membros engajados" computed from the bands and
+ * the clients' store sales), the 12-month trend, the engagement bands, where the members are, module
+ * adoption with real use, and the clients, worst first (highest "Em risco %"); what needs attention
+ * sits behind the header bell.
  */
 export async function PlatformOwnerPanel() {
   const t = await getTranslations('dashboard');
   const moduleName = await moduleNamer(t);
-  const { kpis, attention, activeClientsByMonth, membersByClient, moduleAdoption, clients } =
-    platformOwnerPanel;
+  const {
+    kpis,
+    attention,
+    activeClientsByMonth,
+    membersByClient,
+    moduleAdoption,
+    moduleUsage,
+    clients,
+    engagement,
+  } = platformOwnerPanel;
 
   const totalMembers = membersByClient.reduce((sum, row) => sum + row.members, 0);
   const share = (members: number) => (totalMembers > 0 ? (members / totalMembers) * 100 : 0);
@@ -66,6 +80,12 @@ export async function PlatformOwnerPanel() {
     ...membersByClient.filter((row) => row.kind === 'client').map((row) => row.members),
   );
   const lastMonth = activeClientsByMonth.length - 1;
+  // Largest client first, "outros" always last (it is not one client).
+  const memberRows = [...membersByClient].sort((a, b) =>
+    a.kind === b.kind ? b.members - a.members : a.kind === 'others' ? 1 : -1,
+  );
+  const worstFirst = [...clients].sort((a, b) => b.atRiskPercent - a.atRiskPercent);
+  const storeSalesCents = kpis.storeSales.byClient.reduce((sum, row) => sum + row.cents, 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -105,11 +125,20 @@ export async function PlatformOwnerPanel() {
             minutes: formatCount(kpis.storage.videoMinutes),
           })}
         />
+        <MissingKpi t={t} label={t('platformOwner.kpi.revenue')} item={kpis.monthlyRevenue} />
         <KpiCard
-          label={t('platformOwner.kpi.revenue')}
-          value={t('notMeasured')}
-          note={t('platformOwner.kpi.revenueReason')}
-          variant="missing"
+          label={t('platformOwner.kpi.engaged')}
+          value={formatPercent(engagedPercent(engagement))}
+          delta={kpiDelta(t, kpis.engaged.delta)}
+          note={t('actionsPerActiveMember', {
+            actions: formatDecimal(kpis.engaged.actionsPerActiveMember, 1),
+          })}
+        />
+        <KpiCard
+          label={t('platformOwner.kpi.storeSales')}
+          value={formatBrl(storeSalesCents)}
+          delta={kpiDelta(t, kpis.storeSales.delta)}
+          note={t('platformOwner.kpi.storeSalesNote', { count: kpis.storeSales.byClient.length })}
         />
       </KpiGrid>
 
@@ -128,12 +157,17 @@ export async function PlatformOwnerPanel() {
           </Card>
         </PanelSection>
 
+        <PanelSection title={t('bands.title')}>
+          <BandsBarList t={t} bands={engagement} />
+          <p className="text-xs text-text-secondary">{t('bands.footnote')}</p>
+        </PanelSection>
+
         <PanelSection
           title={t('platformOwner.membersByClient.title')}
           action={t('platformOwner.membersByClient.action')}
         >
           <BarList
-            rows={membersByClient.map((row, i) => ({
+            rows={memberRows.map((row) => ({
               id: row.id,
               label:
                 row.kind === 'client'
@@ -141,7 +175,7 @@ export async function PlatformOwnerPanel() {
                   : t('platformOwner.membersByClient.others', { count: row.clients }),
               value: row.members,
               display: formatPercent(share(row.members)),
-              highlight: i === 0,
+              highlight: row.kind === 'client' && row.members === biggest,
             }))}
           />
           <p className="text-xs text-text-secondary">
@@ -150,20 +184,33 @@ export async function PlatformOwnerPanel() {
             })}
           </p>
         </PanelSection>
-      </div>
 
-      <PanelSection title={t('platformOwner.adoption.title')}>
-        <BarList
-          max={100}
-          rows={moduleAdoption.map((row) => ({
-            id: row.module,
-            label: moduleName(row.module),
-            value: row.percent,
-            display: formatPercent(row.percent),
-          }))}
-        />
-        <p className="text-xs text-text-secondary">{t('platformOwner.adoption.footnote')}</p>
-      </PanelSection>
+        <PanelSection title={t('platformOwner.adoption.title')}>
+          <BarList
+            max={100}
+            rows={moduleAdoption.map((row) => ({
+              id: row.module,
+              label: moduleName(row.module),
+              value: row.percent,
+              display: formatPercent(row.percent),
+            }))}
+          />
+          <p className="text-xs text-text-secondary">{t('platformOwner.adoption.footnote')}</p>
+          <SectionTitle as="h4" variant="group">
+            {t('platformOwner.adoption.usageTitle')}
+          </SectionTitle>
+          <BarList
+            max={100}
+            rows={moduleUsage.map((row) => ({
+              id: row.module,
+              label: moduleName(row.module),
+              value: row.percent,
+              display: formatPercent(row.percent),
+            }))}
+          />
+          <p className="text-xs text-text-secondary">{t('platformOwner.adoption.usageFootnote')}</p>
+        </PanelSection>
+      </div>
 
       <PanelSection
         title={t('platformOwner.clients.title')}
@@ -182,6 +229,17 @@ export async function PlatformOwnerPanel() {
               numeric: true,
             },
             {
+              key: 'atRisk',
+              header: t('platformOwner.clients.columns.atRisk'),
+              numeric: true,
+            },
+            {
+              key: 'engaged',
+              header: t('platformOwner.clients.columns.engaged'),
+              numeric: true,
+              hideOnPhone: true,
+            },
+            {
               key: 'posts',
               header: t('platformOwner.clients.columns.posts'),
               numeric: true,
@@ -194,7 +252,7 @@ export async function PlatformOwnerPanel() {
               hideOnPhone: true,
             },
           ]}
-          rows={clients.map((client) => ({
+          rows={worstFirst.map((client) => ({
             id: client.id,
             cells: {
               client: client.name,
@@ -206,6 +264,8 @@ export async function PlatformOwnerPanel() {
               ),
               members: formatCount(client.members),
               interacted: formatPercent(client.interactedPercent),
+              atRisk: formatPercent(client.atRiskPercent),
+              engaged: formatPercent(client.engagedPercent),
               posts: formatCount(client.posts30d),
               media: formatMegabytes(client.mediaMb),
             },

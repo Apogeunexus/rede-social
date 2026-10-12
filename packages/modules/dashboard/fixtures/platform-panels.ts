@@ -1,5 +1,5 @@
 import { previewTenant } from './preview-tenant';
-import type { Delta, KpiHint, NotMeasured } from './shared';
+import type { Delta, EngagementBands, KpiHint, NotMeasured } from './shared';
 
 /**
  * The three platform levels: fictional numbers in the shape the platform metrics endpoints will
@@ -38,6 +38,10 @@ export interface PlatformClientRow {
   status: ClientStatus;
   members: number;
   interactedPercent: number;
+  /** Superfãs + engajados, % of the client's members (from its bands). */
+  engagedPercent: number;
+  /** "Em risco", % of the client's members (from its bands). */
+  atRiskPercent: number;
   posts30d: number;
   mediaMb: number;
 }
@@ -50,13 +54,21 @@ export interface PlatformOwnerPanel {
     storage: { usedGb: number; planGb: number; delta: Delta; videoMinutes: number };
     /** Not measured yet: the card says why instead of inventing a number. */
     monthlyRevenue: NotMeasured;
+    /** The "Membros engajados" share is computed from `engagement`. */
+    engaged: { delta: Delta; actionsPerActiveMember: number };
+    /** Store order value per client in the last 30 days (recorded value, no real payment). */
+    storeSales: { delta: Delta; byClient: { clientId: string; cents: number }[] };
   };
+  /** Every client's members in the six engagement bands, last 30 days. */
+  engagement: EngagementBands;
   attention: PlatformOwnerAttention[];
   /** `YYYY-MM`, oldest first. */
   activeClientsByMonth: { month: string; count: number }[];
   membersByClient: MembersByClientRow[];
   /** Module key + % of the active clients with it on. */
   moduleAdoption: { module: string; percent: number }[];
+  /** Module key + % of the active members who used it in 30 days, in `moduleAdoption` order. */
+  moduleUsage: { module: string; percent: number }[];
   /** Worst first. */
   clients: PlatformClientRow[];
 }
@@ -100,6 +112,28 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       videoMinutes: 312,
     },
     monthlyRevenue: { measured: false, reason: 'needs_billing_per_client' },
+    engaged: {
+      delta: { amount: 1, kind: 'points', direction: 'up', good: true, basis: 'previous_month' },
+      actionsPerActiveMember: 8.1,
+    },
+    storeSales: {
+      delta: { amount: 9, kind: 'percent', direction: 'up', good: true, basis: 'previous_month' },
+      byClient: [
+        { clientId: 'c-igor', cents: 894000 },
+        { clientId: 'c-aurora', cents: 544000 },
+      ],
+    },
+  },
+  engagement: {
+    counts: {
+      new: 480,
+      superfan: 380,
+      engaged: 1440,
+      occasional: 1340,
+      at_risk: 1150,
+      inactive: 3640,
+    },
+    newActivated: 296,
   },
   attention: [
     { id: 'storage', kind: 'storage_near_limit', usedPercent: 84, failsAbovePercent: 95 },
@@ -130,6 +164,14 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
     { module: 'chat', percent: 58 },
     { module: 'store', percent: 17 },
   ],
+  moduleUsage: [
+    { module: 'feed', percent: 96 },
+    { module: 'communities', percent: 64 },
+    { module: 'stories', percent: 38 },
+    { module: 'events', percent: 31 },
+    { module: 'chat', percent: 9 },
+    { module: 'store', percent: 14 },
+  ],
   clients: [
     {
       id: 'c-corrida',
@@ -138,6 +180,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       status: 'at_risk',
       members: 310,
       interactedPercent: 12,
+      engagedPercent: 3,
+      atRiskPercent: 31,
       posts30d: 0,
       mediaMb: 41,
     },
@@ -148,6 +192,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       status: 'active',
       members: 1210,
       interactedPercent: 27,
+      engagedPercent: 12,
+      atRiskPercent: 24,
       posts30d: 6,
       mediaMb: 88,
     },
@@ -158,6 +204,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       status: 'active',
       members: 1760,
       interactedPercent: 35,
+      engagedPercent: 18,
+      atRiskPercent: 19,
       posts30d: 14,
       mediaMb: 120,
     },
@@ -168,6 +216,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       status: 'active',
       members: 3110,
       interactedPercent: 44,
+      engagedPercent: 25,
+      atRiskPercent: 15,
       posts30d: 22,
       mediaMb: 190,
     },
@@ -178,6 +228,8 @@ export const platformOwnerPanel: PlatformOwnerPanel = {
       status: 'active',
       members: 1240,
       interactedPercent: 38,
+      engagedPercent: 22,
+      atRiskPercent: 14,
       posts30d: 61,
       mediaMb: 402,
     },
@@ -190,20 +242,31 @@ export type PlatformAdminPending =
   | { id: string; kind: 'domain_expired'; clientName: string; host: string }
   | { id: string; kind: 'domain_deadline'; clientName: string; hoursLeft: number }
   | { id: string; kind: 'invite_pending'; clientName: string; daysSinceSent: number }
-  | { id: string; kind: 'media_failures'; clientName: string; failures: number };
+  | { id: string; kind: 'media_failures'; clientName: string; failures: number }
+  | {
+      id: string;
+      kind: 'engagement_drop';
+      clientName: string;
+      /** Engajados %, 30 days ago and today. */
+      fromPercent: number;
+      toPercent: number;
+    };
 
 export type ActivationStep =
   | 'client_created'
   | 'domain_verified'
   | 'invite_accepted'
   | 'first_post'
-  | 'ten_members';
+  | 'ten_members'
+  | 'ten_active_members';
 
 export interface PlatformFailureRow {
   id: string;
   clientName: string;
   media: number;
   push: number;
+  /** Videos stuck in processing. */
+  stalledVideos: number;
   lastPost: RelativeMoment;
   status: ClientStatus;
 }
@@ -216,6 +279,8 @@ export interface PlatformAdminPanel {
     clientsWithoutOwner: { count: number; hint: KpiHint };
     mediaFailures24h: { count: number; delta: Delta };
     pushFailures: { count: number; delta: Delta };
+    /** % of the active members with push on. */
+    pushReach: { percent: number };
   };
   /** In funnel order: how many clients reached each step. */
   activation: { step: ActivationStep; clients: number }[];
@@ -233,6 +298,13 @@ export const platformAdminPanel: PlatformAdminPanel = {
     { id: 'p-horizonte', kind: 'domain_deadline', clientName: 'Escola Horizonte', hoursLeft: 36 },
     { id: 'p-aurora', kind: 'invite_pending', clientName: 'Instituto Aurora', daysSinceSent: 4 },
     { id: 'p-lab', kind: 'media_failures', clientName: 'Rede Lab', failures: 7 },
+    {
+      id: 'p-horizonte-engagement',
+      kind: 'engagement_drop',
+      clientName: 'Escola Horizonte',
+      fromPercent: 17,
+      toPercent: 12,
+    },
   ],
   kpis: {
     unverifiedDomains: { count: 3, hint: 'no_comparison_yet' },
@@ -246,6 +318,7 @@ export const platformAdminPanel: PlatformAdminPanel = {
       count: 14,
       delta: { amount: 3, kind: 'count', direction: 'down', good: true, basis: 'yesterday' },
     },
+    pushReach: { percent: 52 },
   },
   activation: [
     { step: 'client_created', clients: 8 },
@@ -253,6 +326,7 @@ export const platformAdminPanel: PlatformAdminPanel = {
     { step: 'invite_accepted', clients: 4 },
     { step: 'first_post', clients: 4 },
     { step: 'ten_members', clients: 3 },
+    { step: 'ten_active_members', clients: 2 },
   ],
   failures24h: [
     {
@@ -260,6 +334,7 @@ export const platformAdminPanel: PlatformAdminPanel = {
       clientName: 'Rede Lab',
       media: 7,
       push: 2,
+      stalledVideos: 2,
       lastPost: { daysAgo: 0, time: '09:12' },
       status: 'active',
     },
@@ -268,6 +343,7 @@ export const platformAdminPanel: PlatformAdminPanel = {
       clientName: previewTenant.displayName,
       media: 2,
       push: 9,
+      stalledVideos: 0,
       lastPost: { daysAgo: 0, time: '11:40' },
       status: 'active',
     },
@@ -276,6 +352,7 @@ export const platformAdminPanel: PlatformAdminPanel = {
       clientName: 'Clube Corrida Sul',
       media: 0,
       push: 3,
+      stalledVideos: 0,
       lastPost: { daysAgo: 14 },
       status: 'at_risk',
     },
@@ -296,7 +373,17 @@ export interface PlatformSupportPanel {
     members: { count: number; blocked: number; delta: Delta };
     errors24h: { count: number; delta: Delta };
     lastActivity: { daysAgo: number; kind: 'staff_post' };
+    /** Invites sent and not accepted yet. */
+    pendingInvites: { count: number };
+    /** Members who joined in the last 7 days (`joined`) and, of them, never did a counted action. */
+    newNeverActed7d: { count: number; joined: number };
+    /** Counted actions per hour in the last 24 h vs the 30-day average. */
+    activity24h: { perHour: number; averagePerHour: number };
   };
+  /** The client's members in the six engagement bands (shown aggregated, floored, D-02). */
+  engagement: EngagementBands;
+  /** % of the active members with push on. */
+  pushReachPercent: number;
   configuration: {
     enabledModules: string[];
     disabledModules: string[];
@@ -327,7 +414,15 @@ export const platformSupportPanel: PlatformSupportPanel = {
       delta: { amount: 6, kind: 'count', direction: 'up', good: false, basis: 'yesterday' },
     },
     lastActivity: { daysAgo: 14, kind: 'staff_post' },
+    pendingInvites: { count: 37 },
+    newNeverActed7d: { count: 13, joined: 14 },
+    activity24h: { perHour: 2, averagePerHour: 6 },
   },
+  engagement: {
+    counts: { new: 22, superfan: 2, engaged: 8, occasional: 27, at_risk: 96, inactive: 155 },
+    newActivated: 1,
+  },
+  pushReachPercent: 21,
   configuration: {
     enabledModules: ['feed', 'communities', 'stories', 'events', 'chat', 'notifications'],
     disabledModules: ['store', 'reels'],

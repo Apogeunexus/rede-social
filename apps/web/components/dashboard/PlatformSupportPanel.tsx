@@ -1,25 +1,58 @@
-import { platformSupportPanel } from '@rede-social/module-dashboard/fixtures';
-import { Collapsible, KpiCard, KpiGrid, ToneLabel } from '@rede-social/module-dashboard/ui';
+import { type Delta, platformSupportPanel } from '@rede-social/module-dashboard/fixtures';
+import {
+  bandTotal,
+  Collapsible,
+  isBelowPrivacyFloor,
+  KpiCard,
+  KpiGrid,
+  PRIVACY_FLOOR,
+  percentOf,
+  ToneLabel,
+} from '@rede-social/module-dashboard/ui';
 import { Card } from '@rede-social/ui';
 import { Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { PREVIEW_NOTE_ID } from '@/lib/dashboard-preview';
-import { formatCount, formatList, formatTime, kpiDelta, moduleNamer } from './format';
+import { BandsBarList } from './BandsBarList';
+import {
+  formatCount,
+  formatFloored,
+  formatList,
+  formatPercent,
+  formatTime,
+  kpiDelta,
+  moduleNamer,
+} from './format';
 import { PanelHeader } from './PanelHeader';
 import { PreviewAction } from './PanelSection';
 
 const SEARCH_ID = 'preview-support-search';
 
+/** The last 24 h's action rate against the 30-day average, as a relative change. */
+function activityDelta(perHour: number, averagePerHour: number): Delta {
+  const direction = perHour < averagePerHour ? 'down' : perHour > averagePerHour ? 'up' : 'flat';
+  return {
+    amount: percentOf(Math.abs(perHour - averagePerHour), averagePerHour),
+    kind: 'percent',
+    direction,
+    good: direction === 'flat' ? null : direction === 'up',
+    basis: 'average_30_days',
+  };
+}
+
 /**
  * Level 3, "Suporte da plataforma": what is happening with this client, without seeing the members'
- * content? Read-only: the client being looked at, the registered access with its reason, four KPIs,
- * the configuration (closed) and the last errors (open), and the two ways out — escalate, or review
- * one's own registered accesses.
+ * content? Read-only and aggregates only: the client being looked at, the registered access with its
+ * reason, the KPIs (invites, novos who never acted, activity vs the average), the configuration and
+ * the engagement bands (both closed), the last errors with the push reach (open), and the two ways
+ * out — escalate, or review one's own registered accesses. Every count of the client's members or
+ * devices under 5 reads "menos de 5" (D-02).
  */
 export async function PlatformSupportPanel() {
   const t = await getTranslations('dashboard');
   const moduleName = await moduleNamer(t);
-  const { client, access, kpis, configuration, errors24h } = platformSupportPanel;
+  const { client, access, kpis, configuration, errors24h, engagement, pushReachPercent } =
+    platformSupportPanel;
 
   return (
     <div className="flex flex-col gap-6">
@@ -80,7 +113,7 @@ export async function PlatformSupportPanel() {
           label={t('platformSupport.kpi.members')}
           value={formatCount(kpis.members.count)}
           unit={t('platformSupport.kpi.membersUnit', {
-            blocked: formatCount(kpis.members.blocked),
+            blocked: formatFloored(t, kpis.members.blocked),
           })}
           delta={kpiDelta(t, kpis.members.delta)}
         />
@@ -93,6 +126,28 @@ export async function PlatformSupportPanel() {
           label={t('platformSupport.kpi.lastActivity')}
           value={t('daysAgo', { days: kpis.lastActivity.daysAgo })}
           note={t('platformSupport.kpi.lastActivityNote')}
+        />
+        <KpiCard
+          label={t('platformSupport.kpi.pendingInvites')}
+          value={formatFloored(t, kpis.pendingInvites.count)}
+        />
+        <KpiCard
+          label={t('platformSupport.kpi.neverActed')}
+          value={formatFloored(t, kpis.newNeverActed7d.count)}
+          note={t('platformSupport.kpi.neverActedNote', {
+            joined: formatFloored(t, kpis.newNeverActed7d.joined),
+          })}
+        />
+        <KpiCard
+          label={t('platformSupport.kpi.activity')}
+          value={t('platformSupport.kpi.activityValue', { count: kpis.activity24h.perHour })}
+          delta={kpiDelta(
+            t,
+            activityDelta(kpis.activity24h.perHour, kpis.activity24h.averagePerHour),
+          )}
+          note={t('platformSupport.kpi.activityNote', {
+            average: kpis.activity24h.averagePerHour,
+          })}
         />
       </KpiGrid>
 
@@ -123,6 +178,18 @@ export async function PlatformSupportPanel() {
       </Collapsible>
 
       <Collapsible
+        title={t('platformSupport.engagement.title')}
+        summary={t('platformSupport.engagement.summary', {
+          percent: formatPercent(percentOf(engagement.counts.at_risk, bandTotal(engagement))),
+        })}
+      >
+        <BandsBarList t={t} bands={engagement} floor />
+        <p className="text-xs text-text-secondary">
+          {t('platformSupport.engagement.footnote', { floor: PRIVACY_FLOOR })}
+        </p>
+      </Collapsible>
+
+      <Collapsible
         open
         title={t('platformSupport.errors.title')}
         summary={t('platformSupport.errors.summary', {
@@ -139,12 +206,21 @@ export async function PlatformSupportPanel() {
               <div className="flex min-w-0 flex-col text-xs">
                 <span className="font-bold text-text tabular-nums">{formatTime(error.atIso)}</span>
                 <span className="text-text-secondary">
-                  {t(`platformSupport.errors.details.${error.detail}`, { count: error.count ?? 0 })}
+                  {error.detail === 'devices_refused' && isBelowPrivacyFloor(error.count ?? 0)
+                    ? t('platformSupport.errors.details.devices_refused_below_floor', {
+                        floor: PRIVACY_FLOOR,
+                      })
+                    : t(`platformSupport.errors.details.${error.detail}`, {
+                        count: error.count ?? 0,
+                      })}
                 </span>
               </div>
             </li>
           ))}
         </ul>
+        <p className="text-xs text-text-secondary">
+          {t('platformSupport.errors.pushReach', { percent: formatPercent(pushReachPercent) })}
+        </p>
       </Collapsible>
 
       <div className="flex flex-wrap gap-2">

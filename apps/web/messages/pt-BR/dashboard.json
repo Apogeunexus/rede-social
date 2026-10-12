@@ -51,6 +51,7 @@
       "previous_24h": "{amount} vs. 24h anteriores",
       "yesterday": "{amount} vs. ontem",
       "last_7_days": "{amount} em 7 dias",
+      "average_30_days": "{amount} vs. média de 30 dias",
       "none": "{amount}"
     },
     "hint": {
@@ -75,6 +76,7 @@
       "needs_product_page_views": "Precisa registrar as visitas às páginas dos produtos",
       "needs_last_visit": "Precisa registrar a última visita de cada membro"
     },
+    "belowFloor": "menos de {floor}",
     "moment": "{days, plural, =0 {hoje {time}} =1 {ontem {time}} other {há # dias}}",
     "daysAgo": "há {days, plural, one {# dia} other {# dias}}",
     "plans": {
@@ -110,7 +112,9 @@
         "storageUnit": "de {total} GB",
         "storageNote": "{minutes} min de vídeo",
         "revenue": "Receita mensal",
-        "revenueReason": "Precisa do faturamento por cliente"
+        "engaged": "Membros engajados",
+        "storeSales": "Vendas nas lojas dos clientes",
+        "storeSalesNote": "{count, plural, one {de # cliente} other {de # clientes}} · valor registrado, sem pagamento real"
       },
       "attention": {
         "storage": {
@@ -135,7 +139,9 @@
       },
       "adoption": {
         "title": "Adoção de módulos",
-        "footnote": "% dos clientes ativos com o módulo ligado."
+        "footnote": "% dos clientes ativos com o módulo ligado.",
+        "usageTitle": "Uso real",
+        "usageFootnote": "% dos membros ativos que usaram o módulo em 30 dias."
       },
       "clients": {
         "title": "Clientes (piores primeiro)",
@@ -146,6 +152,8 @@
           "status": "Status",
           "members": "Membros",
           "interacted": "Interagiu 30d",
+          "atRisk": "Em risco %",
+          "engaged": "Engajados %",
           "posts": "Posts 30d",
           "media": "Mídia"
         }
@@ -176,6 +184,11 @@
           "tag": "{count, plural, one {# falha} other {# falhas}}",
           "title": "{name}: mídia",
           "detail": "{count, plural, one {# vídeo falhou} other {# vídeos falharam}} no processamento nas últimas 24h"
+        },
+        "engagement_drop": {
+          "tag": "-{points} p.p.",
+          "title": "{name}: engajamento",
+          "detail": "Engajados caíram de {from} para {to} em 30 dias"
         }
       },
       "kpi": {
@@ -183,7 +196,9 @@
         "pendingInvites": "Convites sem aceite",
         "clientsWithoutOwner": "Clientes sem dono",
         "mediaFailures24h": "Falhas de mídia 24h",
-        "pushFailures": "Push com falha"
+        "pushFailures": "Push com falha",
+        "pushReach": "Alcance de push",
+        "pushReachNote": "membros ativos com push ligado"
       },
       "activation": {
         "title": "Ativação dos clientes",
@@ -194,7 +209,8 @@
           "domain_verified": "Domínio verificado",
           "invite_accepted": "Convite aceito",
           "first_post": "1ª publicação",
-          "ten_members": "10+ membros"
+          "ten_members": "10+ membros",
+          "ten_active_members": "10+ membros ativos"
         }
       },
       "failures": {
@@ -203,6 +219,7 @@
           "client": "Cliente",
           "media": "Mídia",
           "push": "Push",
+          "stalledVideos": "Vídeos parados",
           "lastPost": "Última publicação",
           "status": "Status"
         }
@@ -228,7 +245,13 @@
         "membersUnit": "/ {blocked} bloq.",
         "errors24h": "Erros 24h",
         "lastActivity": "Última atividade",
-        "lastActivityNote": "publicação da equipe"
+        "lastActivityNote": "publicação da equipe",
+        "pendingInvites": "Convites não aceitos",
+        "neverActed": "Novos que nunca agiram (7 dias)",
+        "neverActedNote": "de {joined} que entraram",
+        "activity": "Atividade 24h vs. média",
+        "activityValue": "{count}/h",
+        "activityNote": "média: {average}/h"
       },
       "configuration": {
         "title": "Configuração",
@@ -236,6 +259,11 @@
         "enabled": "Ligados: {list}",
         "disabled": "Desligados: {list}",
         "admins": "Admins: {count} ({emails})"
+      },
+      "engagement": {
+        "title": "Engajamento (agregado)",
+        "summary": "{percent} em risco",
+        "footnote": "Só números agregados; contagens abaixo de {floor} aparecem como “menos de {floor}”."
       },
       "errors": {
         "title": "Erros nas últimas 24h",
@@ -248,8 +276,10 @@
         "details": {
           "cname_not_found": "Verificação do domínio: registro CNAME não encontrado",
           "devices_refused": "{count, plural, one {# aparelho recusou} other {# aparelhos recusaram}} a notificação",
-          "unsupported_format": "Vídeo rejeitado: formato não suportado"
-        }
+          "unsupported_format": "Vídeo rejeitado: formato não suportado",
+          "devices_refused_below_floor": "Menos de {floor} aparelhos recusaram a notificação"
+        },
+        "pushReach": "Alcance de push: {percent} dos membros ativos"
       },
       "actions": {
         "escalate": "Escalar para admin",

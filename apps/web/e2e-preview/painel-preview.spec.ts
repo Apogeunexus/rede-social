@@ -299,8 +299,8 @@ const ALERT_LEVELS = [
   },
   {
     level: 'admin-da-plataforma',
-    count: 4,
-    name: 'Alertas, 4, 1 urgente',
+    count: 5,
+    name: 'Alertas, 5, 1 urgente',
     onlyOnce: 'Escola Horizonte: domínio',
   },
   {
@@ -482,5 +482,106 @@ test('admin-do-cliente: unmeasured metrics, videos and reels, at-risk entries', 
   }
   await expect(
     videos.getByText('4 stories, média de 310 visualizações únicas (25%)', { exact: true }),
+  ).toBeVisible();
+});
+
+test("dono-da-plataforma: engagement, store sales, module usage and the clients' risk columns", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-da-plataforma');
+
+  const engaged = kpiCard(page, 'Membros engajados');
+  await expect(engaged).toContainText('22%');
+  await expect(engaged).toContainText('8,1 ações por membro ativo');
+  await expect(kpiCard(page, 'Vendas nas lojas dos clientes')).toContainText(/14\.380,00/);
+  const revenue = kpiCard(page, 'Receita mensal');
+  await expect(revenue).toContainText('Ainda não medido');
+  await expect(revenue).toContainText('Precisa do faturamento por cliente');
+
+  const titles = await h3Texts(page);
+  expect(titles.indexOf('Faixas de engajamento')).toBe(
+    titles.indexOf('Clientes ativos, 12 meses') + 1,
+  );
+  await expect(
+    page.getByText('O maior cliente concentra 37% dos membros.', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    sectionTitled(page, 'Membros por cliente').getByRole('listitem').first(),
+  ).toContainText('Instituto Aurora');
+  await expect(page.getByRole('heading', { level: 4, name: 'Uso real' })).toBeVisible();
+
+  const firstCard = sectionTitled(page, 'Clientes (piores primeiro)').getByRole('listitem').first();
+  await expect(firstCard).toContainText('Clube Corrida Sul');
+  await expect(firstCard).toContainText('Em risco %');
+  await expect(firstCard).toContainText('31%');
+  await expect(firstCard).not.toContainText('Engajados %');
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  const table = page.getByRole('table', { name: 'Clientes (piores primeiro)' });
+  await expect(table).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Em risco %' })).toBeVisible();
+  await expect(table.getByRole('columnheader', { name: 'Engajados %' })).toBeVisible();
+  const overflow = await horizontalOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+});
+
+test('admin-da-plataforma: push reach, the active-members step and stalled videos', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/admin-da-plataforma');
+
+  await expect(kpiCard(page, 'Alcance de push')).toContainText('52%');
+  const steps = sectionTitled(page, 'Ativação dos clientes').getByRole('listitem');
+  await expect(steps).toHaveCount(6);
+  await expect(steps.last()).toContainText('10+ membros ativos');
+  await expect(steps.last()).toContainText('2');
+  const lab = sectionTitled(page, 'Falhas nas últimas 24h')
+    .getByRole('listitem')
+    .filter({ hasText: 'Rede Lab' });
+  await expect(lab).toContainText('Vídeos parados');
+  await expect(lab).toContainText('2');
+
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(page.getByRole('table', { name: 'Falhas nas últimas 24h' })).toBeVisible();
+  const overflow = await horizontalOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+});
+
+test("suporte-da-plataforma: aggregates only, counts under 5 read 'menos de 5'", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/suporte-da-plataforma');
+
+  await expect(kpiCard(page, 'Convites não aceitos')).toContainText('37');
+  const neverActed = kpiCard(page, 'Novos que nunca agiram (7 dias)');
+  await expect(neverActed).toContainText('13');
+  await expect(neverActed).toContainText('de 14 que entraram');
+  const activity = kpiCard(page, 'Atividade 24h vs. média');
+  await expect(activity).toContainText('2/h');
+  await expect(activity).toContainText('média: 6/h');
+  await expect(activity).toContainText('67% vs. média de 30 dias');
+  await expect(page.getByText('/ menos de 5 bloq.', { exact: true })).toBeVisible();
+
+  const summaries = (await page.locator('summary').allTextContents()).map((text) => text.trim());
+  const at = (prefix: string) => summaries.findIndex((text) => text.startsWith(prefix));
+  expect(at('Configuração')).toBeGreaterThanOrEqual(0);
+  expect(at('Engajamento (agregado)')).toBe(at('Configuração') + 1);
+
+  const engagement = page.locator('details').filter({ hasText: 'Engajamento (agregado)' });
+  await engagement.locator('summary').click();
+  await expect(engagement.locator('summary')).toContainText('31% em risco');
+  const superfans = engagement.getByRole('listitem').filter({ hasText: 'Superfãs' });
+  await expect(superfans).toHaveText(/Superfãs\s*menos de 5/);
+  await expect(superfans).not.toContainText('2');
+  await expect(superfans.locator('[data-bar-fill]')).toHaveAttribute('style', /width:\s*0%/);
+
+  await expect(
+    page.getByText('Menos de 5 aparelhos recusaram a notificação', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Alcance de push: 21% dos membros ativos', { exact: true }),
   ).toBeVisible();
 });

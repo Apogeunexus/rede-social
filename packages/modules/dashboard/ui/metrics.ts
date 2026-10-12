@@ -46,6 +46,6 @@ export function engagedPercent(bands: EngagementBands): number {
 export const PRIVACY_FLOOR = 5;
 
 /** Whether a count is small enough to re-identify someone (`count < PRIVACY_FLOOR`). */
-export function isBelowPrivacyFloor(_count: number): boolean {
-  throw new Error('not implemented');
+export function isBelowPrivacyFloor(count: number): boolean {
+  return count < PRIVACY_FLOOR;
 }

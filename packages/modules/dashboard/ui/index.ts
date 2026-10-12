@@ -19,6 +19,8 @@ export {
   engagedPercent,
   interactedCount,
   interactedPercent,
+  isBelowPrivacyFloor,
+  PRIVACY_FLOOR,
   percentOf,
 } from './metrics';
 export {

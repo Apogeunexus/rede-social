@@ -4,7 +4,11 @@ import type {
   KpiHint,
   RelativeMoment,
 } from '@rede-social/module-dashboard/fixtures';
-import type { KpiDelta } from '@rede-social/module-dashboard/ui';
+import {
+  isBelowPrivacyFloor,
+  type KpiDelta,
+  PRIVACY_FLOOR,
+} from '@rede-social/module-dashboard/ui';
 import { getTranslations } from 'next-intl/server';
 import { moduleLabelResolver } from '@/lib/registry';
 
@@ -18,6 +22,13 @@ const PERCENT_1 = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFrac
 /** `8430` -> `8.430`. */
 export function formatCount(value: number): string {
   return INTEGER.format(value);
+}
+
+/** A count of a client's members or devices for platform support: under 5 reads "menos de 5" (D-02). */
+export function formatFloored(t: DashboardT, count: number): string {
+  return isBelowPrivacyFloor(count)
+    ? t('belowFloor', { floor: PRIVACY_FLOOR })
+    : formatCount(count);
 }
 
 /** A 0–100 number -> `41%`. */
