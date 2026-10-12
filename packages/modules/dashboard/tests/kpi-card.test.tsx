@@ -71,6 +71,29 @@ describe('KpiCard', () => {
     render(<KpiCard label="L" value="V" chart={<span>chart-sentinel</span>} />);
     expect(screen.getByText('chart-sentinel')).toBeInTheDocument();
   });
+
+  it('renders the footer last, after the note and the chart', () => {
+    const { container } = render(
+      <KpiCard
+        label="L"
+        value="V"
+        note="note-sentinel"
+        chart={<span>chart-sentinel</span>}
+        footer={<span>footer-sentinel</span>}
+      />,
+    );
+    const footer = screen.getByText('footer-sentinel');
+    expect(container.firstElementChild?.lastElementChild).toContainElement(footer);
+    const note = screen.getByText('note-sentinel');
+    expect(note.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('without a footer, adds nothing after the note', () => {
+    const { container } = render(<KpiCard label="L" value="V" note="note-sentinel" />);
+    const card = container.firstElementChild;
+    expect(card?.children).toHaveLength(3);
+    expect(card?.lastElementChild).toBe(screen.getByText('note-sentinel'));
+  });
 });
 
 describe('KpiGrid', () => {

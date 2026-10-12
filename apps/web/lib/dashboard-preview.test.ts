@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DASHBOARD_PREVIEW_PATH,
   dashboardPreviewEnabled,
+  MEMBER_LISTS,
+  memberCardAnchor,
+  memberListHref,
+  memberReportHref,
   PREVIEW_LEVELS,
+  parseMemberList,
   parseStaffFunctions,
   previewLevel,
 } from './dashboard-preview';
@@ -96,5 +101,29 @@ describe('parseStaffFunctions', () => {
     ).toBe('atendimento');
     expect(parseStaffFunctions({ aba: 'moderacao' }).active).toBe('moderacao');
     expect(parseStaffFunctions({ aba: ['moderacao', 'x'] }).active).toBe('atendimento');
+  });
+});
+
+describe('parseMemberList', () => {
+  it('returns an allow-listed slug', () => {
+    for (const slug of MEMBER_LISTS) expect(parseMemberList({ lista: slug })).toBe(slug);
+    expect(parseMemberList({ lista: 'curtidas' })).toBe('curtidas');
+  });
+
+  it('refuses anything else, so the report renders', () => {
+    for (const lista of ['', 'CURTIDAS', 'xyz', '__proto__', 'constructor', 'curtidas ']) {
+      expect(parseMemberList({ lista })).toBeNull();
+    }
+    expect(parseMemberList({})).toBeNull();
+    expect(parseMemberList({ lista: ['curtidas', 'curtidas'] })).toBeNull();
+    expect(parseMemberList({ lista: undefined })).toBeNull();
+  });
+});
+
+describe('member list hrefs', () => {
+  it('opens a list at its anchor and returns to the card that opened it', () => {
+    expect(memberListHref('curtidas')).toBe('/painel-preview/membro?lista=curtidas#lista');
+    expect(memberReportHref('curtidas')).toBe('/painel-preview/membro#atividade-curtidas');
+    expect(memberCardAnchor('curtidas')).toBe('atividade-curtidas');
   });
 });
