@@ -47,6 +47,24 @@ with the "exemplo" pill until the collection below exists:
 | Onde você mais participa | the member's likes + comments joined to `feed_posts.community_id` | measured |
 | Presença nos encontros | event check-ins vs confirmed RSVPs, last 30 days | measured |
 | Sequência | weeks with at least one counted action | measured |
+| Tempo por story | none | Time each story stays on screen (`needs_story_view_time`) |
+
+#### Drill-down lists
+
+Eight report cards open the list behind their number (`memberActivityLists`, in
+`fixtures/member-lists.ts`): the web passes `?lista=<slug>` on the level-7 page, where the slug is one
+of `curtidas`, `comentarios`, `salvamentos`, `compartilhamentos`, `posts-vistos`, `videos` and
+`stories` (both video cards open `videos`). Anything else renders the report.
+
+- **One table.** `memberPostTable` holds the 60 posts the member viewed in the window, in recency
+  order. Likes, comments, saves and shares point at those posts and carry the post's last-seen
+  moment, so no row contradicts another. Every list agrees with its card (46 / 12 / 9 / 3, 60 posts
+  and 128 views via `totalViews`, 41 videos and 72 minutes via `totalWatchedSeconds`, 23 stories),
+  and likes + comments per community equal "Onde você mais participa".
+- **The "exemplo" rule.** The pill sits next to the example value it marks. An all-example list
+  (saves, shares, posts, videos) has one pill next to its count; the stories list is measured
+  (`story_views`) and only the time per story is example, so each row's time carries its own pill.
+- **Own data only.** Rows hold the member's own actions; authors are the creator or a community.
 
 ## Events emitted
 
