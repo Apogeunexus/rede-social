@@ -61,6 +61,12 @@ describe('KpiCard', () => {
     expect(screen.getByText('missing-sentinel')).toHaveClass('text-text-tertiary');
   });
 
+  it('renders the badge next to the value', () => {
+    render(<KpiCard label="L" value="value-sentinel" badge="badge-sentinel" />);
+    const badge = screen.getByText('badge-sentinel');
+    expect(badge.parentElement).toContainElement(screen.getByText('value-sentinel'));
+  });
+
   it('renders the chart slot', () => {
     render(<KpiCard label="L" value="V" chart={<span>chart-sentinel</span>} />);
     expect(screen.getByText('chart-sentinel')).toBeInTheDocument();

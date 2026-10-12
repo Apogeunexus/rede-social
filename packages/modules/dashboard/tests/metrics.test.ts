@@ -3,6 +3,7 @@ import { type EngagementBands, memberPanel } from '../fixtures';
 import {
   type BandGroup,
   bandTotal,
+  dailyAverageMinutes,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
   FOR_YOU_PRIORITY,
@@ -18,6 +19,7 @@ import {
   PRIVACY_FLOOR,
   percentOf,
   selectForYouCards,
+  totalMinutes,
   vsMedian,
 } from '../ui/metrics';
 
@@ -295,5 +297,17 @@ describe('selectForYouCards', () => {
     expect(MAX_FOR_YOU_CARDS).toBe(3);
     const all = { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity };
     expect(selectForYouCards(all).length).toBeLessThanOrEqual(MAX_FOR_YOU_CARDS);
+  });
+});
+
+describe('totalMinutes / dailyAverageMinutes', () => {
+  it('are 0 for no days', () => {
+    expect(totalMinutes([])).toBe(0);
+    expect(dailyAverageMinutes([])).toBe(0);
+  });
+
+  it('rounds the average to whole minutes', () => {
+    expect(totalMinutes([{ minutes: 10 }, { minutes: 11 }])).toBe(21);
+    expect(dailyAverageMinutes([{ minutes: 10 }, { minutes: 11 }])).toBe(11);
   });
 });

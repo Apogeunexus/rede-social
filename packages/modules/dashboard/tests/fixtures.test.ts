@@ -12,12 +12,14 @@ import {
 } from '../fixtures';
 import {
   bandTotal,
+  dailyAverageMinutes,
   engagedPercent,
   interactedPercent,
   isBelowPrivacyFloor,
   isNewMember,
   MIN_STREAK_WEEKS,
   percentOf,
+  totalMinutes,
   vsMedian,
 } from '../ui/metrics';
 
@@ -254,5 +256,85 @@ describe('memberPanel (level 7)', () => {
     const { weeklyStreak, attendance } = memberPanel.profile;
     expect(weeklyStreak).toBeGreaterThanOrEqual(MIN_STREAK_WEEKS);
     expect(attendance.attended).toBeLessThanOrEqual(attendance.events);
+  });
+
+  const { activity } = memberPanel;
+  const days = activity.usage.value.days;
+
+  it('covers the last 7 complete days, oldest first (2026-10-05 to 2026-10-11)', () => {
+    expect(days.map((day) => day.date)).toEqual([
+      '2026-10-05',
+      '2026-10-06',
+      '2026-10-07',
+      '2026-10-08',
+      '2026-10-09',
+      '2026-10-10',
+      '2026-10-11',
+    ]);
+  });
+
+  it('totals the week as the sum of its days (4 h 26 min, 38 min a day)', () => {
+    expect(totalMinutes(days)).toBe(266);
+    expect(dailyAverageMinutes(days)).toBe(38);
+  });
+
+  it('never counts more community interactions than likes + comments, most first', () => {
+    const rows = activity.byCommunity.value;
+    const sum = rows.reduce((total, row) => total + row.interactions, 0);
+    const { likes, comments } = activity.engagement;
+    expect(sum).toBeLessThanOrEqual(likes.value.count + comments.value.count);
+    const sorted = [...rows].sort((a, b) => b.interactions - a.interactions);
+    expect(rows).toEqual(sorted);
+  });
+
+  it('never watched videos longer than the app was used', () => {
+    expect(activity.seen.videos.value.minutes).toBeLessThanOrEqual(totalMinutes(days));
+  });
+
+  it('has a two-hour peak inside the day', () => {
+    const { fromHour, toHour } = activity.peakHours.value;
+    expect(toHour - fromHour).toBe(2);
+    for (const hour of [fromHour, toHour]) {
+      expect(hour).toBeGreaterThanOrEqual(0);
+      expect(hour).toBeLessThanOrEqual(24);
+    }
+  });
+
+  it('never grades the member: every report delta is neutral', () => {
+    const deltas = [
+      activity.usage.value.delta,
+      ...Object.values(activity.engagement).map((metric) => metric.value.delta),
+    ];
+    for (const delta of deltas) {
+      expect(delta.good).toBeNull();
+      expect(delta.basis).toBe('previous_7_days');
+    }
+  });
+
+  it('every metric that lacks a source is typed as example (D-03)', () => {
+    const examples: Record<string, string> = {};
+    const measured: string[] = [];
+    const walk = (node: unknown, path: string[]): void => {
+      if (typeof node !== 'object' || node === null) return;
+      if ('example' in node && typeof node.example === 'boolean') {
+        const key = path.join('.');
+        if (node.example && 'reason' in node) examples[key] = String(node.reason);
+        else measured.push(key);
+        return;
+      }
+      for (const [key, child] of Object.entries(node)) walk(child, [...path, key]);
+    };
+    walk(activity, []);
+    expect(examples).toEqual({
+      usage: 'needs_usage_sessions',
+      peakHours: 'needs_usage_sessions',
+      'engagement.saves': 'needs_saves',
+      'engagement.shares': 'needs_shares',
+      'seen.posts': 'needs_post_views',
+      'seen.videos': 'needs_video_playback',
+    });
+    expect(measured.sort()).toEqual(
+      ['byCommunity', 'engagement.comments', 'engagement.likes', 'seen.stories'].sort(),
+    );
   });
 });
