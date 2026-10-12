@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { EngagementBands } from '../fixtures';
+import { type EngagementBands, memberPanel } from '../fixtures';
 import {
   bandTotal,
   ENGAGEMENT_BAND_ORDER,
   engagedPercent,
+  FOR_YOU_PRIORITY,
   interactedCount,
   interactedPercent,
   isBelowPrivacyFloor,
+  isNewMember,
+  MAX_FOR_YOU_CARDS,
+  MIN_STREAK_WEEKS,
+  NEW_MEMBER_DAYS,
   PRIVACY_FLOOR,
   percentOf,
+  selectForYouCards,
+  vsMedian,
 } from '../ui/metrics';
 
 const IGOR: EngagementBands = {
@@ -98,5 +105,68 @@ describe('the privacy floor (D-02)', () => {
     expect(isBelowPrivacyFloor(0)).toBe(true);
     expect(isBelowPrivacyFloor(5)).toBe(false);
     expect(isBelowPrivacyFloor(37)).toBe(false);
+  });
+});
+
+describe('isNewMember', () => {
+  it('is a member who joined less than 30 days ago', () => {
+    expect(NEW_MEMBER_DAYS).toBe(30);
+    expect(isNewMember(9)).toBe(true);
+    expect(isNewMember(29)).toBe(true);
+    expect(isNewMember(30)).toBe(false);
+  });
+});
+
+describe('vsMedian', () => {
+  it('compares a post with the median once it is old enough', () => {
+    expect(vsMedian(127, 52, 26, 24)).toBeCloseTo(1.4423, 4);
+    expect(vsMedian(60, 52, 35, 24)).toBeCloseTo(0.1538, 4);
+  });
+
+  it('is null while the post is younger than the comparison point', () => {
+    expect(vsMedian(15, 52, 12, 24)).toBeNull();
+  });
+
+  it('is null without a median to compare with', () => {
+    expect(vsMedian(10, 0, 30, 24)).toBeNull();
+  });
+});
+
+describe('the weekly streak', () => {
+  it('is only worth showing from 2 weeks', () => {
+    expect(MIN_STREAK_WEEKS).toBe(2);
+  });
+});
+
+describe('selectForYouCards', () => {
+  const { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity } =
+    memberPanel.forYou;
+
+  it('ranks event > support reply > access expiring > news > community', () => {
+    expect(FOR_YOU_PRIORITY).toEqual(['event', 'support', 'access', 'news', 'community']);
+  });
+
+  it("keeps the member's three highest cards", () => {
+    expect(selectForYouCards(memberPanel.forYou)).toEqual(['event', 'support', 'access']);
+  });
+
+  it('gives news a slot when a higher card is absent', () => {
+    expect(
+      selectForYouCards({ supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity }),
+    ).toEqual(['support', 'access', 'news']);
+    expect(selectForYouCards({ unlockedCommunity, newSinceLastVisit })).toEqual([
+      'news',
+      'community',
+    ]);
+  });
+
+  it('shows nothing when there is nothing for the member', () => {
+    expect(selectForYouCards({})).toEqual([]);
+  });
+
+  it(`never shows more than ${MAX_FOR_YOU_CARDS} cards`, () => {
+    expect(MAX_FOR_YOU_CARDS).toBe(3);
+    const all = { nextEvent, supportReply, accessExpiring, newSinceLastVisit, unlockedCommunity };
+    expect(selectForYouCards(all).length).toBeLessThanOrEqual(MAX_FOR_YOU_CARDS);
   });
 });

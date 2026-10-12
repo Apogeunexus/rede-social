@@ -1,4 +1,5 @@
 import type { EngagementBand, EngagementBands } from '../fixtures/shared';
+import type { MemberPanel } from '../fixtures/tenant-panels';
 
 /**
  * Pure engagement helpers: every percent and total a panel shows is computed from the bands, never
@@ -48,4 +49,37 @@ export const PRIVACY_FLOOR = 5;
 /** Whether a count is small enough to re-identify someone (`count < PRIVACY_FLOOR`). */
 export function isBelowPrivacyFloor(count: number): boolean {
   return count < PRIVACY_FLOOR;
+}
+
+/** A member counts as new (gets the "Novo" tag) for this many days after joining. */
+export const NEW_MEMBER_DAYS = 30;
+
+/** Whether a member joined less than `NEW_MEMBER_DAYS` ago. */
+export function isNewMember(_joinedDaysAgo: number): boolean {
+  throw new Error('not implemented');
+}
+
+/** A post's interactions against the median as a relative change; `null` while too young or with no median. */
+export function vsMedian(
+  _interactions: number,
+  _median: number,
+  _ageHours: number,
+  _comparableAfterHours: number,
+): number | null {
+  throw new Error('not implemented');
+}
+
+/** A weekly streak shorter than this is not shown. */
+export const MIN_STREAK_WEEKS = 2;
+
+export type ForYouCard = 'event' | 'support' | 'access' | 'news' | 'community';
+
+/** The member's "Para você" cards, most important first. */
+export const FOR_YOU_PRIORITY: readonly ForYouCard[] = [];
+
+export const MAX_FOR_YOU_CARDS = 3;
+
+/** The cards present in `forYou`, in priority order, at most `MAX_FOR_YOU_CARDS`. */
+export function selectForYouCards(_forYou: MemberPanel['forYou']): ForYouCard[] {
+  throw new Error('not implemented');
 }

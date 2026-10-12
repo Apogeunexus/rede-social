@@ -1,19 +1,24 @@
 import { resolveBranding, tenantBrandingSchema } from '@rede-social/contracts/branding';
 import { describe, expect, it } from 'vitest';
 import {
+  memberPanel,
   platformAdminPanel,
   platformOwnerPanel,
   platformSupportPanel,
   previewTenant,
   tenantAdminPanel,
   tenantOwnerPanel,
+  tenantStaffPanel,
 } from '../fixtures';
 import {
   bandTotal,
   engagedPercent,
   interactedPercent,
   isBelowPrivacyFloor,
+  isNewMember,
+  MIN_STREAK_WEEKS,
   percentOf,
+  vsMedian,
 } from '../ui/metrics';
 
 describe('previewTenant (the Igor Alves brand record)', () => {
@@ -211,5 +216,43 @@ describe('platform engagement (levels 1–3)', () => {
   it('never has more new members who never acted than joined', () => {
     const { newNeverActed7d } = platformSupportPanel.kpis;
     expect(newNeverActed7d.count).toBeLessThanOrEqual(newNeverActed7d.joined);
+  });
+});
+
+describe('tenantStaffPanel (level 6)', () => {
+  const { support, moderation, content } = tenantStaffPanel;
+
+  it('tags only the queue member who joined less than 30 days ago', () => {
+    const joined = (name: string) =>
+      support.queue.find((item) => item.name === name)?.joinedDaysAgo ?? Number.NaN;
+    expect(isNewMember(joined('Rui Matos'))).toBe(true);
+    expect(isNewMember(joined('Ana Souza'))).toBe(false);
+  });
+
+  it('compares the recent posts with the median, the youngest still running', () => {
+    const ratios = content.recentPosts.map((post) =>
+      vsMedian(
+        post.likes + post.comments,
+        content.medianInteractions,
+        post.ageHours,
+        content.comparableAfterHours,
+      ),
+    );
+    expect(ratios[0]).toBeCloseTo(1.44, 2);
+    expect(ratios[1]).toBeCloseTo(0.15, 2);
+    expect(ratios[2]).toBeNull();
+  });
+
+  it('removes 0,9% of the comments of the week', () => {
+    const rate = percentOf(moderation.removed7d, moderation.comments7d);
+    expect(Math.round(rate * 10) / 10).toBe(0.9);
+  });
+});
+
+describe('memberPanel (level 7)', () => {
+  it('has a streak worth showing and no more presences than events', () => {
+    const { weeklyStreak, attendance } = memberPanel.profile;
+    expect(weeklyStreak).toBeGreaterThanOrEqual(MIN_STREAK_WEEKS);
+    expect(attendance.attended).toBeLessThanOrEqual(attendance.events);
   });
 });
