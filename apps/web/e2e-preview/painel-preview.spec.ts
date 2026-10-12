@@ -1044,6 +1044,134 @@ for (const { scope, tab, item, query, recover } of BAND_LIST_SCOPES) {
   });
 }
 
+/** The first member card (a link) of an opened band, and the name it shows. */
+async function firstMemberCard(details: Locator) {
+  const card = details.getByRole('listitem').first().getByRole('link');
+  const name = (await card.locator('.text-base').innerText()).trim();
+  return { card, name };
+}
+
+const DETAIL_SECTIONS = [
+  'Últimos 30 dias',
+  'Evolução',
+  'Onde interage',
+  'Eventos',
+  'Compras',
+  'Atendimento',
+];
+
+test('dono-do-cliente membros: a member card opens their insights and Voltar returns', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=membros');
+  const area = ownerArea(page);
+  const atRisk = bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Em risco');
+  await atRisk.locator('summary').click();
+  const { card, name } = await firstMemberCard(atRisk);
+  await card.click();
+
+  await expect(page).toHaveURL(/\?area=membros&faixa=em-risco&membro=om-\d\d$/);
+  await expect(ownerTabs(page).getByRole('link', { name: 'Membros', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(area.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+  await expect(area.getByRole('heading', { name: 'Faixas de engajamento' })).toHaveCount(0);
+  await expect(area.getByText('Em risco', { exact: true })).toBeVisible();
+  await expect(kpiCard(area, 'Dias ativos').locator('span.text-2xl')).toHaveText('0');
+  for (const label of ['Tempo médio diário', 'Posts vistos']) {
+    await expect(kpiCard(area, label), label).toContainText('exemplo');
+  }
+
+  const ys: number[] = [];
+  for (const title of DETAIL_SECTIONS) {
+    const heading = area.getByRole('heading', { name: title, exact: true });
+    await expect(heading, title).toHaveCount(1);
+    ys.push((await heading.boundingBox())?.y ?? Number.NaN);
+  }
+  ys.push(
+    (await area.getByText('Sugestão de ação', { exact: true }).boundingBox())?.y ?? Number.NaN,
+  );
+  expect([...ys].sort((a, b) => a - b)).toEqual(ys);
+  await expect(area.getByRole('button', { name: 'Convidar para o encontro' })).toBeDisabled();
+
+  const back = area.getByRole('link', { name: 'Voltar', exact: true });
+  expect(await back.getAttribute('href')).toMatch(/\?area=membros&faixa=em-risco#faixas$/);
+  await back.click();
+  await expect(page).toHaveURL(/\?area=membros&faixa=em-risco#faixas$/);
+  const reopened = bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Em risco');
+  await expect(reopened).toHaveAttribute('open');
+  await expect(reopened.getByRole('listitem').first()).toContainText(name);
+  await expect(
+    bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Novos'),
+  ).not.toHaveAttribute('open');
+});
+
+test('dono-do-cliente membros: Voltar from an event registrant keeps the event and band', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente?area=membros&recorte=evento&evento=u1');
+  const area = ownerArea(page);
+  const engaged = bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Engajados');
+  await engaged.locator('summary').click();
+  const { card, name } = await firstMemberCard(engaged);
+  await card.click();
+  await expect(page).toHaveURL(
+    /\?area=membros&recorte=evento&evento=u1&faixa=engajados&membro=om-\d\d$/,
+  );
+  await expect(area.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+  const back = area.getByRole('link', { name: 'Voltar', exact: true });
+  expect(await back.getAttribute('href')).toMatch(
+    /\?area=membros&recorte=evento&evento=u1&faixa=engajados#faixas$/,
+  );
+  await back.click();
+  await expect(bandScopeItems(page, 'event').getByRole('link').first()).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  await expect(
+    bandDetails(sectionTitled(area, 'Faixas de engajamento'), 'Engajados'),
+  ).toHaveAttribute('open');
+});
+
+test('dono-do-cliente membros: an unknown membro shows the bands', async ({ page }) => {
+  for (const query of ['membro=xyz', 'faixa=em-risco&membro=om-99', 'membro=OM-01']) {
+    await page.goto(`/painel-preview/dono-do-cliente?area=membros&${query}`);
+    const area = ownerArea(page);
+    await expect(area.getByRole('heading', { name: 'Faixas de engajamento' }), query).toBeVisible();
+    await expect(area.getByRole('link', { name: 'Voltar', exact: true }), query).toHaveCount(0);
+  }
+});
+
+const SUPERFAN_DETAIL = '/painel-preview/dono-do-cliente?area=membros&faixa=superfas&membro=om-13';
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente membros: a member's insights at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(SUPERFAN_DETAIL);
+    await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    const overflow = await horizontalOverflow(page);
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+  });
+}
+
+test("dono-do-cliente membros: a member's insights at 1440x900, inside the phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(SUPERFAN_DETAIL);
+  await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+  await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+  const metrics = await screenMetrics(page);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  const overflow = await pageOverflow(page);
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+});
+
 /** A closed collapsible of the open area, by its title. */
 function areaDetails(page: Page, title: string) {
   return ownerArea(page)

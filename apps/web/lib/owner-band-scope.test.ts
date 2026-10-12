@@ -1,9 +1,11 @@
 import { tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
 import { describe, expect, it } from 'vitest';
 import {
+  OWNER_BAND_SLUGS,
   OWNER_BANDS_ANCHOR,
   OWNER_COMMUNITIES,
   OWNER_EVENTS,
+  ownerMemberHref,
   ownerScopeHref,
   parseOwnerMembersView,
 } from './owner-band-scope';
@@ -113,5 +115,78 @@ describe('ownerScopeHref', () => {
       const query = new URL(ownerScopeHref(scope), 'http://x').searchParams;
       expect(scopeOf(Object.fromEntries(query))).toEqual(scope);
     }
+  });
+});
+
+describe('parseOwnerMembersView: the open band and member (quick 261012-qer B-3)', () => {
+  it('maps each band to one slug and back', () => {
+    expect(OWNER_BAND_SLUGS).toEqual({
+      new: 'novos',
+      superfan: 'superfas',
+      engaged: 'engajados',
+      occasional: 'ocasionais',
+      at_risk: 'em-risco',
+      inactive: 'inativos',
+    });
+    for (const [band, faixa] of Object.entries(OWNER_BAND_SLUGS)) {
+      expect(parseOwnerMembersView({ faixa }).band).toBe(band);
+    }
+  });
+
+  it('is null without a band, or for anything but a slug', () => {
+    expect(parseOwnerMembersView({}).band).toBeNull();
+    for (const faixa of ['at_risk', 'Em-risco', 'em-risco ', '', '__proto__', ['novos', 'novos']]) {
+      expect(parseOwnerMembersView({ faixa }).band, JSON.stringify(faixa)).toBeNull();
+    }
+  });
+
+  it('accepts a roster id as the member, and nothing else', () => {
+    expect(parseOwnerMembersView({}).memberId).toBeNull();
+    expect(parseOwnerMembersView({ membro: 'om-01' }).memberId).toBe('om-01');
+    expect(parseOwnerMembersView({ membro: 'om-72' }).memberId).toBe('om-72');
+    for (const membro of ['om-99', 'OM-01', 'om-1', '', '__proto__', 'constructor', ['om-01']]) {
+      expect(parseOwnerMembersView({ membro }).memberId, JSON.stringify(membro)).toBeNull();
+    }
+  });
+
+  it('keeps the scope next to the band and member', () => {
+    expect(
+      parseOwnerMembersView({
+        recorte: 'evento',
+        evento: 'e2',
+        faixa: 'em-risco',
+        membro: 'om-49',
+      }),
+    ).toEqual({ scope: { kind: 'event', id: 'e2' }, band: 'at_risk', memberId: 'om-49' });
+  });
+});
+
+describe('ownerScopeHref with a band, and ownerMemberHref', () => {
+  it('reopens the band on the way back to #faixas', () => {
+    expect(ownerScopeHref({ kind: 'member' }, 'at_risk')).toBe(
+      '/painel-preview/dono-do-cliente?area=membros&faixa=em-risco#faixas',
+    );
+    expect(ownerScopeHref({ kind: 'event', id: 'u1' }, 'new')).toBe(
+      '/painel-preview/dono-do-cliente?area=membros&recorte=evento&evento=u1&faixa=novos#faixas',
+    );
+  });
+
+  it('opens a member in the scope and band, with no anchor', () => {
+    expect(ownerMemberHref({ kind: 'member' }, 'at_risk', 'om-49')).toBe(
+      '/painel-preview/dono-do-cliente?area=membros&faixa=em-risco&membro=om-49',
+    );
+    expect(ownerMemberHref({ kind: 'community', id: 'c-geral' }, 'superfan', 'om-13')).toBe(
+      '/painel-preview/dono-do-cliente?area=membros&recorte=comunidade&comunidade=geral&faixa=superfas&membro=om-13',
+    );
+  });
+
+  it('round-trips the member link through the parser', () => {
+    const href = ownerMemberHref({ kind: 'event', id: 'e3' }, 'engaged', 'om-25');
+    const query = new URL(href, 'http://x').searchParams;
+    expect(parseOwnerMembersView(Object.fromEntries(query))).toEqual({
+      scope: { kind: 'event', id: 'e3' },
+      band: 'engaged',
+      memberId: 'om-25',
+    });
   });
 });
