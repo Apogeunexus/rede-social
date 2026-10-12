@@ -15,8 +15,8 @@ The package's `exports` map is the whole public surface; nothing else may be imp
 
 | Subpath | What it holds |
 |---|---|
-| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, and the member's card priority `FOR_YOU_PRIORITY` / `MAX_FOR_YOU_CARDS` / `selectForYouCards` |
-| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel`, `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number |
+| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, the member's card priority `FOR_YOU_PRIORITY` / `MAX_FOR_YOU_CARDS` / `selectForYouCards`, and `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average). `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host) |
+| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel`, `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03): its metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown to the member |
 
 UI rules (MOD-02, PWA-03, UI-03): a component holds no route, no clock and no words — every string,
 href and formatted value is a prop decided by the web tier (`apps/web/components/dashboard`, copy in
@@ -25,6 +25,28 @@ every status is an icon plus text; charts are plain SVG drawn to scale (series i
 period dashed in the tertiary text token); nothing scrolls sideways (KPI rows wrap, tables become
 stacked cards below a 48rem container — an `@3xl` container query, so the host must wrap a panel in
 an `@container`; the preview's `PhoneMockup` does this, and without one the cards layout stays).
+
+### Member report (level 7)
+
+"Sua atividade" covers the member's last 7 complete São Paulo days (`memberPanel.activity`). Every
+delta compares with the 7 days before and is neutral (`good: null`): the report describes, it never
+grades. The metrics the app does not collect yet are typed `ExampleValue` and show a fictional value
+with the "exemplo" pill until the collection below exists:
+
+| Metric | Source today | What must be collected (reason) |
+|---|---|---|
+| Tempo de uso (média por dia, gráfico, total da semana) | none | App session start/end per member (`needs_usage_sessions`) |
+| Horário em que você mais usa | none | The same app sessions, by São Paulo hour (`needs_usage_sessions`) |
+| Salvamentos | none | Saves per member (`needs_saves`) |
+| Compartilhamentos | none | Shares per member (`needs_shares`) |
+| Posts vistos | none | Post views per member (`needs_post_views`) |
+| Vídeos e reels (count and watch time) | none | Video playback per member (`needs_video_playback`) |
+| Curtidas | `feed_likes` | measured |
+| Comentários | `feed_comments` | measured |
+| Stories vistos | the member's own `story_views` rows | measured |
+| Onde você mais participa | the member's likes + comments joined to `feed_posts.community_id` | measured |
+| Presença nos encontros | event check-ins vs confirmed RSVPs, last 30 days | measured |
+| Sequência | weeks with at least one counted action | measured |
 
 ## Events emitted
 
@@ -83,7 +105,9 @@ activity metrics of each level (band order, computed percents, the member's card
 platform support the floor merges any band under 5 with a neighbour (every row ≥ 5, the rows sum to
 the exact total) and hides the "nunca agiram" complement when it is under 5. An unmeasured metric
 shows as a `MissingKpi` ("Ainda não medido") when it stands alone, and as the grouped, closed
-"Métricas que dependem de coleta" list on level 5; the member only ever gets measured cards:
+"Métricas que dependem de coleta" list on level 5; the member's "Para você" only ever gets measured
+cards, and level 7's "Sua atividade" report carries the "exemplo" pill exactly on its example
+metrics (seven pills, none on a measured one):
 
 ```bash
 pnpm --filter @rede-social/web exec playwright test --config playwright.preview.config.ts
