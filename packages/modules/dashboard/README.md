@@ -16,7 +16,7 @@ The package's `exports` map is the whole public surface; nothing else may be imp
 | Subpath | What it holds |
 |---|---|
 | `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average), and `sumOf` (a picked number summed over rows), `perItem` (a total per item, rounded, 0 with no items) and `attendancePercent` (check-ins over confirmed RSVPs, unrounded) for the client owner's panel. `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host) |
-| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel` (in `fixtures/tenant-owner.ts`), `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03) and the client owner's panel (261012-o00 D-03): their metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown on screen (the tables below list it) |
+| `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel` (in `fixtures/tenant-owner.ts`, with `tenantOwnerPanel.communityEngagement`: the six bands per community), `ownerBandList` / `OWNER_BAND_LIST_LIMIT` / `OwnerBandMember` / `OwnerBandList` (the level-4 band member lists, `fixtures/owner-members.ts`), `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03) and the client owner's panel (261012-o00 D-03): their metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown on screen (the tables below list it) |
 
 UI rules (MOD-02, PWA-03, UI-03): a component holds no route, no clock and no words — every string,
 href and formatted value is a prop decided by the web tier (`apps/web/components/dashboard`, copy in
@@ -103,6 +103,39 @@ one per row (261012-oxi C-3):
 | Receita por produto, quem compra | paid `store` orders by product, and by the buyer's band | measured |
 | Fila, 1ª resposta, atendimentos por semana, equipe | support chat conversations; staff answers from `chat_messages.author_user_id` | measured |
 | Moderação | removed comments, blocks and unblocks | measured |
+| Faixas por comunidade | the counted actions joined to the community, plus access for the base (paid access for the exclusive VIP, membership for the others) | measured |
+| Membros de cada faixa | the same per-member band, plus the member's last counted action | measured |
+
+#### Faixas por comunidade e membros de cada faixa (261012-pkd)
+
+The "Faixas de engajamento" block of the Membros area has a scope: Toda a base, or one community
+(Comunidade VIP, Geral, Iniciantes, Eventos). The web tier reads `?comunidade=<slug>` through an
+allow-list in `apps/web/lib/owner-communities.ts`, where the slug is the fixture id without its `c-`
+prefix; anything else renders Toda a base. The scope chips are plain links that keep `area=membros`
+and end in `#faixas`, so they land on the block and work without JavaScript.
+
+A community's bands follow the same rules as the whole base, counting only the member's actions in
+that community. Its base is who has access: the exclusive VIP counts who bought it (186), the other
+communities count every member (1.240), and their novos are the base's novos.
+`tests/tenant-owner.test.ts` proves that each community sums to its base, that the VIP novos fit in
+the VIP orders, that no community activates more novos than it has or than the base activated, and
+that no community ranks more members from superfã down to em risco than the whole base. Subiram and
+Caíram stay whole-base (a planner decision: per-community movement would need its own flows), and a
+line says so whenever a community is selected.
+
+Each band is a closed `<details>` whose summary reads "count · percent" with a mini share bar (only
+Em risco is solid). Opened, it lists the 10 members of the band with the most recent activity in the
+scope, then "e mais N membros" for the rest of the band count. On Toda a base each row also says
+where the member interacts most ("Interage mais em …"). The roster behind the lists
+(`fixtures/owner-members.ts`) is a fixed table of 72 fictional names, 12 per band, and a pure builder
+with no randomness and no clock. A member keeps their band or drops one level in a community, never
+rises, and their last activity there is never more recent than overall; `tests/owner-members.test.ts`
+proves this, the band windows, and that every list adds up to its band count.
+
+**Privacy (261012-pkd D-03, user decision).** Until this task, the level-4 panel showed only counts.
+The band lists now show member names and their engagement level to the client's team. Before real
+data is wired, the app's privacy notice must tell members that the client's team sees each member's
+engagement level. Platform levels 1–3 keep aggregates only.
 
 #### Para quando os dados reais forem ligados
 
@@ -125,6 +158,8 @@ says what will appear there and when. What each one renders today with no rows:
   empty bar card.
 - **Conversão por produto** (`OwnerFinance`): the "visitas à página → compra" summary with its pill
   and, opened, an empty bar card.
+- **Faixas de engajamento** (`BandMembers`, 261012-pkd): a band with 0 members renders "0 · 0%" and
+  opens to nothing, so it needs a pt-BR empty sentence.
 
 Expiring access shown as measured (C-8, accepted, out of scope). Level 6 (`TenantStaffPanel`,
 `tenantStaffPanel.store.expiringAccess7d`) shows "Acessos que vencem em 7 dias: 6" as a measured
