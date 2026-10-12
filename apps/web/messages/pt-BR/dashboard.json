@@ -495,14 +495,18 @@
         "waiting": "Aguardando",
         "oldest": "Espera mais antiga",
         "answered": "Respondidas por mim",
+        "myFirstResponse": "Minha 1ª resposta (mediana, 7d)",
         "queue": "Fila",
         "queueAction": "Ir para Suporte",
-        "hours": "{hours}h"
+        "hours": "{hours}h",
+        "newMember": "Novo"
       },
       "moderation": {
         "newComments": "Comentários novos 24h",
-        "removed": "Removidos 7d",
+        "removalRate": "Taxa de remoção (7d)",
+        "removalRateNote": "{removed} de {total} removidos",
         "blocks": "Bloqueios 7d",
+        "firstComments": "1º comentário de novos (24h)",
         "recent": "Comentários recentes",
         "remove": "Remover"
       },
@@ -515,12 +519,17 @@
           "when": "Quando",
           "type": "Tipo",
           "likes": "Curtidas",
-          "comments": "Coment."
-        }
+          "comments": "Coment.",
+          "vsMedian": "vs. mediana"
+        },
+        "inProgress": "em andamento",
+        "medianNote": "Comparado à mediana de {median} interações por post nas primeiras {hours}h."
       },
       "store": {
         "orders": "Pedidos 7d",
         "noOrders": "Produtos sem pedido 30d",
+        "expiring": "Acessos que vencem em 7 dias",
+        "conversion": "Conversão por produto",
         "recent": "Compras recentes",
         "source": {
           "purchase": "compra",
@@ -534,6 +543,8 @@
         "subtitle": "Perfil"
       },
       "memberSince": "Membro desde {date}",
+      "attendance": "Presença nos encontros: {attended} de {total}",
+      "streak": "Sequência: {weeks, plural, one {# semana} other {# semanas}}",
       "forYou": {
         "title": "Para você",
         "event": {
@@ -545,6 +556,13 @@
           "title": "O suporte respondeu",
           "detail": "“{preview}”",
           "unread": "não lida"
+        },
+        "access": {
+          "title": "Seu acesso vence em {days, plural, one {# dia} other {# dias}}",
+          "renew": "Renovar"
+        },
+        "news": {
+          "title": "Novidades em {community} desde sua última visita"
         },
         "community": {
           "detail": "Liberada pela sua compra · {count, plural, one {# publicação} other {# publicações}}"

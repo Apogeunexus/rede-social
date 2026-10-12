@@ -55,18 +55,19 @@ export function isBelowPrivacyFloor(count: number): boolean {
 export const NEW_MEMBER_DAYS = 30;
 
 /** Whether a member joined less than `NEW_MEMBER_DAYS` ago. */
-export function isNewMember(_joinedDaysAgo: number): boolean {
-  throw new Error('not implemented');
+export function isNewMember(joinedDaysAgo: number): boolean {
+  return joinedDaysAgo < NEW_MEMBER_DAYS;
 }
 
 /** A post's interactions against the median as a relative change; `null` while too young or with no median. */
 export function vsMedian(
-  _interactions: number,
-  _median: number,
-  _ageHours: number,
-  _comparableAfterHours: number,
+  interactions: number,
+  median: number,
+  ageHours: number,
+  comparableAfterHours: number,
 ): number | null {
-  throw new Error('not implemented');
+  if (ageHours < comparableAfterHours || !(median > 0)) return null;
+  return interactions / median - 1;
 }
 
 /** A weekly streak shorter than this is not shown. */
@@ -75,11 +76,28 @@ export const MIN_STREAK_WEEKS = 2;
 export type ForYouCard = 'event' | 'support' | 'access' | 'news' | 'community';
 
 /** The member's "Para você" cards, most important first. */
-export const FOR_YOU_PRIORITY: readonly ForYouCard[] = [];
+export const FOR_YOU_PRIORITY: readonly ForYouCard[] = [
+  'event',
+  'support',
+  'access',
+  'news',
+  'community',
+];
+
+const FOR_YOU_FIELD: Record<ForYouCard, keyof MemberPanel['forYou']> = {
+  event: 'nextEvent',
+  support: 'supportReply',
+  access: 'accessExpiring',
+  news: 'newSinceLastVisit',
+  community: 'unlockedCommunity',
+};
 
 export const MAX_FOR_YOU_CARDS = 3;
 
 /** The cards present in `forYou`, in priority order, at most `MAX_FOR_YOU_CARDS`. */
-export function selectForYouCards(_forYou: MemberPanel['forYou']): ForYouCard[] {
-  throw new Error('not implemented');
+export function selectForYouCards(forYou: MemberPanel['forYou']): ForYouCard[] {
+  return FOR_YOU_PRIORITY.filter((card) => forYou[FOR_YOU_FIELD[card]] !== undefined).slice(
+    0,
+    MAX_FOR_YOU_CARDS,
+  );
 }

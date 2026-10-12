@@ -66,6 +66,13 @@ async function screenMetrics(page: Page) {
   });
 }
 
+/** Opens every collapsible (native `<details>`), so a width check covers their content too. */
+async function openAllDetails(page: Page) {
+  await page.locator('details').evaluateAll((elements) => {
+    for (const el of elements) (el as HTMLDetailsElement).open = true;
+  });
+}
+
 async function frameBottom(page: Page) {
   return page.locator('[data-phone-frame]').evaluate((el) => el.getBoundingClientRect().bottom);
 }
@@ -130,6 +137,12 @@ for (const level of LEVELS) {
     } else {
       testInfo.annotations.push({ type: 'fits-screen', description: level });
     }
+
+    await openAllDetails(page);
+    const opened = await screenMetrics(page);
+    expect(opened.scrollWidth).toBeLessThanOrEqual(opened.clientWidth);
+    const openedPage = await pageOverflow(page);
+    expect(openedPage.scrollWidth).toBeLessThanOrEqual(openedPage.clientWidth);
   });
 }
 
@@ -179,6 +192,10 @@ for (const level of LEVELS) {
       if ((await described.count()) > 0) {
         await expect(described.first()).toHaveAccessibleDescription(NOTICE_DESCRIPTION);
       }
+
+      await openAllDetails(page);
+      const opened = await horizontalOverflow(page);
+      expect(opened.scrollWidth).toBeLessThanOrEqual(opened.clientWidth);
     });
   }
 }
@@ -584,4 +601,66 @@ test("suporte-da-plataforma: aggregates only, counts under 5 read 'menos de 5'",
   await expect(
     page.getByText('Alcance de push: 21% dos membros ativos', { exact: true }),
   ).toBeVisible();
+});
+
+test('equipe-do-cliente: per-function metrics', async ({ page }) => {
+  const visit = (id: string) =>
+    page.goto(`/painel-preview/equipe-do-cliente?simular=1&funcoes=${id}`);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await visit('atendimento');
+  await expect(kpiCard(page, 'Minha 1ª resposta (mediana, 7d)')).toContainText('1h04');
+  const queue = sectionTitled(page, 'Fila').getByRole('listitem');
+  await expect(queue.filter({ hasText: 'Rui Matos' })).toContainText('Novo');
+  await expect(queue.filter({ hasText: 'Ana Souza' })).not.toContainText('Novo');
+
+  await visit('moderacao');
+  const removal = kpiCard(page, 'Taxa de remoção (7d)');
+  await expect(removal).toContainText('0,9%');
+  await expect(removal).toContainText('2 de 214 removidos');
+  await expect(kpiCard(page, '1º comentário de novos (24h)')).toContainText('4');
+  await expect(page.getByText('Removidos 7d', { exact: true })).toHaveCount(0);
+
+  await visit('conteudo');
+  const recent = sectionTitled(page, 'Últimas publicações (48h)').getByRole('listitem');
+  await expect(recent.first()).toContainText('vs. mediana');
+  for (const change of ['+144%', '+15%', 'em andamento']) {
+    await expect(recent.getByText(change, { exact: true })).toBeVisible();
+  }
+
+  await visit('loja');
+  const expiring = kpiCard(page, 'Acessos que vencem em 7 dias');
+  await expect(expiring).toContainText('6');
+  await expect(expiring).toContainText('Comunidade VIP');
+  await expect(kpiCard(page, 'Conversão por produto')).toContainText('Ainda não medido');
+  await expect(page.getByText('Ainda não medido', { exact: true })).toHaveCount(1);
+});
+
+test('membro: three cards by priority, presence and streak, no band', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/membro');
+
+  const order = [
+    page.getByText('Encontro mensal · hoje 19h', { exact: true }),
+    page.getByText('O suporte respondeu', { exact: true }),
+    page.getByText('Seu acesso vence em 5 dias', { exact: true }),
+  ];
+  const ys: number[] = [];
+  for (const card of order) {
+    await expect(card).toBeVisible();
+    ys.push((await card.boundingBox())?.y ?? Number.NaN);
+  }
+  expect(ys[0]).toBeLessThan(ys[1] ?? Number.NaN);
+  expect(ys[1]).toBeLessThan(ys[2] ?? Number.NaN);
+  await expect(page.getByRole('button', { name: 'Renovar' })).toBeDisabled();
+  await expect(page.getByText('Novidades em Comunidade VIP desde sua última visita')).toHaveCount(
+    0,
+  );
+  await expect(page.getByText('Liberada pela sua compra')).toHaveCount(0);
+
+  await expect(page.getByText('Presença nos encontros: 3 de 4', { exact: true })).toBeVisible();
+  await expect(page.getByText('Sequência: 6 semanas', { exact: true })).toBeVisible();
+  for (const band of ['Superfãs', 'Engajados', 'Ocasionais', 'Em risco', 'Inativos']) {
+    await expect(page.getByText(band, { exact: true })).toHaveCount(0);
+  }
 });

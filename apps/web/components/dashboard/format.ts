@@ -41,6 +41,17 @@ export function formatRatio(ratio: number): string {
   return PERCENT_1.format(ratio);
 }
 
+const CHANGE = new Intl.NumberFormat('pt-BR', {
+  style: 'percent',
+  maximumFractionDigits: 0,
+  signDisplay: 'exceptZero',
+});
+
+/** A relative change (0.44 = +44%) -> `+44%`, `-12%`, `0%`. */
+export function formatChange(ratio: number): string {
+  return CHANGE.format(ratio);
+}
+
 const MEGABYTES = new Intl.NumberFormat('pt-BR', { style: 'unit', unit: 'megabyte' });
 
 /** `41` -> `41 MB`. */

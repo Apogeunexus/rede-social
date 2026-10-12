@@ -312,26 +312,39 @@ export interface TenantStaffPanel {
     waiting: number;
     oldestWaitHours: number;
     answeredByMe: { count: number; delta: Delta };
+    /** My own first-response median over the last 7 days. */
+    myFirstResponseMedianMinutes: number;
     queue: {
       id: string;
       name: string;
       preview: string;
       waitingHours: number;
       severity: Severity;
+      /** Days since the member joined (a member under 30 days gets the "Novo" tag). */
+      joinedDaysAgo: number;
     }[];
   };
   moderation: {
     newComments24h: { count: number; delta: Delta };
     removed7d: number;
+    /** Comments of the last 7 days: the base of the removal rate. */
+    comments7d: number;
+    /** First comments ever by a new member, last 24 h. */
+    firstCommentsFromNew24h: number;
     blocks7d: number;
     recentComments: { id: string; name: string; text: string }[];
   };
   content: {
     posts7d: { count: number; delta: Delta };
     activeStories: { count: number; expiringSoon: number; withinHours: number };
+    /** Median likes + comments per post at `comparableAfterHours` of age. */
+    medianInteractions: number;
+    comparableAfterHours: number;
     recentPosts: {
       id: string;
       when: RelativeMoment;
+      /** Hours since publication (a post younger than `comparableAfterHours` is not compared yet). */
+      ageHours: number;
       type: PostType;
       likes: number;
       comments: number;
@@ -340,6 +353,10 @@ export interface TenantStaffPanel {
   store: {
     orders7d: { count: number; delta: Delta };
     productsWithoutOrder30d: { count: number; names: string[] };
+    /** Time-limited accesses that end in the next 7 days, and their products. */
+    expiringAccess7d: { count: number; products: string[] };
+    /** Orders per product page view: no product page views are recorded yet. */
+    conversion: NotMeasured;
     recentPurchases: {
       id: string;
       product: string;
@@ -359,6 +376,7 @@ export const tenantStaffPanel: TenantStaffPanel = {
       count: 5,
       delta: { amount: 1, kind: 'count', direction: 'up', good: true, basis: 'yesterday' },
     },
+    myFirstResponseMedianMinutes: 64,
     queue: [
       {
         id: 'q1',
@@ -366,6 +384,7 @@ export const tenantStaffPanel: TenantStaffPanel = {
         preview: 'Não consigo entrar na comunidade VIP…',
         waitingHours: 26,
         severity: 'danger',
+        joinedDaysAgo: 224,
       },
       {
         id: 'q2',
@@ -373,6 +392,7 @@ export const tenantStaffPanel: TenantStaffPanel = {
         preview: 'Oi, o evento de hoje vai ter transmissão?',
         waitingHours: 3,
         severity: 'warning',
+        joinedDaysAgo: 9,
       },
     ],
   },
@@ -382,6 +402,8 @@ export const tenantStaffPanel: TenantStaffPanel = {
       delta: { amount: 12, kind: 'count', direction: 'up', good: false, basis: 'none' },
     },
     removed7d: 2,
+    comments7d: 214,
+    firstCommentsFromNew24h: 4,
     blocks7d: 1,
     recentComments: [
       { id: 'm1', name: 'João P.', text: 'Alguém tem o link da aula de ontem?' },
@@ -395,10 +417,34 @@ export const tenantStaffPanel: TenantStaffPanel = {
       delta: { amount: 2, kind: 'count', direction: 'up', good: true, basis: 'none' },
     },
     activeStories: { count: 4, expiringSoon: 1, withinHours: 6 },
+    medianInteractions: 52,
+    comparableAfterHours: 24,
+    // Ages as of today 20h: "ontem 18h" is 26 h old, "ontem 09h" 35 h, "hoje 08h" 12 h.
     recentPosts: [
-      { id: 'r1', when: { daysAgo: 1, time: '18h' }, type: 'video', likes: 96, comments: 31 },
-      { id: 'r2', when: { daysAgo: 1, time: '09h' }, type: 'text', likes: 40, comments: 20 },
-      { id: 'r3', when: { daysAgo: 0, time: '08h' }, type: 'gallery', likes: 12, comments: 3 },
+      {
+        id: 'r1',
+        when: { daysAgo: 1, time: '18h' },
+        ageHours: 26,
+        type: 'video',
+        likes: 96,
+        comments: 31,
+      },
+      {
+        id: 'r2',
+        when: { daysAgo: 1, time: '09h' },
+        ageHours: 35,
+        type: 'text',
+        likes: 40,
+        comments: 20,
+      },
+      {
+        id: 'r3',
+        when: { daysAgo: 0, time: '08h' },
+        ageHours: 12,
+        type: 'gallery',
+        likes: 12,
+        comments: 3,
+      },
     ],
   },
   store: {
@@ -407,6 +453,8 @@ export const tenantStaffPanel: TenantStaffPanel = {
       delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
     },
     productsWithoutOrder30d: { count: 1, names: ['Workshop gravado'] },
+    expiringAccess7d: { count: 6, products: ['Comunidade VIP'] },
+    conversion: { measured: false, reason: 'needs_product_page_views' },
     recentPurchases: [
       { id: 'b1', product: 'Comunidade VIP', amountCents: 19700, source: 'purchase' },
       { id: 'b2', product: 'Mentoria em grupo', amountCents: 49000, source: 'purchase' },
@@ -417,18 +465,37 @@ export const tenantStaffPanel: TenantStaffPanel = {
 
 /* ---------------------------------------------------------------- 7. Membro */
 
+/**
+ * The member's own data only. There is deliberately no engagement band here: a member never sees
+ * the band they are counted in.
+ */
 export interface MemberPanel {
-  profile: { name: string; memberSince: string };
-  /** Up to 3 cards; an absent entry is simply not rendered. */
+  profile: {
+    name: string;
+    memberSince: string;
+    /** Events with a check-in vs events the member confirmed, last 30 days. */
+    attendance: { attended: number; events: number };
+    /** Consecutive weeks with at least one counted action. */
+    weeklyStreak: number;
+  };
+  /** Candidate cards; an absent entry is not rendered, and at most 3 show, by priority. */
   forYou: {
     nextEvent?: { title: string; startsAtHour: number; place: string; startsInMinutes: number };
     supportReply?: { preview: string; unread: boolean };
+    accessExpiring?: { product: string; daysLeft: number };
+    /** What changed in a community since the member's last visit: last visits are not recorded yet. */
+    newSinceLastVisit?: { community: string; posts: NotMeasured };
     unlockedCommunity?: { name: string; posts: number };
   };
 }
 
 export const memberPanel: MemberPanel = {
-  profile: { name: 'Ana Souza', memberSince: '2026-03-01' },
+  profile: {
+    name: 'Ana Souza',
+    memberSince: '2026-03-01',
+    attendance: { attended: 3, events: 4 },
+    weeklyStreak: 6,
+  },
   forYou: {
     nextEvent: {
       title: 'Encontro mensal',
@@ -437,6 +504,11 @@ export const memberPanel: MemberPanel = {
       startsInMinutes: 40,
     },
     supportReply: { preview: 'Oi, Ana! Seu acesso à VIP já foi liberado.', unread: true },
+    accessExpiring: { product: 'Comunidade VIP', daysLeft: 5 },
+    newSinceLastVisit: {
+      community: 'Comunidade VIP',
+      posts: { measured: false, reason: 'needs_last_visit' },
+    },
     unlockedCommunity: { name: 'Comunidade VIP', posts: 42 },
   },
 };

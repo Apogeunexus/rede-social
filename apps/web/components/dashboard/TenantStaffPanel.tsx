@@ -4,13 +4,32 @@ import {
   type StaffBlockKey,
   tenantStaffPanel,
 } from '@rede-social/module-dashboard/fixtures';
-import { KpiCard, KpiGrid, ResponsiveTable, ToneLabel } from '@rede-social/module-dashboard/ui';
+import {
+  isNewMember,
+  KpiCard,
+  KpiGrid,
+  percentOf,
+  ResponsiveTable,
+  ToneLabel,
+  vsMedian,
+} from '@rede-social/module-dashboard/ui';
 import { Badge, Button, Card, Chip, EmptyState } from '@rede-social/ui';
 import { UserCog } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { previewLevelPath, STAFF_FUNCTIONS, type StaffFunction } from '@/lib/dashboard-preview';
-import { type DashboardT, formatCount, formatList, initials, kpiDelta, momentText } from './format';
+import {
+  type DashboardT,
+  formatChange,
+  formatCount,
+  formatDuration,
+  formatList,
+  formatRatio,
+  initials,
+  kpiDelta,
+  momentText,
+} from './format';
+import { MissingKpi } from './MissingKpi';
 import { PanelHeader } from './PanelHeader';
 import { PanelSection, PreviewAction } from './PanelSection';
 import { TenantColumn } from './TenantColumn';
@@ -31,8 +50,21 @@ function tabHref(functions: readonly StaffFunction[], tab: StaffFunction): strin
   return `${LEVEL_PATH}?${query.toString()}`;
 }
 
-/** One person row of a list card: initials, bold name, secondary line, and a trailing slot. */
-function PersonRow({ name, line, end }: { name: string; line: string; end?: ReactNode }) {
+/**
+ * One person row of a list card: initials, bold name (with an optional tag after it), secondary
+ * line, and a trailing slot.
+ */
+function PersonRow({
+  name,
+  tag,
+  line,
+  end,
+}: {
+  name: string;
+  tag?: ReactNode;
+  line: string;
+  end?: ReactNode;
+}) {
   return (
     <li className="flex items-center gap-3 p-4">
       <span
@@ -42,7 +74,10 @@ function PersonRow({ name, line, end }: { name: string; line: string; end?: Reac
         {initials(name)}
       </span>
       <div className="flex min-w-0 flex-1 flex-col [overflow-wrap:anywhere]">
-        <span className="text-sm font-bold text-text">{name}</span>
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-sm font-bold text-text">{name}</span>
+          {tag}
+        </span>
         <span className="text-xs text-text-secondary">{line}</span>
       </div>
       {end ? <div className="shrink-0">{end}</div> : null}
@@ -69,6 +104,10 @@ function SupportBlock({ t }: { t: DashboardT }) {
           value={formatCount(support.answeredByMe.count)}
           delta={kpiDelta(t, support.answeredByMe.delta)}
         />
+        <KpiCard
+          label={t('tenantStaff.support.myFirstResponse')}
+          value={formatDuration(t, support.myFirstResponseMedianMinutes)}
+        />
       </KpiGrid>
       <PanelSection
         title={t('tenantStaff.support.queue')}
@@ -80,6 +119,11 @@ function SupportBlock({ t }: { t: DashboardT }) {
               <PersonRow
                 key={item.id}
                 name={item.name}
+                {...(isNewMember(item.joinedDaysAgo)
+                  ? {
+                      tag: <ToneLabel tone="brand">{t('tenantStaff.support.newMember')}</ToneLabel>,
+                    }
+                  : {})}
                 line={item.preview}
                 end={
                   <ToneLabel tone={item.severity}>
@@ -106,12 +150,20 @@ function ModerationBlock({ t }: { t: DashboardT }) {
           delta={kpiDelta(t, moderation.newComments24h.delta)}
         />
         <KpiCard
-          label={t('tenantStaff.moderation.removed')}
-          value={formatCount(moderation.removed7d)}
+          label={t('tenantStaff.moderation.removalRate')}
+          value={formatRatio(percentOf(moderation.removed7d, moderation.comments7d) / 100)}
+          note={t('tenantStaff.moderation.removalRateNote', {
+            removed: formatCount(moderation.removed7d),
+            total: formatCount(moderation.comments7d),
+          })}
         />
         <KpiCard
           label={t('tenantStaff.moderation.blocks')}
           value={formatCount(moderation.blocks7d)}
+        />
+        <KpiCard
+          label={t('tenantStaff.moderation.firstComments')}
+          value={formatCount(moderation.firstCommentsFromNew24h)}
         />
       </KpiGrid>
       <PanelSection title={t('tenantStaff.moderation.recent')}>
@@ -163,17 +215,34 @@ function ContentBlock({ t }: { t: DashboardT }) {
             { key: 'type', header: t('tenantStaff.content.columns.type') },
             { key: 'likes', header: t('tenantStaff.content.columns.likes'), numeric: true },
             { key: 'comments', header: t('tenantStaff.content.columns.comments'), numeric: true },
+            { key: 'vsMedian', header: t('tenantStaff.content.columns.vsMedian'), numeric: true },
           ]}
-          rows={content.recentPosts.map((post) => ({
-            id: post.id,
-            cells: {
-              when: momentText(t, post.when),
-              type: t(`postTypes.${post.type}`),
-              likes: formatCount(post.likes),
-              comments: formatCount(post.comments),
-            },
-          }))}
+          rows={content.recentPosts.map((post) => {
+            const ratio = vsMedian(
+              post.likes + post.comments,
+              content.medianInteractions,
+              post.ageHours,
+              content.comparableAfterHours,
+            );
+            return {
+              id: post.id,
+              cells: {
+                when: momentText(t, post.when),
+                type: t(`postTypes.${post.type}`),
+                likes: formatCount(post.likes),
+                comments: formatCount(post.comments),
+                vsMedian:
+                  ratio === null ? t('tenantStaff.content.inProgress') : formatChange(ratio),
+              },
+            };
+          })}
         />
+        <p className="text-xs text-text-secondary">
+          {t('tenantStaff.content.medianNote', {
+            median: formatCount(content.medianInteractions),
+            hours: content.comparableAfterHours,
+          })}
+        </p>
       </PanelSection>
     </>
   );
@@ -194,6 +263,12 @@ function StoreBlock({ t }: { t: DashboardT }) {
           value={formatCount(store.productsWithoutOrder30d.count)}
           note={formatList(store.productsWithoutOrder30d.names)}
         />
+        <KpiCard
+          label={t('tenantStaff.store.expiring')}
+          value={formatCount(store.expiringAccess7d.count)}
+          note={formatList(store.expiringAccess7d.products)}
+        />
+        <MissingKpi t={t} label={t('tenantStaff.store.conversion')} item={store.conversion} />
       </KpiGrid>
       <PanelSection title={t('tenantStaff.store.recent')}>
         <Card>
