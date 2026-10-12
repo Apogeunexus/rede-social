@@ -73,7 +73,8 @@ export type NotMeasuredReason =
   | 'needs_video_playback'
   | 'needs_product_page_views'
   | 'needs_usage_sessions'
-  | 'needs_story_view_time';
+  | 'needs_story_view_time'
+  | 'needs_waitlist';
 
 /**
  * A metric the app does not collect yet: there is deliberately no value field, so no number can be
@@ -92,8 +93,9 @@ export interface MeasuredValue<T> {
 
 /**
  * A FICTIONAL value for a metric the app does not collect yet. This is the bounded exception to
- * "NotMeasured has no value", for the member's "Sua atividade" report only (261012-h5t D-03): it
- * always renders with the "exemplo" pill, and `reason` is never shown to the member.
+ * "NotMeasured has no value", for the member's "Sua atividade" report (261012-h5t D-03) and the
+ * client owner's panel (261012-o00 D-03) only: it always renders with the "exemplo" pill, and
+ * `reason` is never shown on screen (the module README lists it).
  */
 export interface ExampleValue<T> {
   example: true;
@@ -101,5 +103,5 @@ export interface ExampleValue<T> {
   reason: NotMeasuredReason;
 }
 
-/** A member-report metric: measured, or an example the UI must mark as such. */
+/** A member-report or owner-panel metric: measured, or an example the UI must mark as such. */
 export type ReportValue<T> = MeasuredValue<T> | ExampleValue<T>;

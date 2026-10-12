@@ -51,9 +51,12 @@ export type {
 export {
   type EventFormat,
   type OwnerPastEvent,
+  type OwnerUpcomingEvent,
+  type OwnerWaitlistRow,
   type TenantOwnerAttention,
   type TenantOwnerPanel,
   tenantOwnerPanel,
+  type Weekday,
 } from './tenant-owner';
 export {
   type MemberPanel,

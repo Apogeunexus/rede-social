@@ -1,4 +1,4 @@
-import type { Delta, EngagementBand, EngagementBands } from './shared';
+import type { Delta, EngagementBand, EngagementBands, ReportValue } from './shared';
 import type { PostType, Severity } from './tenant-panels';
 
 /**
@@ -49,6 +49,33 @@ export interface OwnerPastEvent {
   walkIns: number;
 }
 
+/** An event still to come: `events.capacity` (null = no limit) and the RSVPs "vou" so far. */
+export interface OwnerUpcomingEvent {
+  id: string;
+  name: string;
+  format: EventFormat;
+  date: string;
+  /** São Paulo hour it starts. */
+  startsAtHour: number;
+  capacity: number | null;
+  confirmed: number;
+}
+
+/**
+ * The waiting list of a full event (no table records it yet): who waited, who got a seat when
+ * someone gave theirs up, and of those, who came (`null` while the event has not happened).
+ */
+export interface OwnerWaitlistRow {
+  eventId: string;
+  name: string;
+  capacity: number;
+  waiting: number;
+  gotSeat: number;
+  attended: number | null;
+}
+
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
 export interface TenantOwnerPanel {
   attention: TenantOwnerAttention[];
   kpis: {
@@ -90,6 +117,34 @@ export interface TenantOwnerPanel {
     posts: number;
     interactions: number;
   }[];
+  /**
+   * Last 14 days, best first: level 5's posts. Likes and comments are `feed_likes` and
+   * `feed_comments`; saves and shares are examples (no table records them yet).
+   */
+  topPosts: {
+    id: string;
+    date: string;
+    type: PostType;
+    community: string;
+    likes: number;
+    comments: number;
+    saves: ReportValue<number>;
+    shares: ReportValue<number>;
+  }[];
+  /** Members reached per post on average: an example (no post views are recorded yet). */
+  reach: ReportValue<{ perPost: number }>;
+  /** Videos and reels: average % watched and % watched to the end; examples (no playback data yet). */
+  videoPlayback: { watchedPercent: ReportValue<number>; completionPercent: ReportValue<number> };
+  /** Stories of the last 30 days and their unique viewers on average (`story_views`, aggregate only). */
+  stories: { count: number; averageUniqueViewers: number };
+  /**
+   * Posts of the last 30 days and their likes + comments, by the São Paulo weekday (Monday first) and
+   * time slot they were published in.
+   */
+  publishing: {
+    byWeekday: { weekday: Weekday; posts: number; interactions: number }[];
+    bySlot: { fromHour: number; toHour: number; posts: number; interactions: number }[];
+  };
   /** Orders of the last 30 days by the band the buyer was in the day before the order. */
   ordersByBand: Record<EngagementBand, number>;
   /** Members who interacted per week, oldest first, and the 12 weeks before them. */
@@ -102,6 +157,12 @@ export interface TenantOwnerPanel {
   events: {
     /** The events of the last 30 days, oldest first. */
     past: OwnerPastEvent[];
+    /** The next events, soonest first. */
+    upcoming: OwnerUpcomingEvent[];
+    /** Example: the waiting lists of the full events (only `events.capacity` exists today). */
+    waitlist: ReportValue<OwnerWaitlistRow[]>;
+    /** Presences (check-ins + walk-ins) by the band the member was in the day before the event. */
+    attendanceByBand: Record<EngagementBand, number>;
   };
   /** Support chat conversations (`chat_conversations` of kind support). */
   support: {
@@ -186,6 +247,14 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     { id: 'c-iniciantes', name: 'Iniciantes', exclusive: false, posts: 8, interactions: 430 },
     { id: 'c-eventos', name: 'Eventos', exclusive: false, posts: 6, interactions: 280 },
   ],
+  topPosts: [],
+  reach: { example: false, value: { perPost: 0 } },
+  videoPlayback: {
+    watchedPercent: { example: false, value: 0 },
+    completionPercent: { example: false, value: 0 },
+  },
+  stories: { count: 0, averageUniqueViewers: 0 },
+  publishing: { byWeekday: [], bySlot: [] },
   ordersByBand: { new: 9, superfan: 31, engaged: 38, occasional: 14, at_risk: 3, inactive: 1 },
   weeklyInteracting: {
     current: [310, 330, 360, 352, 391, 410, 402, 425, 418, 396, 372, 380],
@@ -241,6 +310,9 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         walkIns: 0,
       },
     ],
+    upcoming: [],
+    waitlist: { example: false, value: [] },
+    attendanceByBand: { new: 0, superfan: 0, engaged: 0, occasional: 0, at_risk: 0, inactive: 0 },
   },
   support: { awaiting: { count: 2, oldestHours: 26 } },
   cohorts: [

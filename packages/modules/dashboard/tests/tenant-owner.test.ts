@@ -7,7 +7,19 @@ import { attendancePercent, percentOf, perItem, sumOf } from '../ui/metrics';
  * preview, level 5 first, and every sum it computes adds up.
  */
 
-const { attention, growth, kpis, byCommunity, events, channels, support } = tenantOwnerPanel;
+const {
+  attention,
+  growth,
+  kpis,
+  byCommunity,
+  events,
+  channels,
+  support,
+  topPosts,
+  reach,
+  stories,
+  publishing,
+} = tenantOwnerPanel;
 
 function channel(name: (typeof channels)[number]['channel']): number | undefined {
   return channels.find((row) => row.channel === name)?.count;
@@ -144,5 +156,133 @@ describe('past events', () => {
 describe('support', () => {
   it('waits on level 5’s queue', () => {
     expect(support.awaiting).toEqual(tenantAdminPanel.kpis.awaitingReply);
+  });
+});
+
+describe('top posts (Conteúdo)', () => {
+  it('are level 5’s posts, with saves and shares as examples', () => {
+    expect(
+      topPosts.map(({ id, date, type, community, likes, comments }) => ({
+        id,
+        date,
+        type,
+        community,
+        likes,
+        comments,
+      })),
+    ).toEqual(tenantAdminPanel.topPosts);
+    for (const post of topPosts) {
+      expect(post.saves).toMatchObject({ example: true, reason: 'needs_saves' });
+      expect(post.shares).toMatchObject({ example: true, reason: 'needs_shares' });
+    }
+  });
+});
+
+describe('reach and stories', () => {
+  it('never reach more than the member base', () => {
+    expect(reach.value.perPost).toBeLessThanOrEqual(kpis.members.count);
+    expect(stories.averageUniqueViewers).toBeLessThanOrEqual(kpis.members.count);
+  });
+
+  it('count at least level 5’s stories of the week', () => {
+    expect(stories.count).toBeGreaterThanOrEqual(tenantAdminPanel.stories.count);
+  });
+});
+
+describe('best day and time to publish', () => {
+  it('splits the 61 posts and 3.940 interactions by weekday and by time slot', () => {
+    const lists: readonly { posts: number; interactions: number }[][] = [
+      publishing.byWeekday,
+      publishing.bySlot,
+    ];
+    for (const rows of lists) {
+      expect(sumOf(rows, (row) => row.posts)).toBe(61);
+      expect(sumOf(rows, (row) => row.interactions)).toBe(3940);
+    }
+    expect(new Set(publishing.byWeekday.map((row) => row.weekday)).size).toBe(7);
+  });
+
+  it('peaks on Thursday (88 per post) and at 20h–22h (79 per post)', () => {
+    const best = <T extends { posts: number; interactions: number }>(rows: readonly T[]) =>
+      [...rows].sort(
+        (a, b) => perItem(b.interactions, b.posts) - perItem(a.interactions, a.posts),
+      )[0];
+    const day = best(publishing.byWeekday);
+    const slot = best(publishing.bySlot);
+    expect(day?.weekday).toBe('thu');
+    expect(perItem(day?.interactions ?? 0, day?.posts ?? 0)).toBe(88);
+    expect([slot?.fromHour, slot?.toHour]).toEqual([20, 22]);
+    expect(perItem(slot?.interactions ?? 0, slot?.posts ?? 0)).toBe(79);
+  });
+});
+
+describe('upcoming events and the waiting list (Eventos)', () => {
+  it('gives today’s Encontro mensal level 5’s and the alert’s 92 of 100', () => {
+    const today = events.upcoming.find((row) => row.name === 'Encontro mensal');
+    const admin = tenantAdminPanel.attention.find((item) => item.kind === 'event_today');
+    expect(today).toMatchObject({
+      confirmed: admin?.kind === 'event_today' ? admin.confirmed : -1,
+      capacity: admin?.kind === 'event_today' ? admin.capacity : -1,
+      startsAtHour: 19,
+    });
+  });
+
+  it('is an example, only for full events, never seating or counting more than waited', () => {
+    const { waitlist } = events;
+    expect(waitlist).toMatchObject({ example: true, reason: 'needs_waitlist' });
+    const all = [...events.past, ...events.upcoming];
+    for (const row of waitlist.value) {
+      const event = all.find((other) => other.id === row.eventId);
+      expect(event?.name).toBe(row.name);
+      expect(event?.capacity).toBe(row.capacity);
+      expect(event?.confirmed).toBe(event?.capacity);
+      expect(row.gotSeat).toBeLessThanOrEqual(row.waiting);
+      if (row.attended !== null) expect(row.attended).toBeLessThanOrEqual(row.gotSeat);
+      const upcoming = events.upcoming.some((other) => other.id === row.eventId);
+      expect(row.attended === null).toBe(upcoming);
+    }
+  });
+
+  it('adds up to 67 waiting in 3 events, 15 seated, 10 of 13 who came', () => {
+    const rows = events.waitlist.value;
+    expect(rows).toHaveLength(3);
+    expect(sumOf(rows, (row) => row.waiting)).toBe(67);
+    expect(sumOf(rows, (row) => row.gotSeat)).toBe(15);
+    const happened = rows.filter((row) => row.attended !== null);
+    expect(sumOf(happened, (row) => row.attended ?? 0)).toBe(10);
+    expect(sumOf(happened, (row) => row.gotSeat)).toBe(13);
+  });
+
+  it('splits the 236 presences by band, 164 of them superfãs and engajados', () => {
+    const { attendanceByBand } = events;
+    expect(Object.values(attendanceByBand).reduce((total, n) => total + n, 0)).toBe(
+      channel('attendance'),
+    );
+    expect(attendanceByBand.superfan + attendanceByBand.engaged).toBe(164);
+  });
+});
+
+/** Every path whose value is an `ExampleValue`, with its reason (an example's own value is not walked). */
+function examplePaths(value: unknown, path: string[] = []): { path: string; reason: unknown }[] {
+  if (value === null || typeof value !== 'object') return [];
+  if ('example' in value && value.example === true) {
+    return [{ path: path.join('.'), reason: 'reason' in value ? value.reason : undefined }];
+  }
+  return Object.entries(value).flatMap(([key, child]) => examplePaths(child, [...path, key]));
+}
+
+describe('D-03: the example values of level 4', () => {
+  it('are exactly the metrics the app does not collect yet, each with its reason', () => {
+    const found = examplePaths(tenantOwnerPanel);
+    expect(found.map((item) => item.path).sort()).toEqual(
+      [
+        ...[0, 1, 2, 3].flatMap((i) => [`topPosts.${i}.saves`, `topPosts.${i}.shares`]),
+        'reach',
+        'videoPlayback.watchedPercent',
+        'videoPlayback.completionPercent',
+        'events.waitlist',
+      ].sort(),
+    );
+    for (const item of found) expect(typeof item.reason).toBe('string');
   });
 });
