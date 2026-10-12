@@ -503,9 +503,12 @@ export interface MemberPanel {
       saves: ReportValue<{ count: number; delta: Delta }>;
       shares: ReportValue<{ count: number; delta: Delta }>;
     };
-    /** What the member viewed in the window; stories are the member's own `story_views` rows. */
+    /**
+     * What the member viewed in the window; stories are the member's own `story_views` rows. Posts
+     * are the distinct posts seen and the views over them (a post seen twice counts once in `posts`).
+     */
     seen: {
-      posts: ReportValue<number>;
+      posts: ReportValue<{ posts: number; views: number }>;
       videos: ReportValue<{ count: number; minutes: number }>;
       stories: ReportValue<number>;
     };
@@ -624,7 +627,7 @@ export const memberPanel: MemberPanel = {
       },
     },
     seen: {
-      posts: { example: true, reason: 'needs_post_views', value: 128 },
+      posts: { example: true, reason: 'needs_post_views', value: { posts: 60, views: 128 } },
       videos: { example: true, reason: 'needs_video_playback', value: { count: 41, minutes: 72 } },
       stories: { example: false, value: 23 },
     },

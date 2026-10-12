@@ -26,6 +26,20 @@ export interface PostRef {
 
 export type LikedPost = PostRef & { when: RelativeMoment };
 
+/** A post the member viewed: how many times, and when last. */
+export type ViewedPost = PostRef & { views: number; lastSeen: RelativeMoment };
+
+/** A video or reel the member watched: its length, how often it played and the seconds watched. */
+export interface WatchedVideo {
+  id: string;
+  kind: 'video' | 'reel';
+  community: MemberCommunity;
+  title: string;
+  durationSeconds: number;
+  plays: number;
+  watchedSeconds: number;
+}
+
 /** One of the member's own comments. */
 export interface OwnComment {
   id: string;
@@ -254,6 +268,101 @@ function buildStories(): SeenStory[] {
   }));
 }
 
+/**
+ * How many times each viewed post was seen: 1 post x 6, 2 x 5, 4 x 4, 8 x 3, 27 x 2 and 18 x 1 —
+ * 60 posts, 128 views.
+ */
+const VIEW_COUNTS: readonly number[] = (
+  [
+    [6, 1],
+    [5, 2],
+    [4, 4],
+    [3, 8],
+    [2, 27],
+    [1, 18],
+  ] as const
+).flatMap(([views, posts]) => Array.from({ length: posts }, () => views));
+
+/**
+ * Viewed posts: post i was seen `VIEW_COUNTS[(i * 7) % 60]` times (7 and 60 are coprime, so this is
+ * a permutation and the sum stays 128), sorted by views, most first; the stable sort keeps recency
+ * order for ties.
+ */
+function buildViewedPosts(): ViewedPost[] {
+  return memberPostTable
+    .map((post, index) => ({
+      ...post,
+      views: VIEW_COUNTS[(index * 7) % VIEW_COUNTS.length] ?? 1,
+      lastSeen: seenAt(index),
+    }))
+    .sort((a, b) => b.views - a.views);
+}
+
+/** `[kind, community, title, durationSeconds, plays, watchedSeconds]`, most watched first. */
+const VIDEO_ROWS: readonly (readonly [
+  WatchedVideo['kind'],
+  MemberCommunity,
+  string,
+  number,
+  number,
+  number,
+])[] = [
+  ['video', 'Comunidade VIP', 'Aula 14 completa: a rotina da semana', 612, 1, 540],
+  ['video', 'Comunidade VIP', 'Live VIP: perguntas sobre a rotina da manhã', 540, 1, 300],
+  ['video', 'Geral', 'Como eu organizo a minha agenda', 290, 2, 290],
+  ['video', 'Comunidade VIP', 'Mentoria em grupo: planejamento da semana', 498, 1, 250],
+  ['video', 'Eventos', 'Encontro mensal: a conversa completa', 420, 1, 210],
+  ['video', 'Comunidade VIP', 'Aula 13 completa: revisão em 15 minutos', 360, 1, 200],
+  ['video', 'Geral', 'Live de dúvidas: o que vocês perguntaram', 385, 1, 180],
+  ['video', 'Eventos', 'Workshop de sábado: abertura', 312, 1, 150],
+  ['reel', 'Geral', 'Três hábitos para começar a semana', 90, 2, 150],
+  ['reel', 'Comunidade VIP', 'Desafio VIP em 1 minuto', 70, 3, 140],
+  ['video', 'Comunidade VIP', 'Aula 12: prioridades da semana', 252, 2, 130],
+  ['video', 'Geral', 'Bastidores da gravação das aulas', 240, 1, 120],
+  ['reel', 'Geral', 'Dica rápida: prepare a semana no domingo', 80, 2, 110],
+  ['video', 'Comunidade VIP', 'Checklist da rotina noturna explicado', 225, 1, 100],
+  ['video', 'Eventos', 'Workshop de organização: os primeiros passos', 210, 1, 90],
+  ['reel', 'Comunidade VIP', 'A manhã em três blocos', 62, 2, 90],
+  ['reel', 'Geral', 'Uma lista curta vale mais que uma longa', 85, 1, 85],
+  ['video', 'Geral', 'Leitura da semana comentada', 198, 1, 80],
+  ['reel', 'Eventos', 'Encontro mensal em 1 minuto', 55, 2, 80],
+  ['reel', 'Geral', 'Constância não é perfeição', 75, 1, 75],
+  ['reel', 'Comunidade VIP', 'Planilha de hábitos: como preencher', 48, 2, 70],
+  ['reel', 'Geral', 'Como evitar o excesso de tarefas', 68, 1, 68],
+  ['video', 'Comunidade VIP', 'Aula 11: metas pequenas e possíveis', 185, 1, 60],
+  ['reel', 'Geral', 'Recado da semana', 72, 1, 60],
+  ['reel', 'Eventos', 'Workshop de sábado: o que levar', 60, 1, 60],
+  ['reel', 'Comunidade VIP', 'O mapa da semana em 40 segundos', 40, 2, 60],
+  ['reel', 'Geral', 'Pausas ao longo do dia', 58, 1, 58],
+  ['reel', 'Comunidade VIP', 'Revisão do mês em poucas palavras', 52, 1, 52],
+  ['reel', 'Geral', 'Boas-vindas aos novos membros', 65, 1, 50],
+  ['video', 'Eventos', 'Encontro mensal: perguntas finais', 170, 1, 45],
+  ['reel', 'Geral', 'Enquete das lives: o resultado', 45, 1, 45],
+  ['reel', 'Comunidade VIP', 'Três prioridades para amanhã', 30, 2, 45],
+  ['reel', 'Geral', 'Começar pequeno funciona', 42, 1, 42],
+  ['reel', 'Eventos', 'Fotos do encontro mensal', 38, 1, 38],
+  ['reel', 'Comunidade VIP', 'Rotina de fim de semana', 50, 1, 35],
+  ['reel', 'Geral', 'Calendário de lives do mês', 35, 1, 35],
+  ['reel', 'Comunidade VIP', 'O descanso também entra na agenda', 32, 1, 32],
+  ['reel', 'Geral', 'Rotina com filhos pequenos: uma ideia', 44, 1, 30],
+  ['reel', 'Eventos', 'Inscrições do encontro de novembro', 36, 1, 25],
+  ['video', 'Comunidade VIP', 'Aula 4: o que tirar da sua lista', 150, 1, 20],
+  ['reel', 'Geral', 'Uma pergunta da caixinha', 28, 1, 20],
+];
+
+/** The 41 videos and reels watched in the window: 72 minutes in all. */
+function buildVideos(): WatchedVideo[] {
+  return VIDEO_ROWS.map(([kind, community, title, durationSeconds, plays, watchedSeconds], i) => ({
+    id: `v${String(i + 1).padStart(2, '0')}`,
+    kind,
+    community,
+    title,
+    durationSeconds,
+    plays,
+    watchedSeconds,
+  }));
+}
+
 export interface MemberActivityLists {
   /** The member's `feed_likes` rows in the window. */
   likes: ReportValue<LikedPost[]>;
@@ -261,6 +370,8 @@ export interface MemberActivityLists {
   comments: ReportValue<OwnComment[]>;
   saves: ReportValue<SavedPost[]>;
   shares: ReportValue<SharedPost[]>;
+  posts: ReportValue<ViewedPost[]>;
+  videos: ReportValue<WatchedVideo[]>;
   /** The member's own `story_views` rows: a measured list whose rows carry an example time. */
   stories: MeasuredValue<SeenStory[]>;
 }
@@ -270,5 +381,7 @@ export const memberActivityLists: MemberActivityLists = {
   comments: { example: false, value: buildComments() },
   saves: { example: true, reason: 'needs_saves', value: buildSaves() },
   shares: { example: true, reason: 'needs_shares', value: buildShares() },
+  posts: { example: true, reason: 'needs_post_views', value: buildViewedPosts() },
+  videos: { example: true, reason: 'needs_video_playback', value: buildVideos() },
   stories: { example: false, value: buildStories() },
 };

@@ -804,8 +804,9 @@ test('membro: Sua atividade report', async ({ page }) => {
   const communities = sectionTitled(page, 'Onde você mais participa');
   await expect(communities.getByText('exemplo', { exact: true })).toHaveCount(0);
 
+  const posts = kpiCard(page, 'Posts vistos');
+  for (const text of ['60', 'posts', '128 visualizações']) await expect(posts).toContainText(text);
   const seenValues: [string, string][] = [
-    ['Posts vistos', '128'],
     ['Stories vistos', '23'],
     ['Vídeos e reels', '41'],
     ['Tempo em vídeos e reels', '1 h 12 min'],
@@ -874,6 +875,26 @@ const MEMBER_LIST_CASES: MemberListCase[] = [
     sample: 'Link copiado',
   },
   {
+    slug: 'posts-vistos',
+    card: 'Posts vistos',
+    title: 'Posts que você viu',
+    rows: 60,
+    count: '60 posts · 128 visualizações',
+    listExample: true,
+    rowExamples: 0,
+    sample: 'visto 6×',
+  },
+  {
+    slug: 'videos',
+    card: 'Vídeos e reels',
+    title: 'Vídeos e reels que você assistiu',
+    rows: 41,
+    count: '41 assistidos · 1 h 12 min',
+    listExample: true,
+    rowExamples: 0,
+    sample: '2 min 10 s de 4 min 12 s · 2×',
+  },
+  {
     slug: 'stories',
     card: 'Stories vistos',
     title: 'Stories que você viu',
@@ -891,7 +912,10 @@ const MEMBER_LIST_LABELS = [
   'Comentários',
   'Salvamentos',
   'Compartilhamentos',
+  'Posts vistos',
   'Stories vistos',
+  'Vídeos e reels',
+  'Tempo em vídeos e reels',
 ];
 
 function memberCardLink(page: Page, label: string) {
@@ -1021,4 +1045,33 @@ for (const list of MEMBER_LIST_CASES) {
       expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
     });
   }
+}
+
+test('membro: the video time card opens the same videos list', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/membro');
+  await memberCardLink(page, 'Tempo em vídeos e reels').click();
+  await expect(page).toHaveURL(/\?lista=videos#lista$/);
+  await expect(
+    page.getByRole('heading', { level: 3, name: 'Vídeos e reels que você assistiu', exact: true }),
+  ).toBeVisible();
+});
+
+for (const list of MEMBER_LIST_CASES) {
+  test(`membro ?lista=${list.slug} at 1440x900: inside the phone, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/painel-preview/membro?lista=${list.slug}`);
+    await expect(
+      page
+        .locator('[data-phone-screen]')
+        .getByRole('heading', { level: 3, name: list.title, exact: true }),
+    ).toBeVisible();
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight + 1);
+  });
 }

@@ -1,9 +1,10 @@
 import { memberActivityLists } from '@rede-social/module-dashboard/fixtures';
+import { totalViews, totalWatchedSeconds } from '@rede-social/module-dashboard/ui';
 import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ChevronLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { MEMBER_LIST_ANCHOR, type MemberListSlug, memberReportHref } from '@/lib/dashboard-preview';
-import { type DashboardT, formatMinutesSeconds, momentText } from './format';
+import { type DashboardT, formatHoursMinutes, formatMinutesSeconds, momentText } from './format';
 import { PanelSection } from './PanelSection';
 
 interface ListRow {
@@ -88,6 +89,54 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
           t('member.lists.shares.line', {
             via: t(`member.lists.shares.via.${row.via}`),
             when: momentText(t, row.when),
+          }),
+        ],
+      })),
+    };
+  },
+  'posts-vistos': (t) => {
+    const list = memberActivityLists.posts;
+    return {
+      title: t('member.lists.posts.title'),
+      count: t('member.lists.posts.count', {
+        posts: list.value.length,
+        views: totalViews(list.value),
+      }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: row.excerpt,
+        lines: [
+          t('member.lists.posts.line', {
+            community: row.community,
+            when: momentText(t, row.lastSeen),
+          }),
+        ],
+        aside: t('member.lists.posts.times', { count: row.views }),
+      })),
+    };
+  },
+  videos: (t) => {
+    const list = memberActivityLists.videos;
+    return {
+      title: t('member.lists.videos.title'),
+      count: t('member.lists.videos.count', {
+        count: list.value.length,
+        duration: formatHoursMinutes(t, totalWatchedSeconds(list.value) / 60),
+      }),
+      example: list.example,
+      rows: list.value.map((row) => ({
+        id: row.id,
+        title: row.title,
+        lines: [
+          t('member.lists.videos.line', {
+            kind: t(`member.lists.videos.kind.${row.kind}`),
+            community: row.community,
+          }),
+          t('member.lists.videos.watched', {
+            watched: formatMinutesSeconds(t, row.watchedSeconds),
+            duration: formatMinutesSeconds(t, row.durationSeconds),
+            plays: row.plays,
           }),
         ],
       })),

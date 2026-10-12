@@ -136,6 +136,16 @@ export function dailyAverageMinutes(days: readonly { minutes: number }[]): numbe
   return days.length === 0 ? 0 : Math.round(totalMinutes(days) / days.length);
 }
 
+/** The views of a list of viewed posts, summed (0 for no rows). */
+export function totalViews(rows: readonly { views: number }[]): number {
+  return rows.reduce((total, row) => total + row.views, 0);
+}
+
+/** The seconds watched over a list of videos, summed (0 for no rows). */
+export function totalWatchedSeconds(rows: readonly { watchedSeconds: number }[]): number {
+  return rows.reduce((total, row) => total + row.watchedSeconds, 0);
+}
+
 /** A weekly streak shorter than this is not shown. */
 export const MIN_STREAK_WEEKS = 2;
 

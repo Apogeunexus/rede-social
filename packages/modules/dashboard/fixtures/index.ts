@@ -10,6 +10,8 @@ export {
   type SeenStory,
   type SharedPost,
   spreadMoments,
+  type ViewedPost,
+  type WatchedVideo,
 } from './member-lists';
 export {
   type ActivationStep,

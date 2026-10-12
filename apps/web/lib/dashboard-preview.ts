@@ -94,6 +94,8 @@ export const MEMBER_LISTS = [
   'comentarios',
   'salvamentos',
   'compartilhamentos',
+  'posts-vistos',
+  'videos',
   'stories',
 ] as const;
 export type MemberListSlug = (typeof MEMBER_LISTS)[number];

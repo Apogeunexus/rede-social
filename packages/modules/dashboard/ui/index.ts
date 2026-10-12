@@ -34,6 +34,8 @@ export {
   percentOf,
   selectForYouCards,
   totalMinutes,
+  totalViews,
+  totalWatchedSeconds,
   vsMedian,
 } from './metrics';
 export {

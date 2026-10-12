@@ -160,11 +160,16 @@ export async function MemberActivity() {
           period={t('member.activity.period')}
         >
           <KpiGrid>
-            <KpiCard
-              label={t('member.activity.seen.posts')}
-              value={formatCount(seen.posts.value)}
-              badge={exampleBadge(t, seen.posts)}
-            />
+            <ListLink slug="posts-vistos">
+              <KpiCard
+                label={t('member.activity.seen.posts')}
+                value={formatCount(seen.posts.value.posts)}
+                unit={t('member.activity.seen.postsUnit', { count: seen.posts.value.posts })}
+                note={t('member.activity.seen.postsViews', { count: seen.posts.value.views })}
+                badge={exampleBadge(t, seen.posts)}
+                footer={seeList}
+              />
+            </ListLink>
             <ListLink slug="stories">
               <KpiCard
                 label={t('member.activity.seen.stories')}
@@ -173,17 +178,23 @@ export async function MemberActivity() {
                 footer={seeList}
               />
             </ListLink>
-            <KpiCard
-              label={t('member.activity.seen.videos')}
-              value={formatCount(seen.videos.value.count)}
-              unit={t('member.activity.seen.videosUnit', { count: seen.videos.value.count })}
-              badge={exampleBadge(t, seen.videos)}
-            />
-            <KpiCard
-              label={t('member.activity.seen.videoTime')}
-              value={formatHoursMinutes(t, seen.videos.value.minutes)}
-              badge={exampleBadge(t, seen.videos)}
-            />
+            <ListLink slug="videos">
+              <KpiCard
+                label={t('member.activity.seen.videos')}
+                value={formatCount(seen.videos.value.count)}
+                unit={t('member.activity.seen.videosUnit', { count: seen.videos.value.count })}
+                badge={exampleBadge(t, seen.videos)}
+                footer={seeList}
+              />
+            </ListLink>
+            <ListLink slug="videos" anchor={false}>
+              <KpiCard
+                label={t('member.activity.seen.videoTime')}
+                value={formatHoursMinutes(t, seen.videos.value.minutes)}
+                badge={exampleBadge(t, seen.videos)}
+                footer={seeList}
+              />
+            </ListLink>
           </KpiGrid>
         </PanelSection>
 

@@ -610,6 +610,8 @@
         "seen": {
           "title": "O que você viu",
           "posts": "Posts vistos",
+          "postsUnit": "{count, plural, one {post} other {posts}}",
+          "postsViews": "{count, plural, one {# visualização} other {# visualizações}}",
           "stories": "Stories vistos",
           "videos": "Vídeos e reels",
           "videosUnit": "{count, plural, one {assistido} other {assistidos}}",
@@ -657,6 +659,22 @@
             "link": "Link copiado",
             "native": "Compartilhado pelo celular"
           }
+        },
+        "posts": {
+          "title": "Posts que você viu",
+          "count": "{posts, plural, one {# post} other {# posts}} · {views, plural, one {# visualização} other {# visualizações}}",
+          "line": "{community} · última vez {when}",
+          "times": "visto {count}×"
+        },
+        "videos": {
+          "title": "Vídeos e reels que você assistiu",
+          "count": "{count, plural, one {# assistido} other {# assistidos}} · {duration}",
+          "kind": {
+            "video": "Vídeo",
+            "reel": "Reel"
+          },
+          "line": "{kind} · {community}",
+          "watched": "{watched} de {duration} · {plays}×"
         },
         "stories": {
           "title": "Stories que você viu",
