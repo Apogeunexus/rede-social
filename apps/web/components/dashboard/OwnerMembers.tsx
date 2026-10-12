@@ -32,6 +32,7 @@ import {
   formatPercent,
   formatSignedCount,
 } from './format';
+import { OwnerMemberDetail } from './OwnerMemberDetail';
 import { PanelSection, PreviewAction } from './PanelSection';
 
 /**
@@ -125,11 +126,13 @@ function ScopeItems({ t, scope }: { t: DashboardT; scope: OwnerBandScope }) {
  * The bands have three scope tabs (quick 261012-qer B-2): Por membro (the whole base), Por comunidade
  * and Por evento (that event's registrants), each with a second row to pick the item; who moved stays
  * whole-base, and the win-back card follows the scope (A-2). Each band opens a named list of its
- * members (261012-pkd D-02). Those lists are the only place this panel names a member, to the
+ * members (261012-pkd D-02); a member card opens that member's insights in place of the area
+ * (261012-qer B-3). Those lists and insights are the only places this panel names a member, to the
  * client's own team (D-03); every other block is counts only.
  */
 export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
   const t = await getTranslations('dashboard');
+  if (members.memberId) return <OwnerMemberDetail t={t} view={members} />;
   const { kpis, growth, cohorts, movement } = tenantOwnerPanel;
   const { scope } = members;
   const entry = scopeEntry(t, scope);
@@ -197,7 +200,7 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
         </nav>
         <ScopeItems t={t} scope={scope} />
         {entry.note ? <p className="text-xs text-text-secondary">{entry.note}</p> : null}
-        <BandMembers t={t} bands={scopeBands} scope={scope} />
+        <BandMembers t={t} bands={scopeBands} scope={scope} openBand={members.band} />
         <p className="text-xs text-text-secondary">
           {/* Every event registrant acted (the RSVP), so the line would always read X de X. */}
           {scope.kind === 'event'

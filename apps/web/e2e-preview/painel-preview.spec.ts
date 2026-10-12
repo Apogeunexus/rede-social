@@ -454,7 +454,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
     heading: 'Membros que interagiram por semana',
     pills: 0,
   },
-  { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 0 },
+  // One per member card (the example daily time, quick 261012-qer B-1): 10 in each closed band.
+  { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 60 },
   { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 4 },
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 3 },
   { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },

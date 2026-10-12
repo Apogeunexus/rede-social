@@ -164,6 +164,18 @@ export function formatMonthYear(isoDate: string): string {
   return MONTH_YEAR.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
+const FULL_DATE = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
+/** `2026-09-30` -> `30/09/2026`. */
+export function formatDate(isoDate: string): string {
+  return FULL_DATE.format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 /** `100` minutes -> `1h40`. */
 export function formatDuration(t: DashboardT, minutes: number): string {
   return t('duration', {

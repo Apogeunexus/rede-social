@@ -1,4 +1,10 @@
-import { type OwnerBandScope, tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
+import {
+  type EngagementBand,
+  type OwnerBandScope,
+  ownerBandRoster,
+  tenantOwnerPanel,
+} from '@rede-social/module-dashboard/fixtures';
+import { ENGAGEMENT_BAND_ORDER } from '@rede-social/module-dashboard/ui';
 import { ownerAreaHref } from './dashboard-preview';
 
 /*
@@ -27,9 +33,26 @@ export const OWNER_EVENTS: readonly { id: string; name: string; date: string }[]
   ...[...tenantOwnerPanel.events.past].reverse(),
 ].map(({ id, name, date }) => ({ id, name, date }));
 
-/** What the Membros area renders: the bands' scope (Task 4 adds the open band and member). */
+/** The `?faixa=` slug of each band (quick 261012-qer B-3): the band a member link came from. */
+export const OWNER_BAND_SLUGS: Readonly<Record<EngagementBand, string>> = {
+  new: 'novos',
+  superfan: 'superfas',
+  engaged: 'engajados',
+  occasional: 'ocasionais',
+  at_risk: 'em-risco',
+  inactive: 'inativos',
+};
+
+const OWNER_MEMBER_IDS: readonly string[] = ownerBandRoster.map((row) => row.id);
+
+/**
+ * What the Membros area renders: the bands' scope, the band to reopen (null = all closed) and the
+ * member whose insights replace the area (null = the area itself).
+ */
 export interface OwnerMembersView {
   scope: OwnerBandScope;
+  band: EngagementBand | null;
+  memberId: string | null;
 }
 
 const RECORTES = ['membro', 'comunidade', 'evento'] as const;
@@ -45,13 +68,14 @@ function first<T>(rows: readonly T[]): T {
   return row;
 }
 
-/**
- * The scope the query asks for (untrusted). `recorte` picks Por membro, Por comunidade or Por evento;
- * anything else is Por membro, so a bare legacy `?comunidade=` too. Under a valid `recorte`, an
- * unknown `comunidade` or `evento` falls to that row's first item. Only allow-listed constants ever
- * reach markup or URLs.
- */
-export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
+/** The band of a `faixa` slug: exact and single, else null. */
+function parseBand(params: SearchParams): EngagementBand | null {
+  const raw = params.faixa;
+  if (typeof raw !== 'string') return null;
+  return ENGAGEMENT_BAND_ORDER.find((band) => OWNER_BAND_SLUGS[band] === raw) ?? null;
+}
+
+function parseScope(params: SearchParams): OwnerBandScope {
   const recorte = pick(params.recorte, RECORTES);
   if (recorte === 'comunidade') {
     const slug = pick(
@@ -60,7 +84,7 @@ export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
     );
     const community =
       OWNER_COMMUNITIES.find((row) => row.slug === slug) ?? first(OWNER_COMMUNITIES);
-    return { scope: { kind: 'community', id: community.id } };
+    return { kind: 'community', id: community.id };
   }
   if (recorte === 'evento') {
     const id =
@@ -68,9 +92,23 @@ export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
         params.evento,
         OWNER_EVENTS.map((row) => row.id),
       ) ?? first(OWNER_EVENTS).id;
-    return { scope: { kind: 'event', id } };
+    return { kind: 'event', id };
   }
-  return { scope: { kind: 'member' } };
+  return { kind: 'member' };
+}
+
+/**
+ * The view the query asks for (untrusted). `recorte` picks Por membro, Por comunidade or Por evento;
+ * anything else is Por membro, so a bare legacy `?comunidade=` too. Under a valid `recorte`, an
+ * unknown `comunidade` or `evento` falls to that row's first item. `faixa` is a band slug and
+ * `membro` a roster id, else null. Only allow-listed constants ever reach markup or URLs.
+ */
+export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
+  return {
+    scope: parseScope(params),
+    band: parseBand(params),
+    memberId: pick(params.membro, OWNER_MEMBER_IDS) ?? null,
+  };
 }
 
 /** A scope's query after `?area=membros` (empty for Por membro). */
@@ -82,7 +120,16 @@ function scopeQuery(scope: OwnerBandScope): string {
   return `&recorte=comunidade&comunidade=${slug}`;
 }
 
-/** A scope tab's or chip's link: the Membros area, the scope, the bands anchor. */
-export function ownerScopeHref(scope: OwnerBandScope): string {
-  return `${ownerAreaHref('membros')}${scopeQuery(scope)}#${OWNER_BANDS_ANCHOR}`;
+function bandQuery(band: EngagementBand | null | undefined): string {
+  return band ? `&faixa=${OWNER_BAND_SLUGS[band]}` : '';
+}
+
+/** A scope tab's or chip's link (or Voltar's, reopening `band`): the Membros area at #faixas. */
+export function ownerScopeHref(scope: OwnerBandScope, band?: EngagementBand | null): string {
+  return `${ownerAreaHref('membros')}${scopeQuery(scope)}${bandQuery(band)}#${OWNER_BANDS_ANCHOR}`;
+}
+
+/** A member card's link: the member's insights, remembering the scope and band to go back to. */
+export function ownerMemberHref(scope: OwnerBandScope, band: EngagementBand, id: string): string {
+  return `${ownerAreaHref('membros')}${scopeQuery(scope)}${bandQuery(band)}&membro=${id}`;
 }

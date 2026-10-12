@@ -565,6 +565,87 @@
         "seeAll": "Ver todos",
         "empty": "Nenhum membro nesta faixa."
       },
+      "memberDetail": {
+        "back": "Voltar",
+        "band": {
+          "new": "Novo",
+          "superfan": "Superfã",
+          "engaged": "Engajado",
+          "occasional": "Ocasional",
+          "at_risk": "Em risco",
+          "inactive": "Inativo"
+        },
+        "last30": {
+          "title": "Últimos 30 dias",
+          "activeDays": "Dias ativos",
+          "likes": "Curtidas",
+          "comments": "Comentários",
+          "strongActions": "Ações fortes",
+          "strongNote": "comentários, presenças e compras",
+          "dailyTime": "Tempo médio diário",
+          "postsSeen": "Posts vistos"
+        },
+        "evolution": {
+          "title": "Evolução",
+          "past": "{month} (há {days} dias)",
+          "today": "Hoje",
+          "line": "{when}: {band}",
+          "notMember": "ainda não era membro",
+          "weeklyTitle": "Dias ativos por semana",
+          "weeklyLabel": "Dias ativos por semana, últimas 12 semanas"
+        },
+        "where": {
+          "title": "Onde interage",
+          "communities": "Ações por comunidade, desde que entrou",
+          "postTypes": "Curtidas e comentários por tipo de post, desde que entrou"
+        },
+        "events": {
+          "title": "Eventos",
+          "row": "{name} · {date}",
+          "attended": "Foi",
+          "missed": "Não foi",
+          "registered": "Inscrito",
+          "empty": "Nenhuma inscrição em eventos."
+        },
+        "purchases": {
+          "title": "Compras",
+          "bought": "Comprado em {date} · {value}",
+          "expires": "Vence em {date}",
+          "empty": "Nenhuma compra."
+        },
+        "support": {
+          "title": "Atendimento",
+          "summary": "{count, plural, one {# conversa} other {# conversas}} em 8 semanas · última há {days, plural, one {# dia} other {# dias}} · primeira resposta em {time}",
+          "empty": "Nenhuma conversa com o atendimento em 8 semanas."
+        },
+        "suggestion": {
+          "title": "Sugestão de ação",
+          "new": {
+            "detail": "Entrou há {days, plural, one {# dia} other {# dias}}. Dê as boas-vindas e indique a comunidade Iniciantes.",
+            "action": "Enviar boas-vindas"
+          },
+          "superfan": {
+            "detail": "Um dos que mais participam. Convide para receber os novos no próximo encontro.",
+            "action": "Enviar convite"
+          },
+          "engaged": {
+            "detail": "Participa com frequência. Mostre o próximo evento: {event}.",
+            "action": "Avisar sobre o evento"
+          },
+          "occasional": {
+            "detail": "Participa de vez em quando. Mostre o próximo evento: {event}.",
+            "action": "Avisar sobre o evento"
+          },
+          "at_risk": {
+            "detail": "Sem ações há {days, plural, one {# dia} other {# dias}}. Convide para o próximo encontro: {event}.",
+            "action": "Convidar para o encontro"
+          },
+          "inactive": {
+            "detail": "Sem ações há {days, plural, one {# dia} other {# dias}}. Mande uma mensagem chamando de volta.",
+            "action": "Enviar mensagem"
+          }
+        }
+      },
       "formats": {
         "title": "Interações por post, por formato",
         "summary": "{format} rende mais: {perPost} por post",

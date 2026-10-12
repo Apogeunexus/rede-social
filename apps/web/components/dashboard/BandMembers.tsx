@@ -15,6 +15,7 @@ import {
 } from '@rede-social/module-dashboard/ui';
 import { Card, cn } from '@rede-social/ui';
 import type { ReactNode } from 'react';
+import { ownerMemberHref } from '@/lib/owner-band-scope';
 import { ExamplePill } from './ExamplePill';
 import {
   bandLabel,
@@ -34,6 +35,8 @@ export interface BandMembersProps {
   bands: EngagementBands;
   /** The scope (allow-listed by `parseOwnerMembersView`). */
   scope: OwnerBandScope;
+  /** The band to render open (coming back from a member's insights); null = all closed. */
+  openBand: EngagementBand | null;
 }
 
 function topCommunityLabel(t: DashboardT, id: string): string {
@@ -97,39 +100,44 @@ function CardLine({ label, children }: { label: string; children: ReactNode }) {
 /**
  * One member as a card (quick 261012-qer B-1): the initials on the brand color (the profile photo
  * replaces them once profiles are wired), the name, and four labeled lines. The daily time is an
- * example, so its pill sits right next to it.
+ * example, so its pill sits right next to it. The whole card links to the member's insights (B-3).
  */
-function MemberCard({ t, member }: { t: DashboardT; member: OwnerBandMember }) {
+function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMember; href: string }) {
   return (
-    <Card className="flex items-start gap-3 p-3">
-      <span
-        aria-hidden
-        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-on-brand"
-      >
-        {initials(member.name)}
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1 [overflow-wrap:anywhere]">
-        <span className="text-base font-bold text-text">{member.name}</span>
-        <dl className="flex flex-col gap-0.5">
-          <CardLine label={t('tenantOwner.bandMembers.since')}>
-            {formatMonthYear(member.memberSince)}
-          </CardLine>
-          <CardLine label={t('tenantOwner.bandMembers.lastActive')}>
-            {t('tenantOwner.bandMembers.when', {
-              days: member.lastActive.daysAgo,
-              time: member.lastActive.time ?? '',
-            })}
-          </CardLine>
-          <CardLine label={t('tenantOwner.bandMembers.topCommunity')}>
-            {topCommunityLabel(t, member.topCommunityId)}
-          </CardLine>
-          <CardLine label={t('tenantOwner.bandMembers.dailyTime')}>
-            {formatHoursMinutes(t, member.dailyMinutes.value)}{' '}
-            <ExamplePill text={exampleBadge(t, member.dailyMinutes)} />
-          </CardLine>
-        </dl>
-      </div>
-    </Card>
+    <a
+      href={href}
+      className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+    >
+      <Card className="flex items-start gap-3 p-3 transition-colors hover:bg-card-hover">
+        <span
+          aria-hidden
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-on-brand"
+        >
+          {initials(member.name)}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1 [overflow-wrap:anywhere]">
+          <span className="text-base font-bold text-text">{member.name}</span>
+          <dl className="flex flex-col gap-0.5">
+            <CardLine label={t('tenantOwner.bandMembers.since')}>
+              {formatMonthYear(member.memberSince)}
+            </CardLine>
+            <CardLine label={t('tenantOwner.bandMembers.lastActive')}>
+              {t('tenantOwner.bandMembers.when', {
+                days: member.lastActive.daysAgo,
+                time: member.lastActive.time ?? '',
+              })}
+            </CardLine>
+            <CardLine label={t('tenantOwner.bandMembers.topCommunity')}>
+              {topCommunityLabel(t, member.topCommunityId)}
+            </CardLine>
+            <CardLine label={t('tenantOwner.bandMembers.dailyTime')}>
+              {formatHoursMinutes(t, member.dailyMinutes.value)}{' '}
+              <ExamplePill text={exampleBadge(t, member.dailyMinutes)} />
+            </CardLine>
+          </dl>
+        </div>
+      </Card>
+    </a>
   );
 }
 
@@ -138,10 +146,11 @@ function MemberCard({ t, member }: { t: DashboardT; member: OwnerBandMember }) {
  * `<details>`: the summary reads count · share with a mini bar (only Em risco solid, the band to act
  * on). Opened, the band lists its 10 most recent members as cards; over 10 it says so on top and
  * ends with how many more plus a disabled "Ver todos" (A-3); a band with no members says so (A-4).
- * The body keys on the band count, so it always agrees with the summary. Names reach the client's
- * own team only (D-03).
+ * The body keys on the band count, so it always agrees with the summary. Each card opens the
+ * member's insights; coming back, `openBand` renders that band open. Names reach the client's own
+ * team only (D-03).
  */
-export function BandMembers({ t, bands, scope }: BandMembersProps) {
+export function BandMembers({ t, bands, scope, openBand }: BandMembersProps) {
   const total = bandTotal(bands);
   return ENGAGEMENT_BAND_ORDER.map((band) => {
     const count = bands.counts[band];
@@ -149,6 +158,7 @@ export function BandMembers({ t, bands, scope }: BandMembersProps) {
     return (
       <Collapsible
         key={band}
+        open={band === openBand}
         title={bandLabel(t, band)}
         summary={<BandSummary t={t} band={band} count={count} total={total} />}
       >
@@ -164,7 +174,11 @@ export function BandMembers({ t, bands, scope }: BandMembersProps) {
             <ul className="flex flex-col gap-3">
               {members.map((member) => (
                 <li key={member.id} className="min-w-0">
-                  <MemberCard t={t} member={member} />
+                  <MemberCard
+                    t={t}
+                    member={member}
+                    href={ownerMemberHref(scope, band, member.id)}
+                  />
                 </li>
               ))}
             </ul>

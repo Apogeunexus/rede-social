@@ -40,7 +40,7 @@ function eventosBands(): EngagementBands {
 }
 
 function renderBands(bands: EngagementBands, scope: OwnerBandScope) {
-  const { container } = render(<BandMembers t={t} bands={bands} scope={scope} />);
+  const { container } = render(<BandMembers t={t} bands={bands} scope={scope} openBand={null} />);
   return container;
 }
 
