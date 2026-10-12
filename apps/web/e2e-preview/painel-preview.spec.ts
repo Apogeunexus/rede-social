@@ -454,8 +454,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
     heading: 'Membros que interagiram por semana',
     pills: 0,
   },
-  // One per member card (the example daily time, quick 261012-qer B-1): 10 in each closed band.
-  { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 60 },
+  // One per band list (the example daily time, quick 261012-ri4 R-2): the six bands all have members.
+  { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 6 },
   { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 4 },
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 3 },
   { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
@@ -1015,6 +1015,17 @@ for (const { scope, tab, item, query, recover } of BAND_LIST_SCOPES) {
       const empty = details.getByText('Nenhum membro nesta faixa.', { exact: true });
       if (count === 0) await expect(empty, label).toBeVisible();
       else await expect(empty, label).toHaveCount(0);
+      const pills = details.getByText('exemplo', { exact: true });
+      if (count > 0) {
+        await expect(pills, label).toHaveCount(1);
+        await expect(
+          details.getByText('Tempo médio diário: valores de exemplo'),
+          label,
+        ).toBeVisible();
+        await expect(rows.getByText('exemplo', { exact: true }), label).toHaveCount(0);
+      } else {
+        await expect(pills, label).toHaveCount(0);
+      }
     }
 
     if (scope === 'Por membro') {
@@ -1025,6 +1036,14 @@ for (const { scope, tab, item, query, recover } of BAND_LIST_SCOPES) {
       await expect(first).toContainText('Última atividade: hoje às 22:40');
       await expect(first).toContainText('Comunidade que mais interage: Geral');
       await expect(first).toContainText('Tempo médio diário: 18 min');
+      const fontSize = (locator: Locator) =>
+        locator.evaluate((el) => getComputedStyle(el).fontSize);
+      expect(await fontSize(first.getByText('Luana Ferraz', { exact: true }))).toBe('18px');
+      expect(await fontSize(first.getByText('Membro desde:').locator('..'))).toBe('14px');
+      await expect(first.getByRole('link').locator('svg')).toHaveCount(1);
+      await expect(
+        bandDetails(bands, 'Novos').getByRole('link', { name: /Luana Ferraz/ }),
+      ).toHaveCount(1);
     }
     if (scope === 'Comunidade VIP') {
       await expect(bandDetails(bands, 'Inativos').getByText('e mais 8 membros')).toBeVisible();
@@ -1048,7 +1067,7 @@ for (const { scope, tab, item, query, recover } of BAND_LIST_SCOPES) {
 /** The first member card (a link) of an opened band, and the name it shows. */
 async function firstMemberCard(details: Locator) {
   const card = details.getByRole('listitem').first().getByRole('link');
-  const name = (await card.locator('.text-base').innerText()).trim();
+  const name = (await card.locator('.text-lg').innerText()).trim();
   return { card, name };
 }
 

@@ -14,6 +14,7 @@ import {
   percentOf,
 } from '@rede-social/module-dashboard/ui';
 import { Card, cn } from '@rede-social/ui';
+import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ownerMemberHref } from '@/lib/owner-band-scope';
 import { ExamplePill } from './ExamplePill';
@@ -88,19 +89,21 @@ function BandSummary({
   );
 }
 
-/** One labeled line of the member card: the label bold, then its value. */
+/** One labeled line of the member card: the label in gray, then its value in the text color. */
 function CardLine({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="text-xs text-text-secondary">
-      <dt className="inline font-semibold">{label}</dt> <dd className="inline">{children}</dd>
+    <div className="text-sm">
+      <dt className="inline text-text-secondary">{label}</dt>{' '}
+      <dd className="inline text-text">{children}</dd>
     </div>
   );
 }
 
 /**
- * One member as a card (quick 261012-qer B-1): the initials on the brand color (the profile photo
- * replaces them once profiles are wired), the name, and four labeled lines. The daily time is an
- * example, so its pill sits right next to it. The whole card links to the member's insights (B-3).
+ * One member as a card (quick 261012-qer B-1, sized as the user drew it in quick 261012-ri4 R-1):
+ * the initials on the brand color (the profile photo replaces them once profiles are wired), the
+ * large name, four labeled lines, and a chevron saying it opens (R-3). The whole card links to the
+ * member's insights (B-3). The daily time is an example; the list says so once on top (R-2).
  */
 function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMember; href: string }) {
   return (
@@ -108,16 +111,16 @@ function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMembe
       href={href}
       className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
-      <Card className="flex items-start gap-3 p-3 transition-colors hover:bg-card-hover">
+      <Card className="flex items-start gap-4 p-4 transition-colors hover:bg-card-hover">
         <span
           aria-hidden
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-bold text-on-brand"
+          className="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand text-base font-bold text-on-brand"
         >
           {initials(member.name)}
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-1 [overflow-wrap:anywhere]">
-          <span className="text-base font-bold text-text">{member.name}</span>
-          <dl className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 [overflow-wrap:anywhere]">
+          <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
+          <dl className="flex flex-col gap-1">
             <CardLine label={t('tenantOwner.bandMembers.since')}>
               {formatMonthYear(member.memberSince)}
             </CardLine>
@@ -131,11 +134,11 @@ function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMembe
               {topCommunityLabel(t, member.topCommunityId)}
             </CardLine>
             <CardLine label={t('tenantOwner.bandMembers.dailyTime')}>
-              {formatHoursMinutes(t, member.dailyMinutes.value)}{' '}
-              <ExamplePill text={exampleBadge(t, member.dailyMinutes)} />
+              {formatHoursMinutes(t, member.dailyMinutes.value)}
             </CardLine>
           </dl>
         </div>
+        <ChevronRight aria-hidden size={18} className="shrink-0 self-center text-brand" />
       </Card>
     </a>
   );
@@ -146,6 +149,8 @@ function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMembe
  * `<details>`: the summary reads count · share with a mini bar (only Em risco solid, the band to act
  * on). Opened, the band lists its 10 most recent members as cards; over 10 it says so on top and
  * ends with how many more plus a disabled "Ver todos" (A-3); a band with no members says so (A-4).
+ * When a listed daily time is an example, one line on top says so with the pill (quick 261012-ri4
+ * R-2), instead of a pill on every card.
  * The body keys on the band count, so it always agrees with the summary. Each card opens the
  * member's insights; coming back, `openBand` renders that band open. Names reach the client's own
  * team only (D-03).
@@ -155,6 +160,7 @@ export function BandMembers({ t, bands, scope, openBand }: BandMembersProps) {
   return ENGAGEMENT_BAND_ORDER.map((band) => {
     const count = bands.counts[band];
     const { members, more } = ownerBandList(scope, band);
+    const example = members.find((member) => member.dailyMinutes.example)?.dailyMinutes;
     return (
       <Collapsible
         key={band}
@@ -166,10 +172,20 @@ export function BandMembers({ t, bands, scope, openBand }: BandMembersProps) {
           <p className="text-sm text-text-secondary">{t('tenantOwner.bandMembers.empty')}</p>
         ) : (
           <>
-            {more > 0 ? (
-              <p className="text-xs text-text-secondary">
-                {t('tenantOwner.bandMembers.recent', { count: members.length })}
-              </p>
+            {more > 0 || example ? (
+              <div className="flex flex-col gap-1">
+                {more > 0 ? (
+                  <p className="text-xs text-text-secondary">
+                    {t('tenantOwner.bandMembers.recent', { count: members.length })}
+                  </p>
+                ) : null}
+                {example ? (
+                  <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+                    {t('tenantOwner.bandMembers.exampleNote')}
+                    <ExamplePill text={exampleBadge(t, example)} />
+                  </p>
+                ) : null}
+              </div>
             ) : null}
             <ul className="flex flex-col gap-3">
               {members.map((member) => (

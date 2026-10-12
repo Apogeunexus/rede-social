@@ -559,6 +559,7 @@
         "lastActive": "Última atividade:",
         "topCommunity": "Comunidade que mais interage:",
         "dailyTime": "Tempo médio diário:",
+        "exampleNote": "Tempo médio diário: valores de exemplo",
         "when": "{days, plural, =0 {hoje às {time}} =1 {ontem às {time}} other {há # dias}}",
         "recent": "Os {count} com atividade mais recente",
         "more": "e mais {count, plural, one {# membro} other {# membros}}",
