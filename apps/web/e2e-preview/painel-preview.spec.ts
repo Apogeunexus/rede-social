@@ -802,6 +802,15 @@ test('dono-do-cliente membros comunidade=vip at 1440x900: inside the phone', asy
   await expect(page).toHaveURL(/comunidade=geral#faixas$/);
   const heading = ownerArea(page).getByRole('heading', { name: 'Faixas de engajamento' });
   await expect(heading).toBeInViewport();
+  // In view and not under the screen's sticky status bar.
+  const edges = await heading.evaluate((el) => {
+    const bar = el.closest('[data-phone-screen]')?.firstElementChild;
+    return {
+      heading: el.getBoundingClientRect().top,
+      bar: bar?.getBoundingClientRect().bottom ?? Number.NaN,
+    };
+  });
+  expect(edges.heading).toBeGreaterThanOrEqual(edges.bar);
   await expect
     .poll(() => page.locator('[data-phone-screen]').evaluate((el) => el.scrollTop))
     .toBeGreaterThan(0);

@@ -93,7 +93,8 @@ export async function OwnerMembers({ community }: { community: string | null }) 
         </Card>
       </PanelSection>
 
-      <PanelSection id={OWNER_BANDS_ANCHOR} title={t('bands.title')}>
+      {/* scroll-mt keeps the #faixas landing clear of the phone mockup's sticky status bar. */}
+      <PanelSection id={OWNER_BANDS_ANCHOR} title={t('bands.title')} className="scroll-mt-20">
         <nav aria-label={t('tenantOwner.bandScope.label')}>
           <ul className="flex flex-wrap gap-2">
             <li>
