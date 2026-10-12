@@ -17,6 +17,7 @@ export {
   OWNER_BAND_LIST_LIMIT,
   type OwnerBandList,
   type OwnerBandMember,
+  type OwnerBandScope,
   ownerBandList,
 } from './owner-members';
 export {

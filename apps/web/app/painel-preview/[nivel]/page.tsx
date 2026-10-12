@@ -20,7 +20,7 @@ import {
   parseStaffFunctions,
   previewLevel,
 } from '@/lib/dashboard-preview';
-import { parseOwnerCommunity } from '@/lib/owner-communities';
+import { parseOwnerMembersView } from '@/lib/owner-band-scope';
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -44,7 +44,7 @@ const PANELS: Record<PreviewSlug, (query: SearchParams) => ReactNode> = {
   'admin-da-plataforma': () => <PlatformAdminPanel />,
   'suporte-da-plataforma': () => <PlatformSupportPanel />,
   'dono-do-cliente': (query) => (
-    <TenantOwnerPanel area={parseOwnerArea(query)} community={parseOwnerCommunity(query)} />
+    <TenantOwnerPanel area={parseOwnerArea(query)} members={parseOwnerMembersView(query)} />
   ),
   'admin-do-cliente': () => <TenantAdminPanel />,
   'equipe-do-cliente': (query) => <TenantStaffPanel {...parseStaffFunctions(query)} />,

@@ -541,9 +541,15 @@
       },
       "bandScope": {
         "label": "Recorte das faixas",
-        "all": "Toda a base",
+        "byMember": "Por membro",
+        "byCommunity": "Por comunidade",
+        "byEvent": "Por evento",
+        "communityLabel": "Comunidade das faixas",
+        "eventLabel": "Evento das faixas",
         "exclusive": "Comunidade {name}",
+        "event": "{name} · {date}",
         "note": "{community}: {count, plural, one {# membro com acesso} other {# membros com acesso}}. Contam só as ações feitas nesta comunidade.",
+        "eventNote": "{event}: {count, plural, one {# inscrito} other {# inscritos}}. Cada um aparece na faixa que tem hoje na base toda.",
         "movementNote": "Subiram e Caíram contam toda a base."
       },
       "bandMembers": {

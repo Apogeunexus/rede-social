@@ -95,9 +95,17 @@ export interface TenantOwnerPanel {
    * The six bands per community (quick 261012-pkd D-01), with the same ids and order as
    * `byCommunity`. Same band rules as `engagement`, counting only the member's actions in that
    * community. The base is who has access: the exclusive VIP = who bought it, the others = every
-   * member. Novos in an open community are the base's novos.
+   * member. Novos in an open community are the base's novos. `atRiskWithPush` is the community's em
+   * risco who have push on (quick 261012-qer A-2), named like the base's own field.
    */
-  communityEngagement: { id: string; bands: EngagementBands }[];
+  communityEngagement: { id: string; bands: EngagementBands; atRiskWithPush: number }[];
+  /**
+   * The six bands of each panel event's registrants (quick 261012-qer B-2): today's whole-base band of
+   * everyone who RSVP'd "vou", so each entry sums to the event's `confirmed`. Nobody is inactive: no
+   * fixture RSVP is older than 60 days. `newActivated` equals the novos, because an RSVP is a counted
+   * action. `atRiskWithPush` is the registrants in em risco with push on.
+   */
+  eventEngagement: { id: string; bands: EngagementBands; atRiskWithPush: number }[];
   /**
    * Band today vs 30 days ago, novos excluded: how many moved up or down, and the biggest flows
    * (`active` = any of superfã, engajado or ocasional).
@@ -220,6 +228,22 @@ export interface TenantOwnerPanel {
   };
 }
 
+/** One event's registrant bands: new, superfan, engaged, occasional, at_risk (inactive is always 0). */
+function eventBands(
+  id: string,
+  [newCount, superfan, engaged, occasional, atRisk]: [number, number, number, number, number],
+  atRiskWithPush: number,
+): TenantOwnerPanel['eventEngagement'][number] {
+  return {
+    id,
+    bands: {
+      counts: { new: newCount, superfan, engaged, occasional, at_risk: atRisk, inactive: 0 },
+      newActivated: newCount,
+    },
+    atRiskWithPush,
+  };
+}
+
 export const tenantOwnerPanel: TenantOwnerPanel = {
   attention: [
     {
@@ -269,6 +293,7 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         counts: { new: 14, superfan: 38, engaged: 61, occasional: 33, at_risk: 22, inactive: 18 },
         newActivated: 11,
       },
+      atRiskWithPush: 11,
     },
     {
       id: 'c-geral',
@@ -283,6 +308,7 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         },
         newActivated: 48,
       },
+      atRiskWithPush: 78,
     },
     {
       id: 'c-iniciantes',
@@ -290,6 +316,7 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         counts: { new: 96, superfan: 6, engaged: 38, occasional: 104, at_risk: 120, inactive: 876 },
         newActivated: 31,
       },
+      atRiskWithPush: 49,
     },
     {
       id: 'c-eventos',
@@ -297,7 +324,17 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         counts: { new: 96, superfan: 3, engaged: 22, occasional: 88, at_risk: 97, inactive: 934 },
         newActivated: 14,
       },
+      atRiskWithPush: 40,
     },
+  ],
+  eventEngagement: [
+    eventBands('u1', [14, 26, 34, 12, 6], 3),
+    eventBands('u2', [11, 12, 23, 14, 4], 2),
+    eventBands('u3', [3, 15, 16, 4, 2], 1),
+    eventBands('e4', [9, 9, 21, 17, 5], 2),
+    eventBands('e3', [6, 16, 18, 7, 3], 1),
+    eventBands('e2', [5, 28, 62, 41, 12], 5),
+    eventBands('e1', [1, 30, 45, 18, 6], 3),
   ],
   movement: {
     up: 77,

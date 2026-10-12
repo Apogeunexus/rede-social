@@ -8,6 +8,7 @@ import { Chip } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-preview';
+import type { OwnerMembersView } from '@/lib/owner-band-scope';
 import { type DashboardT, formatCount } from './format';
 import { OwnerContent } from './OwnerContent';
 import { OwnerEvents } from './OwnerEvents';
@@ -62,14 +63,14 @@ const AREAS = {
   atendimento: { labelKey: 'tenantOwner.areas.support', Area: OwnerSupport },
 } satisfies Record<OwnerArea, { labelKey: string; Area: AreaComponent }>;
 
-/** An area component; only Membros reads the community scope, the others take no props. */
-type AreaComponent = (props: { community: string | null }) => Promise<ReactNode>;
+/** An area component; only Membros reads the members view, the others ignore it. */
+type AreaComponent = (props: { members: OwnerMembersView }) => Promise<ReactNode>;
 
 export interface TenantOwnerPanelProps {
   /** The open area (allow-listed by `parseOwnerArea`). */
   area: OwnerArea;
-  /** The bands' community scope (allow-listed by `parseOwnerCommunity`); null = Toda a base. */
-  community: string | null;
+  /** The Membros area's view (allow-listed by `parseOwnerMembersView`). */
+  members: OwnerMembersView;
 }
 
 /**
@@ -79,7 +80,7 @@ export interface TenantOwnerPanelProps {
  * server component. The Membros band lists name members to the client's own team (261012-pkd D-03);
  * the bell and every other block stay counts only.
  */
-export async function TenantOwnerPanel({ area, community }: TenantOwnerPanelProps) {
+export async function TenantOwnerPanel({ area, members }: TenantOwnerPanelProps) {
   const t = await getTranslations('dashboard');
   const Area: AreaComponent = AREAS[area].Area;
 
@@ -110,7 +111,7 @@ export async function TenantOwnerPanel({ area, community }: TenantOwnerPanelProp
       </nav>
 
       <div data-owner-area={area} className="flex flex-col gap-6">
-        <Area community={community} />
+        <Area members={members} />
       </div>
     </TenantColumn>
   );

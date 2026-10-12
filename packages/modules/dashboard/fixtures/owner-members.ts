@@ -1,11 +1,11 @@
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import type { RelativeMoment } from './platform-panels';
-import type { EngagementBand } from './shared';
+import type { EngagementBand, EngagementBands } from './shared';
 import { tenantOwnerPanel } from './tenant-owner';
 
 /**
- * The level-4 band lists (quick 261012-pkd D-02): who is in each engagement band, for the whole base
- * and for each community. RAW DATA (MOD-02): a fixed name table plus a pure builder, no randomness and
+ * The level-4 band lists (quick 261012-pkd D-02): who is in each engagement band, for the whole base,
+ * for each community and for each event's registrants (quick 261012-qer B-2). RAW DATA (MOD-02): a fixed name table plus a pure builder, no randomness and
  * no clock, so every render lists the same people. One roster feeds every scope, so a member is never
  * more engaged nor more recent in a community than in the whole base.
  *
@@ -29,6 +29,12 @@ export interface OwnerBandMember {
   topCommunityId?: string;
 }
 
+/** What the bands count: the whole base, one community's members, or one event's registrants. */
+export type OwnerBandScope =
+  | { kind: 'member' }
+  | { kind: 'community'; id: string }
+  | { kind: 'event'; id: string };
+
 export interface OwnerBandList {
   members: OwnerBandMember[];
   /** The band's members not listed (the band count minus the rows). */
@@ -43,7 +49,11 @@ export interface OwnerRosterMember {
   lastActive: RelativeMoment;
   topCommunityId: string;
   communities: Record<string, { band: EngagementBand; lastActive: RelativeMoment }>;
+  /** The panel events the member RSVP'd "vou" to, oldest first. */
+  eventIds: string[];
 }
+
+type UnregisteredMember = Omit<OwnerRosterMember, 'eventIds'>;
 
 /** 12 names per band, in ENGAGEMENT_BAND_ORDER. Fictional; none is used elsewhere in the fixtures. */
 const MEMBER_NAMES = [
@@ -186,7 +196,7 @@ function at<T>(rows: readonly T[], index: number): T {
   return row;
 }
 
-function buildMember(bandIndex: number, j: number): OwnerRosterMember {
+function buildMember(bandIndex: number, j: number): UnregisteredMember {
   const i = bandIndex * PER_BAND + j;
   const band = at(ENGAGEMENT_BAND_ORDER, bandIndex);
   const time = at(TIMES, j);
@@ -222,16 +232,46 @@ function buildMember(bandIndex: number, j: number): OwnerRosterMember {
   };
 }
 
-export const ownerBandRoster: readonly OwnerRosterMember[] = ENGAGEMENT_BAND_ORDER.flatMap(
+const unregistered: readonly UnregisteredMember[] = ENGAGEMENT_BAND_ORDER.flatMap(
   (_band, bandIndex) => Array.from({ length: PER_BAND }, (_, j) => buildMember(bandIndex, j)),
 );
 
-function bandCount(communityId: string | null, band: EngagementBand): number {
-  if (communityId === null) return tenantOwnerPanel.engagement.counts[band];
-  const entry = tenantOwnerPanel.communityEngagement.find((row) => row.id === communityId);
-  if (!entry) throw new Error(`no engagement bands for community ${communityId}`);
-  return entry.bands.counts[band];
+/** The scope's six bands; an id the fixture does not have is a bug, so it throws. */
+function scopeBands(scope: OwnerBandScope): EngagementBands {
+  if (scope.kind === 'member') return tenantOwnerPanel.engagement;
+  const rows =
+    scope.kind === 'community'
+      ? tenantOwnerPanel.communityEngagement
+      : tenantOwnerPanel.eventEngagement;
+  const entry = rows.find((row) => row.id === scope.id);
+  if (!entry) throw new Error(`no engagement bands for ${scope.kind} ${scope.id}`);
+  return entry.bands;
 }
+
+const PAST_EVENTS = tenantOwnerPanel.events.past;
+const EVENTS = [...PAST_EVENTS, ...tenantOwnerPanel.events.upcoming];
+
+/** Nobody RSVPs to a past event before joining; anyone may have RSVP'd to an upcoming one. */
+function eligible(member: UnregisteredMember, event: { id: string; date: string }): boolean {
+  return !PAST_EVENTS.some((row) => row.id === event.id) || member.memberSince <= event.date;
+}
+
+/**
+ * An event's registrants in the roster, per band: the first eligible slots (ascending j) up to the
+ * band's registrant count, so every list adds up to the event's bands.
+ */
+function registers(member: UnregisteredMember, event: { id: string; date: string }): boolean {
+  const count = scopeBands({ kind: 'event', id: event.id }).counts[member.band];
+  return unregistered
+    .filter((row) => row.band === member.band && eligible(row, event))
+    .slice(0, Math.min(count, PER_BAND))
+    .some((row) => row.id === member.id);
+}
+
+export const ownerBandRoster: readonly OwnerRosterMember[] = unregistered.map((member) => ({
+  ...member,
+  eventIds: EVENTS.filter((event) => registers(member, event)).map((event) => event.id),
+}));
 
 /** Most recent first: fewer days ago, then a later clock reading, then the id. */
 function byRecency(a: OwnerBandMember, b: OwnerBandMember): number {
@@ -243,20 +283,26 @@ function byRecency(a: OwnerBandMember, b: OwnerBandMember): number {
 }
 
 /**
- * The members of `band` in a scope (null = the whole base, else a `byCommunity` id; anything else
- * throws): the `OWNER_BAND_LIST_LIMIT` most recent, with the scope's last action, and how many more
- * the band count holds. Only the whole base says where each member interacts most.
+ * The members of `band` in a scope (an id the fixture does not have throws): the
+ * `OWNER_BAND_LIST_LIMIT` most recent, with the scope's last action, and how many more the band count
+ * holds. An event's registrants sit in their whole-base band, with their whole-base last action. Only
+ * the whole base says where each member interacts most.
  */
-export function ownerBandList(communityId: string | null, band: EngagementBand): OwnerBandList {
-  const count = bandCount(communityId, band);
+export function ownerBandList(scope: OwnerBandScope, band: EngagementBand): OwnerBandList {
+  const count = scopeBands(scope).counts[band];
   const members = ownerBandRoster
     .flatMap((row): OwnerBandMember[] => {
-      if (communityId === null) {
+      if (scope.kind !== 'community') {
         if (row.band !== band) return [];
+        if (scope.kind === 'event' && !row.eventIds.includes(scope.id)) return [];
         const { id, name, memberSince, lastActive, topCommunityId } = row;
-        return [{ id, name, memberSince, lastActive, topCommunityId }];
+        return [
+          scope.kind === 'member'
+            ? { id, name, memberSince, lastActive, topCommunityId }
+            : { id, name, memberSince, lastActive },
+        ];
       }
-      const entry = row.communities[communityId];
+      const entry = row.communities[scope.id];
       if (entry?.band !== band) return [];
       return [
         { id: row.id, name: row.name, memberSince: row.memberSince, lastActive: entry.lastActive },

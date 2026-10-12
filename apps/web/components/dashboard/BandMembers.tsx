@@ -1,6 +1,7 @@
 import {
   type EngagementBand,
   type EngagementBands,
+  type OwnerBandScope,
   ownerBandList,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
@@ -25,8 +26,8 @@ import {
 export interface BandMembersProps {
   t: DashboardT;
   bands: EngagementBands;
-  /** The scope (allow-listed by `parseOwnerCommunity`); null = Toda a base. */
-  community: string | null;
+  /** The scope (allow-listed by `parseOwnerMembersView`). */
+  scope: OwnerBandScope;
 }
 
 function topCommunityLabel(t: DashboardT, id: string): string {
@@ -71,11 +72,11 @@ function BandSummary({
  * to act on); opened, the 10 most recent members of the band in the scope and how many more it holds.
  * Names reach the client's own team only (D-03).
  */
-export function BandMembers({ t, bands, community }: BandMembersProps) {
+export function BandMembers({ t, bands, scope }: BandMembersProps) {
   const total = bandTotal(bands);
   return ENGAGEMENT_BAND_ORDER.map((band) => {
     const count = bands.counts[band];
-    const { members, more } = ownerBandList(community, band);
+    const { members, more } = ownerBandList(scope, band);
     return (
       <Collapsible
         key={band}
