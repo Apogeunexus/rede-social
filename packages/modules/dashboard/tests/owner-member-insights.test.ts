@@ -205,6 +205,15 @@ describe('where the member interacts', () => {
     }
   });
 
+  it('never counts fewer actions since joining than in the last 30 days (quick 261013-orf)', () => {
+    for (const { row, insights } of ALL) {
+      const { likes, comments, checkIns, orders } = insights.last30;
+      expect(insights.communities[0]?.actions ?? 0, row.id).toBeGreaterThanOrEqual(
+        likes + comments + checkIns + orders,
+      );
+    }
+  });
+
   it('ranks the four post types', () => {
     for (const { row, insights } of ALL) {
       const types = insights.postTypes.map((entry) => entry.type);

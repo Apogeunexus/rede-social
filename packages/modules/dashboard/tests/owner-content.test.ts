@@ -15,6 +15,7 @@ import {
   ownerContentKindRetention,
   ownerContentKindVelocity,
   ownerContentPeople,
+  ownerContentUnanswered,
   ownerMemberInsights,
   tenantOwnerPanel,
 } from '../fixtures';
@@ -168,7 +169,7 @@ describe('the content items', () => {
       expect(item.reach.value, item.id).toBeLessThanOrEqual(1240);
       expect(item.views.value, item.id).toBeGreaterThanOrEqual(item.reach.value);
     }
-    expect(sum(posts, (item) => item.reach.value)).toBe(37332);
+    expect(sum(posts, (item) => item.reach.value)).toBe(23488);
     expect(Math.round(sum(posts, (item) => item.reach.value) / posts.length)).toBe(
       reach.value.perPost,
     );
@@ -607,5 +608,112 @@ describe("each publication's detail (D-06, D-08)", () => {
     }
     const op12 = ownerContentPeople('op-12', 'comments').people;
     expect(op12[0]?.answered).toBe(false);
+  });
+});
+
+describe('every people list (quick 261013-orf E-03.1)', () => {
+  /**
+   * The items published today or yesterday reach fewer active roster members than 10: their lists
+   * hold every member who could act (the ceiling), proved below to be exactly that number.
+   */
+  const CEILING: Readonly<Record<string, number>> = {
+    'op-01/likes': 2,
+    'op-01/saves': 2,
+    'op-02/likes': 6,
+    'op-03/likes': 6,
+    'op-03/comments': 6,
+    'os-01/likes': 6,
+  };
+
+  /** Active roster members who reach the item's community with an active day by its age. */
+  function eligible(item: ContentItem): number {
+    const age = daysSince(item.date);
+    return ROSTER.filter(
+      ({ row, insights }) =>
+        (item.communityId === null || row.communities[item.communityId] !== undefined) &&
+        insights.lists.activeDays.some((day) => day.when.daysAgo <= age),
+    ).length;
+  }
+
+  it('hold at least min(total, 10) people, or every member who could act', () => {
+    for (const item of ownerContentItems) {
+      for (const who of ['likes', 'comments', 'saves', 'shares'] as const) {
+        if (who === 'saves' && item.saves === null) continue;
+        const { people, total } = ownerContentPeople(item.id, who);
+        const ceiling = CEILING[`${item.id}/${who}`] ?? Number.POSITIVE_INFINITY;
+        expect(people.length, `${item.id} ${who}`).toBeGreaterThanOrEqual(
+          Math.min(total, 10, ceiling),
+        );
+        if (total > 0) expect(people.length, `${item.id} ${who}`).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('cap the recent items at the members who could act', () => {
+    for (const key of Object.keys(CEILING)) {
+      const [id = ''] = key.split('/');
+      expect(CEILING[key], key).toBe(eligible(ownerContentItem(id)));
+    }
+  });
+});
+
+describe('unanswered comments (quick 261013-orf E-02)', () => {
+  const open = ownerContentItems.filter((item) => item.comments > item.commentMeta.answered);
+
+  it('are the item’s unanswered commenters, oldest first, each with a distinct text', () => {
+    expect(open.map((item) => item.id).sort()).toEqual(
+      ['op-02', 'op-03', 'op-04', 'op-08', 'op-12', 'op-19', 'op-24'].sort(),
+    );
+    for (const item of open) {
+      const rows = ownerContentUnanswered(item.id);
+      expect(rows, item.id).toHaveLength(item.comments - item.commentMeta.answered);
+      const commenters = ownerContentPeople(item.id, 'comments').people;
+      for (const [i, row] of rows.entries()) {
+        const person = commenters.find((p) => p.id === row.person.id);
+        expect(person?.answered, `${item.id} ${row.person.id}`).toBe(false);
+        expect(row.text.trim().length, item.id).toBeGreaterThan(0);
+        expect(row.text.length, item.id).toBeLessThanOrEqual(160);
+        const before = rows[i - 1];
+        if (before) {
+          expect(before.person.when.daysAgo, item.id).toBeGreaterThanOrEqual(
+            row.person.when.daysAgo,
+          );
+        }
+      }
+      expect(new Set(rows.map((row) => row.text)).size, item.id).toBe(rows.length);
+      const hours = item.commentMeta.oldestUnansweredHours ?? 0;
+      if (hours >= 48) {
+        expect(rows[0]?.person.when.daysAgo, item.id).toBe(Math.floor(hours / 24));
+        for (const person of commenters) {
+          expect(person.when.daysAgo, `${item.id} ${person.id}`).toBeLessThanOrEqual(
+            Math.floor(hours / 24),
+          );
+        }
+      }
+    }
+  });
+
+  it('are none for an item whose comments are all answered', () => {
+    expect(ownerContentUnanswered('op-11')).toEqual([]);
+    expect(ownerContentUnanswered('os-05')).toEqual([]);
+  });
+});
+
+describe('reach without inativos (quick 261013-orf E-03.4)', () => {
+  it('never reaches inativos and keeps em risco at 10% or less', () => {
+    for (const item of ownerContentItems) {
+      const { value } = ownerContentDetail(item.id).reachByBand;
+      expect(value.inactive, item.id).toBe(0);
+      expect(value.at_risk, item.id).toBeLessThanOrEqual(item.reach.value * 0.1);
+    }
+  });
+
+  it('fits a post in the active members and a slice of em risco, views never below reach', () => {
+    for (const item of posts) {
+      expect(item.reach.value, item.id).toBeLessThanOrEqual(530);
+      expect(item.views.value, item.id).toBeGreaterThanOrEqual(item.reach.value);
+    }
+    expect(sum(posts, (item) => item.reach.value)).toBe(23488);
+    expect(reach.value.perPost).toBe(385);
   });
 });

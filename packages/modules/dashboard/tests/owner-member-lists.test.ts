@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { OwnerMemberInsights } from '../fixtures';
-import { ownerMemberInsights, tenantOwnerPanel } from '../fixtures';
+import { ownerContentItem, ownerMemberInsights, tenantOwnerPanel } from '../fixtures';
 import { daysSince, ownerBandRoster, PREVIEW_TODAY } from '../fixtures/owner-members';
 import { ownerPostTable } from '../fixtures/owner-posts';
 
@@ -135,22 +135,53 @@ describe('each member’s lists (D-07)', () => {
     }
   });
 
-  it('comment once a day on the most recent active days, on a post liked that day', () => {
+  it('comments: distinct reachable posts, each on an active day no later than the post’s age, one per post, and the count is the KPI', () => {
     for (const { row, insights } of ALL) {
-      const { comments, likes, activeDays } = insights.lists;
-      const recentDays = activeDays.slice(0, comments.length).map((day) => day.when.daysAgo);
-      expect(
-        comments.map((comment) => comment.when.daysAgo),
-        row.id,
-      ).toEqual(recentDays);
+      const { comments, activeDays } = insights.lists;
+      expect(comments, row.id).toHaveLength(insights.last30.comments);
+      expect(new Set(comments.map((comment) => comment.post.id)).size, row.id).toBe(
+        comments.length,
+      );
+      const days = new Set(activeDays.map((day) => day.when.daysAgo));
       for (const comment of comments) {
-        expect(
-          likes.some(
-            (like) =>
-              like.post.id === comment.post.id && like.when.daysAgo === comment.when.daysAgo,
-          ),
-          `${row.id} ${comment.post.id}`,
-        ).toBe(true);
+        const where = `${row.id} ${comment.post.id}`;
+        expect(Object.keys(row.communities), where).toContain(comment.post.communityId);
+        expect(comment.when.daysAgo, where).toBeLessThanOrEqual(daysSince(comment.post.date));
+        expect(days.has(comment.when.daysAgo), where).toBe(true);
+      }
+      expect(isRecentFirst(comments.map((comment) => comment.when)), row.id).toBe(true);
+    }
+  });
+
+  it('like as many posts as active days plus the band’s extras (the KPI is unchanged)', () => {
+    const extras: Record<string, (j: number) => number> = {
+      new: (j) => j % 3,
+      superfan: (j) => 12 + j,
+      engaged: (j) => 2 + j,
+      occasional: () => 0,
+    };
+    for (const { row, insights } of ALL) {
+      const extra = extras[row.band];
+      if (!extra) continue;
+      const j = ownerBandRoster.filter((other) => other.band === row.band).indexOf(row);
+      expect(insights.last30.likes, row.id).toBe(insights.last30.activeDays + extra(j));
+    }
+  });
+
+  it('every listed post has a feed kind (D-03)', () => {
+    for (const { row, insights } of ALL) {
+      const { likes, comments, strongActions, postsSeen } = insights.lists;
+      const listed = [
+        ...likes.map((like) => like.post),
+        ...comments.map((comment) => comment.post),
+        ...strongActions.flatMap((action) => (action.kind === 'comment' ? [action.post] : [])),
+        ...postsSeen.value.map((entry) => entry.post),
+      ];
+      for (const post of listed) {
+        const item = ownerContentItem(post.id);
+        expect(item.kind, `${row.id} ${post.id}`).not.toBe('story');
+        expect(item.kind === 'video', `${row.id} ${post.id}`).toBe((item.durationSeconds ?? 0) > 0);
+        expect(item.durationSeconds, `${row.id} ${post.id}`).toBe(post.durationSeconds);
       }
     }
   });
