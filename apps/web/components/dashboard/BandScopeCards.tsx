@@ -184,7 +184,9 @@ export function EventCard({
               )}
             </div>
           </div>
-          <dl className="grid grid-cols-3 divide-x divide-border border-t border-border pt-3">
+          {/* Equal columns while every value fits; a two-word value ("Sem limite") widens its own
+              column at 360 px instead of breaking onto two lines. */}
+          <dl className="grid grid-cols-[repeat(3,minmax(max-content,1fr))] divide-x divide-border border-t border-border pt-3">
             {cells.map((cell) => (
               <Cell
                 key={cell.label}
