@@ -4,6 +4,7 @@ import {
   OWNER_BAND_LIST_LIMIT,
   ownerBandIncludes,
   ownerBandList,
+  ownerScopeBands,
   tenantOwnerPanel,
   tenantStaffPanel,
 } from '../fixtures';
@@ -330,5 +331,22 @@ describe('the example daily time (quick 261012-qer B-1)', () => {
     expect(Math.min(...range('superfan'))).toBeGreaterThan(Math.max(...range('occasional')));
     expect(Math.min(...range('engaged'))).toBeGreaterThan(Math.max(...range('at_risk')));
     expect(range('inactive').every((value) => value === 0)).toBe(true);
+  });
+});
+
+describe('ownerScopeBands (quick 261012-tru)', () => {
+  it('returns the whole base, a community entry or an event entry', () => {
+    expect(ownerScopeBands({ kind: 'member' })).toBe(engagement);
+    for (const row of communityEngagement) {
+      expect(ownerScopeBands({ kind: 'community', id: row.id }), row.id).toBe(row.bands);
+    }
+    for (const row of eventEngagement) {
+      expect(ownerScopeBands({ kind: 'event', id: row.id }), row.id).toBe(row.bands);
+    }
+  });
+
+  it('throws for an id the fixture does not have', () => {
+    expect(() => ownerScopeBands({ kind: 'community', id: 'c-xyz' })).toThrow();
+    expect(() => ownerScopeBands({ kind: 'event', id: 'x9' })).toThrow();
   });
 });

@@ -333,6 +333,8 @@ describe('D-03: the example values of level 4', () => {
         'store.renewal',
         'store.conversion',
         'support.bySubject',
+        ...[0, 1, 2, 3].map((i) => `events.past.${i}.ticketCents`),
+        ...[0, 1, 2].map((i) => `events.upcoming.${i}.ticketCents`),
       ].sort(),
     );
     for (const item of found) expect(typeof item.reason).toBe('string');
@@ -636,6 +638,42 @@ describe('engagement by event registrants (Membros, quick 261012-qer B-2)', () =
       expect(Number.isInteger(scope.push), scope.id).toBe(true);
       expect(scope.push, scope.id).toBeGreaterThanOrEqual(0);
       expect(scope.push, scope.id).toBeLessThanOrEqual(scope.atRisk);
+    }
+  });
+});
+
+describe('scope cards (quick 261012-tru D-03, D-04)', () => {
+  const { communityEngagement, weeklyInteracting } = tenantOwnerPanel;
+
+  it('gives each community its own description and its members active in the week', () => {
+    expect(byCommunity.map((row) => row.activeWeek)).toEqual([104, 296, 92, 41]);
+    const lastWeek = weeklyInteracting.current.at(-1) ?? 0;
+    for (const row of byCommunity) {
+      expect(row.description.trim().length, row.id).toBeGreaterThan(0);
+      const bands = communityEngagement.find((entry) => entry.id === row.id)?.bands;
+      if (!bands) throw new Error(`no bands for ${row.id}`);
+      const { new: newCount, superfan, engaged, occasional } = bands.counts;
+      expect(row.activeWeek, row.id).toBeGreaterThanOrEqual(superfan);
+      expect(row.activeWeek, row.id).toBeLessThanOrEqual(
+        Math.min(newCount + superfan + engaged + occasional, lastWeek),
+      );
+    }
+    expect(new Set(byCommunity.map((row) => row.description)).size).toBe(byCommunity.length);
+  });
+
+  it('gives every event its measured duration and an example ticket price', () => {
+    const all = [...events.past, ...events.upcoming];
+    const duration = Object.fromEntries(all.map((row) => [row.id, row.durationMinutes]));
+    expect(duration).toEqual({ e1: 180, e2: 60, e3: 240, e4: 90, u1: 180, u2: 60, u3: 480 });
+    const ticket = Object.fromEntries(all.map((row) => [row.id, row.ticketCents.value]));
+    expect(ticket).toEqual({ e1: 6000, e2: 0, e3: 12000, e4: 0, u1: 6000, u2: 0, u3: 35000 });
+    for (const row of all) {
+      expect(row.ticketCents, row.id).toMatchObject({
+        example: true,
+        reason: 'needs_event_tickets',
+      });
+      if (row.format === 'online') expect(row.ticketCents.value, row.id).toBe(0);
+      else expect(row.ticketCents.value, row.id).toBeGreaterThan(0);
     }
   });
 });

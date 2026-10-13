@@ -1,11 +1,12 @@
 // @vitest-environment happy-dom
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { EngagementBands, OwnerBandScope } from '@rede-social/module-dashboard/fixtures';
+import type { EngagementBands } from '@rede-social/module-dashboard/fixtures';
 import { tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMessages } from '@/i18n/messages';
+import type { OwnerMembersView } from '@/lib/owner-band-scope';
 import { BandMembers } from './BandMembers';
 import type { DashboardT } from './format';
 
@@ -30,8 +31,11 @@ const t = createTranslator({
   namespace: 'dashboard',
 } as never) as unknown as DashboardT;
 
-const MEMBER: OwnerBandScope = { kind: 'member' };
-const EVENTOS: OwnerBandScope = { kind: 'community', id: 'c-eventos' };
+type BandView = Pick<OwnerMembersView, 'kind' | 'band' | 'itemId'>;
+
+const MEMBER: BandView = { kind: 'member', band: null, itemId: null };
+const COMMUNITIES: BandView = { kind: 'community', band: null, itemId: null };
+const AREA = '/painel-preview/dono-do-cliente?area=membros';
 
 function eventosBands(): EngagementBands {
   const entry = tenantOwnerPanel.communityEngagement.find((row) => row.id === 'c-eventos');
@@ -39,8 +43,8 @@ function eventosBands(): EngagementBands {
   return entry.bands;
 }
 
-function renderBands(bands: EngagementBands, scope: OwnerBandScope) {
-  const { container } = render(<BandMembers t={t} bands={bands} scope={scope} openBand={null} />);
+function renderBands(bands: EngagementBands, view: BandView) {
+  const { container } = render(<BandMembers t={t} bands={bands} view={view} />);
   return container;
 }
 
@@ -148,7 +152,7 @@ describe('R-2 (quick 261012-ri4): one example pill per list', () => {
 
 describe('A-1: a share that rounds to 0% with members', () => {
   it('reads "menos de 1%" and keeps a visible bar', () => {
-    const container = renderBands(eventosBands(), EVENTOS);
+    const container = renderBands(eventosBands(), COMMUNITIES);
     const superfans = band(container, 'Superfãs');
     expect(superfans.querySelector('summary')?.textContent).toContain('3 · menos de 1%');
     expect(band(container, 'Novos').querySelector('summary')?.textContent).toContain('96 · 8%');
@@ -174,7 +178,11 @@ describe('A-3: a band over 10 says the list is capped', () => {
   });
 
   it('says nothing of a cap when the band fits', () => {
-    const container = renderBands(eventosBands(), EVENTOS);
+    const container = renderBands(tenantOwnerPanel.engagement, {
+      kind: 'community',
+      band: 'superfan',
+      itemId: 'c-eventos',
+    });
     const superfans = band(container, 'Superfãs');
     expect(superfans.querySelectorAll('li')).toHaveLength(3);
     expect(superfans.textContent).not.toContain('Os 10 com atividade mais recente');
@@ -200,5 +208,101 @@ describe('A-4: a band with no members', () => {
     expect(atRisk.querySelectorAll('li')).toHaveLength(0);
     expect(atRisk.querySelectorAll('button')).toHaveLength(0);
     expect(atRisk.textContent).not.toContain('exemplo');
+  });
+});
+
+/** The dd next to a card's dt `label`. */
+function cell(root: Element, label: string): string | undefined {
+  const term = [...root.querySelectorAll('dt')].find((el) => el.textContent?.trim() === label);
+  return term?.nextElementSibling?.textContent?.trim();
+}
+
+describe('D-02/D-03 (quick 261012-tru): a band opened in Por comunidade lists community cards', () => {
+  const container = () =>
+    renderBands(tenantOwnerPanel.engagement, { kind: 'community', band: 'engaged', itemId: null });
+
+  it('shows the four communities, each a linked card with a 16:7 cover and its band count', () => {
+    const engaged = band(container(), 'Engajados');
+    const items = [...engaged.querySelectorAll('li')];
+    expect(items).toHaveLength(4);
+    const slugs = ['vip', 'geral', 'iniciantes', 'eventos'];
+    for (const [i, count] of [61, 150, 38, 22].entries()) {
+      const item = items[i];
+      if (!item) throw new Error(`no card ${i}`);
+      expect(item.querySelectorAll('[data-geometry="card"]'), String(i)).toHaveLength(1);
+      expect(exactly(item, `${count} nesta faixa`).length, String(i)).toBeGreaterThan(0);
+      expect(item.querySelector('a')?.getAttribute('href')).toBe(
+        `${AREA}&recorte=comunidade&comunidade=${slugs[i]}&faixa=engajados#faixas`,
+      );
+    }
+  });
+
+  it('draws the VIP card as designed: name, description, four columns and the note', () => {
+    const [vip] = band(container(), 'Engajados').querySelectorAll('li');
+    if (!vip) throw new Error('no VIP card');
+    const [name] = exactly(vip, 'Comunidade VIP');
+    expect(name?.classList.contains('text-xl')).toBe(true);
+    expect(name?.classList.contains('font-bold')).toBe(true);
+    expect(cell(vip, 'Membros')).toBe('186');
+    expect(cell(vip, 'Ativos na semana')).toBe('104');
+    expect(cell(vip, 'Publicações no mês')).toBe('22');
+    expect(cell(vip, 'Interações no mês')).toBe('1.650');
+    expect(vip.textContent).toContain('Interações: comentários e curtidas');
+    expect(vip.textContent).toContain('Aulas, lives e materiais exclusivos para quem é VIP.');
+  });
+});
+
+describe('D-02/D-04 (quick 261012-tru): a band opened in Por evento lists event cards', () => {
+  it('shows the seven events with a 16:10 cover and one revenue example line', () => {
+    const engaged = band(
+      renderBands(tenantOwnerPanel.engagement, { kind: 'event', band: 'engaged', itemId: null }),
+      'Engajados',
+    );
+    expect(engaged.querySelectorAll('li')).toHaveLength(7);
+    expect(engaged.querySelectorAll('[data-geometry="hero"]')).toHaveLength(7);
+    expect(exactly(engaged, 'exemplo')).toHaveLength(1);
+    expect((engaged.textContent ?? '').split('Receita: valores de exemplo')).toHaveLength(2);
+    const [u1] = engaged.querySelectorAll('li');
+    if (!u1) throw new Error('no u1 card');
+    expect(u1.textContent).toContain('Encontro mensal');
+    expect(u1.textContent).toContain('Presencial');
+    expect(cell(u1, 'Data')).toBe('12/10');
+    expect(cell(u1, 'Duração')).toBe('3h00');
+    expect(cell(u1, 'Receita')).toMatch(/^R\$\s?5,5\s?mil$/);
+    expect(exactly(u1, '34 nesta faixa').length).toBeGreaterThan(0);
+  });
+
+  it('leaves a card with nobody in the band unlinked', () => {
+    const inactive = band(
+      renderBands(tenantOwnerPanel.engagement, { kind: 'event', band: 'inactive', itemId: null }),
+      'Inativos',
+    );
+    const items = [...inactive.querySelectorAll('li')];
+    expect(items).toHaveLength(7);
+    for (const item of items) expect(exactly(item, '0 nesta faixa').length).toBeGreaterThan(0);
+    expect(inactive.querySelectorAll('a')).toHaveLength(0);
+  });
+});
+
+describe('D-05 (quick 261012-tru): an opened community lists its members in the band', () => {
+  it('goes back to the cards, shows the unlinked card, then the members', () => {
+    const engaged = band(
+      renderBands(tenantOwnerPanel.engagement, {
+        kind: 'community',
+        band: 'engaged',
+        itemId: 'c-vip',
+      }),
+      'Engajados',
+    );
+    const back = [...engaged.querySelectorAll('a')].find(
+      (el) => el.textContent?.trim() === 'Voltar às comunidades',
+    );
+    expect(back?.getAttribute('href')).toBe(`${AREA}&recorte=comunidade&faixa=engajados#faixas`);
+    const covers = [...engaged.querySelectorAll('[data-geometry="card"]')];
+    expect(covers).toHaveLength(1);
+    expect(covers[0]?.closest('a')).toBeNull();
+    expect(engaged.querySelectorAll('li')).toHaveLength(10);
+    expect(engaged.textContent).toContain('e mais 51 membros');
+    expect(engaged.textContent).toContain('Engajados em Comunidade VIP');
   });
 });
