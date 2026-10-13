@@ -336,3 +336,68 @@ describe('memberActivityLists (D-05)', () => {
     for (const post of memberPostTable) expect(COMMUNITIES).toContain(post.community);
   });
 });
+
+describe('memberPostTable kinds (quick 261013-orf D-03)', () => {
+  const FEED_KINDS = ['video', 'photo', 'carousel', 'text', 'link'];
+  const byId = new Map(memberPostTable.map((post) => [post.id, post]));
+
+  it('every post has a feed kind, and only videos carry a length', () => {
+    for (const post of memberPostTable) {
+      expect(FEED_KINDS).toContain(post.kind);
+      if (post.kind === 'video') {
+        expect(Number.isInteger(post.durationSeconds)).toBe(true);
+        expect(post.durationSeconds).toBeGreaterThan(0);
+      } else {
+        expect(post.durationSeconds).toBeNull();
+      }
+    }
+  });
+
+  it('splits 23 videos, 16 texts, 7 carousels, 7 photos and 7 links', () => {
+    expect(countBy(memberPostTable, (post) => post.kind)).toEqual({
+      video: 23,
+      text: 16,
+      carousel: 7,
+      photo: 7,
+      link: 7,
+    });
+  });
+
+  it('every list row carries the kind and length of the table post with the same id', () => {
+    const rows = [
+      ...memberActivityLists.likes.value,
+      ...memberActivityLists.saves.value,
+      ...memberActivityLists.shares.value,
+      ...memberActivityLists.posts.value,
+      ...memberActivityLists.comments.value.map((comment) => comment.post),
+    ];
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const post = byId.get(row.id);
+      expect(post).toBeDefined();
+      expect(row.kind).toBe(post?.kind);
+      expect(row.durationSeconds).toBe(post?.durationSeconds);
+    }
+  });
+
+  it('a post and the video list row of the same video share the length', () => {
+    const videos = new Map(memberActivityLists.videos.value.map((video) => [video.id, video]));
+    const pairs = [
+      ['p01', 'v01'],
+      ['p02', 'v09'],
+      ['p05', 'v02'],
+      ['p07', 'v04'],
+      ['p08', 'v03'],
+      ['p09', 'v06'],
+      ['p15', 'v11'],
+      ['p21', 'v23'],
+      ['p28', 'v05'],
+      ['p38', 'v22'],
+      ['p57', 'v40'],
+    ] as const;
+    for (const [postId, videoId] of pairs) {
+      expect(byId.get(postId)?.kind).toBe('video');
+      expect(byId.get(postId)?.durationSeconds).toBe(videos.get(videoId)?.durationSeconds);
+    }
+  });
+});
