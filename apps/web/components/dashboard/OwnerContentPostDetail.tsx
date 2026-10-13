@@ -61,8 +61,9 @@ export function isInProgress(item: ContentItem): boolean {
   return daysSince(item.date) < COMPARABLE_AFTER_DAYS;
 }
 
+/** "dos vídeos", "das fotos": the kind with its article, for "a média …". */
 function kindsLabel(t: DashboardT, item: ContentItem): string {
-  return t(`tenantOwner.content.kindsPlural.${item.kind}`);
+  return t(`tenantOwner.content.kindsOf.${item.kind}`);
 }
 
 /** The detail's header (D-06): the cover, the whole caption, the meta, and how it did. */

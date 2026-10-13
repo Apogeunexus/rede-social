@@ -705,13 +705,21 @@
           "link": "Link",
           "story": "Story"
         },
-        "kindsPlural": {
-          "video": "vídeos",
-          "photo": "fotos",
-          "carousel": "carrosséis",
-          "text": "textos",
-          "link": "links",
-          "story": "stories"
+        "kindsOf": {
+          "video": "dos vídeos",
+          "photo": "das fotos",
+          "carousel": "dos carrosséis",
+          "text": "dos textos",
+          "link": "dos links",
+          "story": "dos stories"
+        },
+        "kindsThe": {
+          "video": "Os vídeos",
+          "photo": "As fotos",
+          "carousel": "Os carrosséis",
+          "text": "Os textos",
+          "link": "Os links",
+          "story": "Os stories"
         },
         "card": {
           "meta": "{date} · {community} · {kind}",
@@ -744,7 +752,7 @@
           },
           "open": "Ver publicações",
           "back": "Voltar aos tipos",
-          "postsOf": "Os {kinds}, da melhor para a pior publicação"
+          "postsOf": "Publicações deste tipo, da melhor para a pior"
         },
         "posts": {
           "title": "Todas as publicações",
@@ -753,7 +761,7 @@
         "detail": {
           "back": "Voltar",
           "interactions": "{count, plural, one {{value} interação} other {{value} interações}}",
-          "vsKind": "{ratio}× a média dos {kinds}",
+          "vsKind": "{ratio}× a média {kinds}",
           "inProgress": "Em andamento",
           "interactionsTitle": "Interações",
           "velocity": {
@@ -762,7 +770,7 @@
             "label": "Curtidas e comentários acumulados nas primeiras 48 horas, desta publicação e da média do tipo",
             "hour": "{hours} h",
             "current": "Esta publicação",
-            "average": "Média dos {kinds}",
+            "average": "Média {kinds}",
             "inProgress": "Ainda nas primeiras 48 horas: o gráfico aparece quando elas terminarem."
           },
           "reach": {
@@ -797,11 +805,11 @@
               "action": "Enviar push"
             },
             "series": {
-              "detail": "Teve {ratio}× a média dos {kinds}: repita o tema como série, {day} às {from}h.",
+              "detail": "Teve {ratio}× a média {kinds}: repita o tema como série, {day} às {from}h.",
               "action": "Planejar série"
             },
             "reel": {
-              "detail": "Ficou em {ratio}× a média dos {kinds}: transforme em um reel de até 90 segundos e publique {day} às {from}h.",
+              "detail": "Ficou em {ratio}× a média {kinds}: transforme em um reel de até 90 segundos e publique {day} às {from}h.",
               "action": "Criar reel"
             }
           },
@@ -920,12 +928,12 @@
             },
             "schedule": {
               "title": "Publique no melhor horário",
-              "detail": "Os {kinds} rendem mais ({perPost} interações por post) e {day}, {from}h–{to}h, é o melhor horário ({best} por publicação).",
+              "detail": "{kinds} rendem mais ({perPost} interações por post) e {day}, {from}h–{to}h, é o melhor horário ({best} por publicação).",
               "action": "Agendar publicação"
             },
             "series": {
               "title": "Transforme a melhor em série",
-              "detail": "“{excerpt}” teve {count} interações, {ratio}× a média dos {kinds}. Faça uma série com o mesmo tema.",
+              "detail": "“{excerpt}” teve {count} interações, {ratio}× a média {kinds}. Faça uma série com o mesmo tema.",
               "action": "Criar série"
             }
           }

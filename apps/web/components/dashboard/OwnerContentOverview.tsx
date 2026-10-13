@@ -435,7 +435,7 @@ function NextSteps({ t }: { t: DashboardT }) {
         icon={CalendarClock}
         title={t(`${key}.schedule.title`)}
         detail={t(`${key}.schedule.detail`, {
-          kinds: t(`tenantOwner.content.kindsPlural.${kind}`),
+          kinds: t(`tenantOwner.content.kindsThe.${kind}`),
           perPost: formatCount(kindAverage(kind)),
           day: t(`tenantOwner.content.weekday.${slot.weekday}`).toLowerCase(),
           from: slot.fromHour,
@@ -451,7 +451,7 @@ function NextSteps({ t }: { t: DashboardT }) {
           excerpt: best.excerpt,
           count: formatCount(interactionsOf(best)),
           ratio: formatDecimal(interactionsOf(best) / kindAverage(best.kind), 1),
-          kinds: t(`tenantOwner.content.kindsPlural.${best.kind}`),
+          kinds: t(`tenantOwner.content.kindsOf.${best.kind}`),
         })}
         action={<PreviewAction variant="outline">{t(`${key}.series.action`)}</PreviewAction>}
       />

@@ -255,9 +255,9 @@ describe('parseOwnerContentView: the overview numbers and bands (D-02)', () => {
   });
 
   it('a member comes from who interacted, or from that band', () => {
-    const any = firstInteractor(null);
-    expect(parseOwnerContentView({ numero: 'membros', membro: any })).toEqual(
-      view({ number: 'members', memberId: any }),
+    const interactor = firstInteractor(null);
+    expect(parseOwnerContentView({ numero: 'membros', membro: interactor })).toEqual(
+      view({ number: 'members', memberId: interactor }),
     );
     const atRisk = ownerBandRoster.find((row) => row.band === 'at_risk')?.id;
     expect(parseOwnerContentView({ numero: 'membros', membro: atRisk })).toEqual(
@@ -271,10 +271,10 @@ describe('parseOwnerContentView: the overview numbers and bands (D-02)', () => {
     expect(parseOwnerContentView({ faixa: 'engajados', membro: superfan })).toEqual(
       view({ band: 'engaged' }),
     );
-    expect(parseOwnerContentView({ numero: 'taxa', membro: any })).toEqual(
+    expect(parseOwnerContentView({ numero: 'taxa', membro: interactor })).toEqual(
       view({ number: 'rate' }),
     );
-    expect(parseOwnerContentView({ membro: any })).toEqual(EMPTY);
+    expect(parseOwnerContentView({ membro: interactor })).toEqual(EMPTY);
     expect(OWNER_BAND_SLUGS.engaged).toBe('engajados');
   });
 

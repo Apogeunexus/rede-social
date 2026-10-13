@@ -136,9 +136,7 @@ export function OwnerContentTypes({ t, view }: { t: DashboardT; view: OwnerConte
         <BackLink href={back} label={t(`${KEY}.types.back`)} />
         <MetricsNote t={t} />
         <KindCard t={t} kind={kind} href={null} />
-        <p className="text-sm font-bold text-text">
-          {t(`${KEY}.types.postsOf`, { kinds: t(`${KEY}.kindsPlural.${kind}`) })}
-        </p>
+        <p className="text-sm font-bold text-text">{t(`${KEY}.types.postsOf`)}</p>
         <ContentPostList
           t={t}
           items={[...itemsOfKind(kind)].sort(byInteractions)}
