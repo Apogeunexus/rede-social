@@ -87,10 +87,13 @@ one per row (261012-oxi C-3):
 
 | Metric | Source today | What must be collected (reason) |
 |---|---|---|
-| Salvamentos (posts que mais renderam) | none | Saves per post (`needs_saves`) |
-| Compartilhamentos (posts que mais renderam) | none | Shares per post (`needs_shares`) |
-| Alcance por post | none | Post views per member (`needs_post_views`) |
-| % assistido e conclusão (vídeos e reels) | none | Video playback per member (`needs_video_playback`) |
+| Salvamentos (cartões e detalhe da publicação) | none | Saves per post (`needs_saves`) |
+| Compartilhamentos (cartões e detalhe da publicação) | none | Shares per post (`needs_shares`) |
+| Alcance e visualizações por publicação, alcance por faixa, taxa de engajamento | none | Post views per member (`needs_post_views`), kept only to count (P3) |
+| % assistido, retenção do vídeo | none | Video playback per member (`needs_video_playback`) |
+| Até o último cartão (carrossel) | none | How far each member swiped a gallery (`needs_gallery_swipes`) |
+| Cliques no link | none | Link clicks per post (`needs_link_clicks`) |
+| Toques no story (avançaram, voltaram, saíram) | none | Story taps per viewer (`needs_story_taps`) |
 | Lista de espera | only `events.capacity` (no waiting list) | A waiting list per full event: who joined it, who got a seat, who came (`needs_waitlist`) |
 | Acessos que vencem em 7 dias, taxa de renovação | the `store` access `expires_at` column, never set | Fill `expires_at` when a time-limited access is granted (`needs_access_expiry`) |
 | Conversão por produto | none | Product page visits (`needs_product_page_views`) |
@@ -110,6 +113,11 @@ one per row (261012-oxi C-3):
 | Cartão de comunidade | `communities.description`, access (the base), members with a counted action in the community in the last 7 days, the 30-day posts and their likes + comments (the Conteúdo numbers) | measured |
 | Cartão de evento | `events.starts_at` (data) and `ends_at` − `starts_at` (duração); receita = RSVPs "vou" × the ticket price | measured + receita example |
 | Insights do membro | one member's counted actions, RSVPs and check-ins, paid orders and support conversation counts; daily time, posts seen and access expiry are examples | measured + examples |
+| Tipo de publicação (Conteúdo) | SPEC §2.3: `feed_posts.media_kind` video; gallery with 1 `feed_post_media` row = foto, 2+ = carrossel; `none` with a link preview = link, else texto; a `stories` row = story | measured |
+| Curtidas e comentários por publicação, e quem curtiu ou comentou | `feed_posts.like_count` / `comment_count` and `feed_likes` / `feed_comments` per member (`stories.like_count` / replies for a story) | measured |
+| Comentários respondidos pela equipe e 1ª resposta | the staff replies under each comment (author role) and their time | measured |
+| Reativados, inscrições, vendas e assinaturas da vitrine até 7 dias | the same member's counted actions, RSVPs "vou", paid orders and VIP purchases within 7 days after interacting with the publication | measured association, not cause |
+| Visualizações únicas de story | aggregate `story_views` (totals only, never who viewed) | measured |
 
 #### Faixas por comunidade e membros de cada faixa (261012-pkd, 261012-qer, 261012-tru)
 
@@ -238,7 +246,53 @@ sees each member's individual behavior, including those posts. Platform levels 1
 only. Only `OwnerMemberDetail.tsx` and `OwnerMemberList.tsx` read `ownerMemberInsights`, and only
 `BandMembers.tsx` reads `ownerBandList`.
 
+#### Conteúdo (261013-h51)
+
+The Conteúdo area is one cascade of plain links in three equal tabs, as Membros: **Visão geral**,
+**Por tipo** and **Publicações** (`?vista=` none, `tipos`, `publicacoes`), one row and no period
+selector (30 days against the 30 before). The params, in order: `vista`, `numero` (an overview
+number: `publicacoes`, `interacoes`, `taxa`, `membros`, `visualizacoes`, `alcance`), `faixa` (a band
+of "Quem interage" with interactors), `tipo` (`video`, `foto`, `carrossel`, `texto`, `link`,
+`story`), `post`, `quem` (`curtidas`, `comentarios`, `salvamentos`, `compartilhamentos`; there is no
+views or reach value), `membro` and `lista`. `apps/web/lib/owner-content-view.ts` reads them level by
+level: each is an exact, single, allow-listed value that the opened list holds (a post of the opened
+type, a member of the opened people through `ownerContentIncludes` / `ownerContentInteractorIncludes`),
+and anything else falls one level up, never to an error. Every deeper step has a "Voltar" to the exact
+previous URL, landing on the card or number it closed. A member opens the same `MemberCard`,
+`OwnerMemberDetail` and `OwnerMemberList` as Membros.
+
+Data: `fixtures/owner-content.ts` holds the 61 posts of `owner-posts.ts` (now with likes, comments
+and media) and 16 stories, the people behind each number (the inverse of the roster's insights lists,
+so a member's like and a post's liker are one fact), the overview aggregates and each publication's
+detail; `tests/owner-content.test.ts` proves the sums and both directions. Only
+`OwnerContentPeople.tsx` reads `ownerContentPeople`, `ownerContentInteractors` and
+`ownerContentInteractions`.
+
+Planner decisions:
+
+- PD-1 Reel is folded into Vídeo; stories are the sixth type only in Por tipo; the numbers and lists count the 61 feed posts.
+- PD-2 The cover takes the feed's ratio (video 9:16–1.91, gallery 4:5–1.91, link 16:9, story 9:16, no cover for text), capped in height by narrowing it.
+- PD-3 The tab row shows on the tab screens (an opened type or band included); deeper steps replace the area under a "Voltar".
+- PD-4 Post dates do not model the weekday and slot split; the heatmap is its own aggregate (rows and columns add up to `byWeekday` / `bySlot`).
+- PD-5 Quem interage uses today's band; em risco and inativos are 0 by definition; the percent is the share of the band that interacted.
+- PD-6 The heatmap tint is `heatBucket` of the min–max-normalized value, so only the best cell is solid.
+- PD-7 The Interações list is the interactions themselves (who, band, liked or commented, which publication, when).
+- PD-8 Saves and shares people are example subsets of the likers; story likers and repliers are picked from the active roster.
+- PD-9 A comment's text is never shown; the commenters list puts the unanswered first.
+- PD-10 Any order count under 5, zero included, reads "menos de 5 pedidos" with no value.
+- PD-11 Canais left Conteúdo with nothing moved: the panel's Visão geral already has one number per area.
+- PD-12 Taxa de engajamento = likes + comments ÷ the reach of the 61 posts (an example, because the reach is).
+
 #### Para quando os dados reais forem ligados
+
+**Privacy of Conteúdo (261013-h51 D-07, user decisions, next to the notice above).**
+
+- P1: the names of who liked or commented on a publication are shown at level 4 only, to the client's
+  team, as in Membros; platform levels 1–3 keep aggregates only. The privacy notice must say so.
+- P2: revenue per publication is shown only from 5 orders on; below that it reads "menos de 5
+  pedidos", with no value.
+- P3: views per member are recorded only to count them, never to list who viewed; they are kept 90
+  days. No views or reach number opens a list of people (the parser has no such `quem` value).
 
 Notes from the 261012-oxi review, for the change that replaces the fixture with API answers.
 
@@ -246,8 +300,8 @@ Empty lists (C-7, not implemented). The fixture always has rows, so no level-4 b
 state yet. Once real data is wired, each of these blocks needs a pt-BR sentence for "no rows" that
 says what will appear there and when. What each one renders today with no rows:
 
-- **Posts que mais renderam** (`OwnerContent`): an empty card; the example note line also hides,
-  because it only shows while a post's saves or shares are examples.
+- **Conteúdo** (`OwnerContent*`): the publication lists, the people lists and Precisa de atenção
+  already have their empty sentence; the trend, the heatmap and the type cards still assume rows.
 - **Próximos eventos** (`OwnerEvents`, `ResponsiveTable`): on a phone, nothing under the heading; at
   `@3xl`, a table with its column headers and no body rows.
 - **Lista de espera** (`OwnerEvents`): "0 pessoa entrou na espera de 0 evento lotado" (pt-BR plural
