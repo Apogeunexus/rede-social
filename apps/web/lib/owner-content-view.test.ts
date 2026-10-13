@@ -14,6 +14,7 @@ import {
   CONTENT_WHO_SLUGS,
   contentBackHref,
   contentCoverRatio,
+  contentRecommendation,
   type OwnerContentView,
   ownerContentHref,
   parseOwnerContentView,
@@ -420,5 +421,31 @@ describe('contentCoverRatio (PD-2, the feed ratios)', () => {
     expect(contentCoverRatio(item('link', null))).toBeCloseTo(16 / 9);
     expect(contentCoverRatio(item('story', { width: 1080, height: 1920 }))).toBeCloseTo(9 / 16);
     expect(contentCoverRatio(item('text', null))).toBeNull();
+  });
+});
+
+describe('contentRecommendation (the deterministic rule of D-06)', () => {
+  const base = { kind: 'video' as const, kindAverage: 96, daysAgo: 10, durationSeconds: 1500 };
+
+  it('pushes a publication still in its first 48 hours', () => {
+    expect(contentRecommendation({ ...base, interactions: 500, daysAgo: 1 })).toBe('push');
+  });
+
+  it('turns a publication 1,5× its kind into a series', () => {
+    expect(contentRecommendation({ ...base, interactions: 144 })).toBe('series');
+  });
+
+  it('pushes a story or a short video', () => {
+    expect(
+      contentRecommendation({ ...base, kind: 'story', interactions: 30, durationSeconds: null }),
+    ).toBe('push');
+    expect(contentRecommendation({ ...base, interactions: 100, durationSeconds: 58 })).toBe('push');
+  });
+
+  it('turns anything else into a reel', () => {
+    expect(contentRecommendation({ ...base, interactions: 100 })).toBe('reel');
+    expect(
+      contentRecommendation({ ...base, kind: 'text', interactions: 40, kindAverage: 48 }),
+    ).toBe('reel');
   });
 });

@@ -11,6 +11,9 @@ import {
   ownerContentItem,
   ownerContentItems,
   ownerContentKindMetric,
+  ownerContentDetail,
+  ownerContentKindRetention,
+  ownerContentKindVelocity,
   ownerContentPeople,
   ownerMemberInsights,
   tenantOwnerPanel,
@@ -268,7 +271,10 @@ describe('the people behind each number (P1)', () => {
           expect(person.band, person.id).toBe(row?.band);
           expect(person.name, person.id).toBe(row?.name);
           const before = people[i - 1];
-          if (before) expect(before.when.daysAgo, item.id).toBeLessThanOrEqual(person.when.daysAgo);
+          // Comments put the unanswered first (D-06), then most recent; likes are most recent first.
+          if (before && Boolean(before.answered) === Boolean(person.answered)) {
+            expect(before.when.daysAgo, item.id).toBeLessThanOrEqual(person.when.daysAgo);
+          }
         }
       }
     }
@@ -457,3 +463,149 @@ describe('who interacts and the interactions (D-02, PD-5, PD-7)', () => {
 function sumOf<T extends Record<K, number>, K extends string>(rows: readonly T[], key: K): number {
   return rows.reduce((total, row) => total + row[key], 0);
 }
+
+describe("each publication's detail (D-06, D-08)", () => {
+  const { engagement, store, events } = tenantOwnerPanel;
+  const ALL_EVENTS = [...events.past, ...events.upcoming];
+  const unit = (id: string) => {
+    const product = store.products.find((row) => row.id === id);
+    if (!product || product.orders === 0) throw new Error(`no unit price for ${id}`);
+    return product.cents / product.orders;
+  };
+
+  it("has a non-decreasing 48-hour curve under its interactions, and its kind's", () => {
+    for (const item of ownerContentItems) {
+      const { velocity48h } = ownerContentDetail(item.id);
+      expect(velocity48h, item.id).toHaveLength(8);
+      for (const [i, value] of velocity48h.entries()) {
+        expect(value, item.id).toBeGreaterThanOrEqual(velocity48h[i - 1] ?? 0);
+      }
+      expect(velocity48h.at(-1) ?? 0, item.id).toBeLessThanOrEqual(item.likes + item.comments);
+    }
+    for (const kind of CONTENT_KIND_ORDER) {
+      const curve = ownerContentKindVelocity(kind);
+      expect(curve, kind).toHaveLength(8);
+      for (const [i, value] of curve.entries()) {
+        expect(value, kind).toBeGreaterThanOrEqual(curve[i - 1] ?? 0);
+      }
+    }
+  });
+
+  it('splits its reach by band within each band', () => {
+    for (const item of ownerContentItems) {
+      const { reachByBand } = ownerContentDetail(item.id);
+      expect(reachByBand.example, item.id).toBe(item.reach.example);
+      const values = Object.values(reachByBand.value);
+      expect(
+        values.reduce((a, b) => a + b, 0),
+        item.id,
+      ).toBe(item.reach.value);
+      for (const band of ENGAGEMENT_BAND_ORDER) {
+        expect(reachByBand.value[band], `${item.id} ${band}`).toBeLessThanOrEqual(
+          engagement.counts[band],
+        );
+      }
+    }
+  });
+
+  it('has a retention curve on videos and taps on stories only, as examples', () => {
+    for (const item of ownerContentItems) {
+      const { retention, navigation } = ownerContentDetail(item.id);
+      if (item.kind === 'video') {
+        expect(retention, item.id).toMatchObject({ example: true, reason: 'needs_video_playback' });
+        const curve = retention?.value ?? [];
+        expect(curve, item.id).toHaveLength(11);
+        expect(curve[0], item.id).toBe(100);
+        for (const [i, value] of curve.entries()) {
+          expect(value, item.id).toBeLessThanOrEqual(curve[i - 1] ?? 100);
+        }
+      } else {
+        expect(retention, item.id).toBeNull();
+      }
+      if (item.kind === 'story') {
+        expect(navigation, item.id).toMatchObject({ example: true, reason: 'needs_story_taps' });
+      } else {
+        expect(navigation, item.id).toBeNull();
+      }
+    }
+    const average = ownerContentKindRetention();
+    expect(average).toHaveLength(11);
+    expect(average[0]).toBe(100);
+  });
+
+  it('keeps what only the app knows coherent with the panel', () => {
+    let vitrine = 0;
+    for (const item of ownerContentItems) {
+      const detail = ownerContentDetail(item.id);
+      expect(detail.reactivated, item.id).toBeLessThanOrEqual(item.likes + item.comments);
+      for (const row of detail.rsvps) {
+        const event = ALL_EVENTS.find((entry) => entry.id === row.eventId);
+        expect(event, `${item.id} ${row.eventId}`).toBeDefined();
+        expect(row.members, item.id).toBeLessThanOrEqual(event?.confirmed ?? 0);
+      }
+      expect(detail.orders.count, item.id).toBeLessThanOrEqual(96);
+      const cents = detail.orders.products.reduce(
+        (sum, row) => sum + row.count * unit(row.productId),
+        0,
+      );
+      expect(detail.orders.cents, item.id).toBe(cents);
+      expect(
+        detail.orders.products.reduce((sum, row) => sum + row.count, 0),
+        item.id,
+      ).toBe(detail.orders.count);
+      if (detail.vitrine) {
+        expect(item.communityId, item.id).toBe('c-vip');
+        vitrine += detail.vitrine.subscriptions;
+      }
+    }
+    expect(vitrine).toBeLessThanOrEqual(21);
+  });
+
+  it('pins the publications the screens quote', () => {
+    expect(ownerContentDetail('op-11')).toMatchObject({
+      reactivated: 7,
+      orders: { count: 6, cents: 50200 },
+      rsvps: [{ eventId: 'u2', members: 21 }],
+    });
+    expect(ownerContentDetail('op-15')).toMatchObject({
+      vitrine: { subscriptions: 6 },
+      orders: { count: 6, cents: 118200 },
+    });
+    expect(ownerContentDetail('op-19').orders.count).toBe(3);
+    expect(ownerContentDetail('op-22').orders.count).toBe(0);
+    const top = [...posts]
+      .filter((item) => item.kind === 'video')
+      .sort((a, b) => b.likes + b.comments - (a.likes + a.comments))[0];
+    expect(top?.id).toBe('op-41');
+    expect(ownerContentDetail(top?.id ?? '')).toMatchObject({
+      reactivated: 14,
+      orders: { count: 9, cents: 121600 },
+    });
+  });
+
+  it('marks the oldest roster comments unanswered, first in the list', () => {
+    for (const item of ownerContentItems) {
+      const { people } = ownerContentPeople(item.id, 'comments');
+      const unanswered = item.comments - item.commentMeta.answered;
+      const expected = Math.min(unanswered, people.length);
+      const open = people.filter((person) => person.answered === false);
+      expect(open, item.id).toHaveLength(expected);
+      expect(
+        people.slice(0, expected).every((p) => p.answered === false),
+        item.id,
+      ).toBe(true);
+      const oldestAnswered = Math.max(
+        -1,
+        ...people.filter((p) => p.answered).map((p) => p.when.daysAgo),
+      );
+      for (const person of open) {
+        expect(person.when.daysAgo, item.id).toBeGreaterThanOrEqual(oldestAnswered);
+        expect((person.when.daysAgo - 1) * 24, item.id).toBeLessThanOrEqual(
+          item.commentMeta.oldestUnansweredHours ?? 0,
+        );
+      }
+    }
+    const op12 = ownerContentPeople('op-12', 'comments').people;
+    expect(op12[0]?.answered).toBe(false);
+  });
+});
