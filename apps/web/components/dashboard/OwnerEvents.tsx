@@ -11,6 +11,7 @@ import {
   sumOf,
   topBy,
 } from '@rede-social/module-dashboard/ui';
+import { EventCover } from '@rede-social/module-events/ui';
 import { getTranslations } from 'next-intl/server';
 import { EventCard, eventRevenue, RevenueExampleNote } from './BandScopeCards';
 import { ExamplePill } from './ExamplePill';
@@ -20,12 +21,29 @@ import { PanelSection } from './PanelSection';
 const FORMATS: readonly EventFormat[] = ['in_person', 'online'];
 
 /**
+ * The cards' 16:10 cover as a 56 px thumbnail before an event's bar (quick 261013-p31 D-03).
+ * Decorative: the row's text already names the event.
+ */
+function EventThumb() {
+  return (
+    <span
+      aria-hidden
+      data-event-thumb
+      className="block aspect-[16/10] h-14 shrink-0 overflow-hidden rounded-lg"
+    >
+      <EventCover geometry="hero" coverAssetId={null} coverVariantWidths={[]} coverAlt="" />
+    </span>
+  );
+}
+
+/**
  * Level 4, "Eventos": the next events as the bands' event cards (quick 261013-p31) with their seats
  * left and example receita, unlinked because no single place lists who registered for one event
  * (its RSVPs spread over the bands), then the waiting lists of the full events
  * (one example block: no table records a waiting list yet, D-04), then closed: attendance per past
  * event (check-ins over RSVPs, with the walk-ins), in person against online, and who comes by
- * engagement band. Counts only: no member is named.
+ * engagement band. Counts only: no member is named. The two bar lists that compare events (waiting
+ * list, attendance) lead each bar with the event's cover thumbnail; the other two list no event.
  */
 export async function OwnerEvents() {
   const t = await getTranslations('dashboard');
@@ -109,6 +127,7 @@ export async function OwnerEvents() {
             display: t('tenantOwner.waitlist.waiting', { count: formatCount(row.waiting) }),
             rate: t('tenantOwner.waitlist.capacity', { count: formatCount(row.capacity) }),
             highlight: i === 0,
+            leading: <EventThumb />,
           }))}
         />
         {mostWaited ? (
@@ -156,6 +175,7 @@ export async function OwnerEvents() {
               confirmed: formatCount(row.confirmed),
             }),
             highlight: row.id === best?.id,
+            leading: <EventThumb />,
           }))}
         />
         {walkInEvent ? (

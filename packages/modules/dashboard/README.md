@@ -15,7 +15,7 @@ The package's `exports` map is the whole public surface; nothing else may be imp
 
 | Subpath | What it holds |
 |---|---|
-| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average), and `sumOf` (a picked number summed over rows), `perItem` (a total per item, rounded, 0 with no items) and `attendancePercent` (check-ins over confirmed RSVPs, unrounded) for the client owner's panel. `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host) |
+| `./ui` | `KpiCard`, `KpiGrid`, `Sparkline`, `LineChart`, `BarList`, `ToneLabel`, `AttentionList`, `ResponsiveTable`, `Collapsible`, `CohortHeatmap`, `ActionCard`, the pure scale helpers `linearPoints`, `pathFrom`, `niceBounds`, `barPercent`, `funnelRates`, `largestDrop`, `heatBucket` / `HEAT_BUCKETS`, and the pure metric helpers (`ui/metrics.ts`): `ENGAGEMENT_BAND_ORDER`, `bandTotal`, `interactedCount`, `interactedPercent`, `engagedPercent`, `percentOf`, the privacy floor `PRIVACY_FLOOR` / `isBelowPrivacyFloor`, `mergeBandsBelowFloor` / `BandGroup` (bands under the floor merged with a neighbour, so none is recoverable by subtracting from the total) and `isComplementBelowPrivacyFloor` (a shown count whose complement would be under the floor), `NEW_MEMBER_DAYS` / `isNewMember`, `vsMedian`, `MIN_STREAK_WEEKS`, `totalMinutes` / `dailyAverageMinutes` (the member report's week total and daily average), and `sumOf` (a picked number summed over rows), `perItem` (a total per item, rounded, 0 with no items) and `attendancePercent` (check-ins over confirmed RSVPs, unrounded) for the client owner's panel. `KpiCard` takes an optional `badge` (a small neutral pill next to the value, worded by the host). The rows of `BarList` take an optional `leading` (a decorative thumbnail, on all rows or none), and then each row stacks its name and value over the bar |
 | `./fixtures` | `previewTenant` (the Igor Alves tenant: display name + a `TenantBranding` record, the only colour values of the package), `platformOwnerPanel`, `platformAdminPanel`, `platformSupportPanel`, `tenantOwnerPanel` (in `fixtures/tenant-owner.ts`, with `tenantOwnerPanel.communityEngagement`: the six bands per community), `ownerBandList` / `OWNER_BAND_LIST_LIMIT` / `OwnerBandMember` / `OwnerBandList` (the level-4 band member lists, `fixtures/owner-members.ts`), `tenantAdminPanel`, `tenantStaffPanel`, `memberPanel`, with an exported type per shape, and the shared shapes in `fixtures/shared.ts`: `Delta`, the engagement model (`EngagementBand`, `EngagementBands`: six exclusive bands of the active members, with the counted actions and band rules in its doc comment) and `NotMeasured` / `NotMeasuredReason`. A metric the app does not collect yet is typed `NotMeasured`, which has no value field: it renders as "Ainda não medido" with the reason, never as a number. The one bounded exception is the member's "Sua atividade" report (261012-h5t D-03) and the client owner's panel (261012-o00 D-03): their metrics are `ReportValue<T>` = `MeasuredValue<T>` \| `ExampleValue<T>`, where `ExampleValue` carries a FICTIONAL value plus its `reason`; it always renders with the "exemplo" pill, and the reason is never shown on screen (the tables below list it) |
 
 UI rules (MOD-02, PWA-03, UI-03): a component holds no route, no clock and no words — every string,
@@ -150,7 +150,10 @@ pill, a thin line and three columns split by thin lines: Data, Duração and Rec
 example ticket price, one "Receita: valores de exemplo" line with the pill per list, never per
 card). Planner decision: this receita is a card example only, not part of the Financeiro store
 revenue, which counts paid store orders. Both covers come through the modules' public `/ui`
-surface, which `pnpm boundaries` allows for `apps/web`.
+surface, which `pnpm boundaries` allows for `apps/web`. The same event card (`EventCard`) draws
+Próximos eventos in the Eventos area (quick 261013-p31), with Inscritos / Vagas / Receita and no
+link, and the bars of Lista de espera and Comparecimento por evento lead with the cover as a 56 px
+16:10 thumbnail.
 
 Por evento shows today's whole-base band of everyone who RSVP'd "vou" to the event
 (`eventEngagement`). `tests/tenant-owner.test.ts` proves that each event's bands sum to its
@@ -302,8 +305,8 @@ says what will appear there and when. What each one renders today with no rows:
 
 - **Conteúdo** (`OwnerContent*`): the publication lists, the people lists and Precisa de atenção
   already have their empty sentence; the trend, the heatmap and the type cards still assume rows.
-- **Próximos eventos** (`OwnerEvents`, `ResponsiveTable`): on a phone, nothing under the heading; at
-  `@3xl`, a table with its column headers and no body rows.
+- **Próximos eventos** (`OwnerEvents`, an `EventCard` list): with no rows, the receita line and
+  nothing else (no table at any width).
 - **Lista de espera** (`OwnerEvents`): "0 pessoa entrou na espera de 0 evento lotado" (pt-BR plural
   rules put 0 in `one`), an empty bar card, no demand line, and the "Conseguiram vaga" / "Foram ao
   evento" cards at 0.

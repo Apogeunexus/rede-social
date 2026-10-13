@@ -2357,6 +2357,24 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   ).toBeVisible();
   await expect(kpiCard(waitlist, 'Conseguiram vaga')).toContainText('15');
   await expect(kpiCard(waitlist, 'Foram ao evento')).toContainText('10');
+  // Each bar of the comparison lists leads with the cover as a 56 px 16:10 thumbnail (D-03).
+  const thumbs = waitlist.locator('[data-event-thumb]');
+  await expect(thumbs).toHaveCount(3);
+  for (let i = 0; i < 3; i++) await expect(thumbs.nth(i)).toHaveAttribute('aria-hidden', 'true');
+  const waitBars = waitlist.getByRole('listitem').filter({ has: page.locator('[data-bar-fill]') });
+  await expect(waitBars).toHaveCount(3);
+  for (let i = 0; i < 3; i++) {
+    await expect(waitBars.nth(i).locator('[data-event-thumb]')).toHaveCount(1);
+  }
+  const thumbBox = await thumbs.first().boundingBox();
+  expect(Math.abs((thumbBox?.height ?? 0) - 56)).toBeLessThanOrEqual(1);
+  expect(Math.abs((await boxRatio(thumbs.first())) - 16 / 10)).toBeLessThan(0.02);
+  const tracks = await waitlist
+    .locator('[data-bar-fill]')
+    .evaluateAll((fills) =>
+      fills.map((fill) => fill.parentElement?.getBoundingClientRect()).map((r) => [r?.x, r?.right]),
+    );
+  for (const track of tracks) expect(track).toEqual(tracks[0]);
 
   const summaries: [string, string][] = [
     ['Comparecimento por evento', 'comparecimento 64%'],
@@ -2372,7 +2390,11 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   const attendance = areaDetails(page, 'Comparecimento por evento');
   await attendance.locator('summary').click();
   await expect(attendance.getByRole('listitem')).toHaveCount(4);
+  await expect(attendance.locator('[data-event-thumb]')).toHaveCount(4);
   await expect(attendance).toContainText('+6 pessoas sem inscrição no Encontro set.');
+  for (const title of ['Presencial × online', 'Quem vai aos eventos']) {
+    await expect(areaDetails(page, title).locator('[data-event-thumb]')).toHaveCount(0);
+  }
 });
 
 test('dono-do-cliente ?area=financeiro', async ({ page }) => {
