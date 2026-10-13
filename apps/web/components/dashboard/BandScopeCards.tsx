@@ -133,9 +133,16 @@ interface CardCell {
   value: string;
 }
 
-/** An event's example receita: RSVPs × the example ticket price, the one formula of every card. */
-export function eventRevenue(event: { confirmed: number; ticketCents: { value: number } }) {
-  return formatBrlCompact(event.confirmed * event.ticketCents.value);
+/**
+ * An event's example receita: RSVPs × the example ticket price, the one formula of every card. A free
+ * event reads "Gratuito", not "R$ 0,00", which looked like missing data next to "R$ 5,5 mil".
+ */
+export function eventRevenue(
+  t: DashboardT,
+  event: { confirmed: number; ticketCents: { value: number } },
+) {
+  const cents = event.confirmed * event.ticketCents.value;
+  return cents === 0 ? t('tenantOwner.scopeCards.event.free') : formatBrlCompact(cents);
 }
 
 /**
@@ -215,7 +222,7 @@ export function EventScopeCard({ t, id, band, href }: ScopeCardProps) {
       cells={[
         { label: t(`${key}.date`), value: formatDayMonth(event.date) },
         { label: t(`${key}.duration`), value: formatDuration(t, event.durationMinutes) },
-        { label: t(`${key}.revenue`), value: eventRevenue(event) },
+        { label: t(`${key}.revenue`), value: eventRevenue(t, event) },
       ]}
     >
       <InBand

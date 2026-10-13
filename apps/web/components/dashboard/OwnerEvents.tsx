@@ -101,7 +101,7 @@ export async function OwnerEvents() {
                           ? t('tenantOwner.upcoming.full')
                           : formatCount(row.capacity - row.confirmed),
                   },
-                  { label: t('tenantOwner.scopeCards.event.revenue'), value: eventRevenue(row) },
+                  { label: t('tenantOwner.scopeCards.event.revenue'), value: eventRevenue(t, row) },
                 ]}
               />
             </li>

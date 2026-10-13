@@ -66,7 +66,7 @@ describe('BarList', () => {
   });
 
   it("keeps today's grid without leading", () => {
-    const grid = 'grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto]';
+    const grid = 'grid-cols-[minmax(min-content,2fr)_minmax(0,3fr)_auto]';
     const plain = render(<BarList rows={rows} />);
     expect(plain.container.querySelector('ul')).toHaveClass(grid);
     cleanup();

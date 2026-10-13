@@ -84,7 +84,7 @@ describe('D-01/D-02 (quick 261013-p31): Próximos eventos são cartões de event
     expect(cell(u1, 'Receita')).toMatch(/^R\$\s?5,5\s?mil$/);
     expect(cell(u2, 'Inscritos')).toBe('64');
     expect(cell(u2, 'Vagas')).toBe('Sem limite');
-    expect(cell(u2, 'Receita')).toMatch(/^R\$\s?0,00$/);
+    expect(cell(u2, 'Receita')).toBe('Gratuito');
     expect(cell(u3, 'Inscritos')).toBe('40');
     expect(cell(u3, 'Vagas')).toBe('Lotado');
     expect(cell(u3, 'Receita')).toMatch(/^R\$\s?14\s?mil$/);

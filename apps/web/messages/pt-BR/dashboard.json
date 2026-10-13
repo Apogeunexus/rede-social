@@ -521,6 +521,7 @@
           "date": "Data",
           "duration": "Duração",
           "revenue": "Receita",
+          "free": "Gratuito",
           "revenueNote": "Receita: valores de exemplo"
         }
       },

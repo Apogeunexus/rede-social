@@ -27,7 +27,7 @@ export interface BarListProps {
 
 function labelClass(row: BarRow) {
   return cn(
-    'min-w-0 [overflow-wrap:anywhere]',
+    'min-w-0 [overflow-wrap:break-word]',
     row.highlight ? 'font-bold text-text' : 'text-text-secondary',
   );
 }
@@ -82,7 +82,7 @@ export function BarList({ rows, max, className }: BarListProps) {
   }
   return (
     <Card className={cn('p-4', className)}>
-      <ul className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto] gap-x-2 gap-y-3">
+      <ul className="grid grid-cols-[minmax(min-content,2fr)_minmax(0,3fr)_auto] gap-x-2 gap-y-3">
         {rows.map((row) => (
           <li key={row.id} className="col-span-3 grid grid-cols-subgrid items-center text-sm">
             <span className={labelClass(row)}>{row.label}</span>
