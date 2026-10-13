@@ -126,12 +126,15 @@ export function MemberCard({
   href,
   band,
   id,
+  status,
 }: {
   t: DashboardT;
   member: OwnerBandMember;
   href: string;
   band?: EngagementBand;
   id?: string;
+  /** A pill next to the name (a commenter's "Sem resposta"). */
+  status?: ReactNode;
 }) {
   return (
     <a
@@ -147,7 +150,14 @@ export function MemberCard({
           {initials(member.name)}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-2 [overflow-wrap:anywhere]">
-          <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
+          {status ? (
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
+              {status}
+            </span>
+          ) : (
+            <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
+          )}
           <dl className="flex flex-col gap-1">
             {band ? (
               <CardLine label={t('tenantOwner.bandMembers.band')}>{bandLabel(t, band)}</CardLine>

@@ -94,6 +94,8 @@ export interface ContentCommentMeta {
 export interface ContentPerson extends OwnerBandMember {
   band: EngagementBand;
   when: RelativeMoment;
+  /** Comments only: whether the client's team answered it (never the comment's text). */
+  answered?: boolean;
 }
 
 export interface ContentPeople {
@@ -350,6 +352,21 @@ function storyPeople(item: ContentItem, index: number): Pick<ItemPeople, 'likes'
 }
 
 /**
+ * The commenters with the team's answer (D-06): the oldest roster comments, up to the item's
+ * unanswered count, are the unanswered ones and come first; then the rest, most recent first.
+ */
+function answerFlags(item: ContentItem, comments: readonly ContentPerson[]): ContentPerson[] {
+  const unanswered = Math.min(item.comments - item.commentMeta.answered, comments.length);
+  const open = comments
+    .slice(comments.length - unanswered)
+    .map((person) => ({ ...person, answered: false }));
+  const answered = comments
+    .slice(0, comments.length - unanswered)
+    .map((person) => ({ ...person, answered: true }));
+  return [...open, ...answered];
+}
+
+/**
  * Every item's people, built once from the roster (exported for the determinism test). Saves and
  * shares take alternate likers (even and odd places), at most the example value.
  */
@@ -374,7 +391,7 @@ export function buildOwnerContentPeople(): Map<string, ItemPeople> {
         ? storyPeople(item, storyItems.indexOf(item))
         : (posts.get(item.id) ?? { likes: [], comments: [] });
     const likes = [...base.likes].sort(byRecency);
-    const comments = [...base.comments].sort(byRecency);
+    const comments = answerFlags(item, [...base.comments].sort(byRecency));
     const every = (rest: number) => likes.filter((_, i) => i % 2 === rest);
     people.set(item.id, {
       likes,
@@ -603,4 +620,195 @@ export function ownerContentInteractions(): {
 } {
   const total = postItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
   return { rows: INTERACTIONS, total };
+}
+
+/** Share of the first 48 hours' interactions reached at 6, 12 … 48 hours, by kind (a story's in 24). */
+const VELOCITY: Record<ContentKind, readonly number[]> = {
+  video: [0.32, 0.5, 0.62, 0.7, 0.77, 0.82, 0.86, 0.89],
+  photo: [0.4, 0.58, 0.68, 0.75, 0.8, 0.84, 0.87, 0.9],
+  carousel: [0.35, 0.52, 0.64, 0.72, 0.78, 0.83, 0.87, 0.9],
+  text: [0.3, 0.46, 0.57, 0.65, 0.72, 0.77, 0.81, 0.84],
+  link: [0.38, 0.55, 0.65, 0.72, 0.77, 0.81, 0.84, 0.86],
+  story: [0.55, 0.75, 0.85, 0.9, 0.94, 0.97, 0.99, 1],
+};
+
+/** % still watching at each tenth of a video: a short vertical one and a long horizontal one. */
+const RETENTION_SHORT = [100, 84, 76, 70, 65, 61, 57, 54, 51, 48, 45] as const;
+const RETENTION_LONG = [100, 72, 60, 52, 46, 41, 37, 33, 30, 27, 24] as const;
+
+/** How likely a member of each band is to be reached, against the band's size. */
+const REACH_WEIGHT: Record<EngagementBand, number> = {
+  new: 0.6,
+  superfan: 1,
+  engaged: 0.95,
+  occasional: 0.9,
+  at_risk: 0.6,
+  inactive: 0.25,
+};
+
+interface Business {
+  reactivated?: number;
+  rsvps?: readonly (readonly [string, number])[];
+  orders?: readonly (readonly [string, number])[];
+  vitrine?: number;
+}
+
+/**
+ * What only the app knows, per publication (measured associations): members back after 30+ days
+ * idle, RSVPs "vou" and paid orders by members who interacted with it, within 7 days after, and the
+ * VIP subscriptions while a VIP post was the community's shop window. Every other item has none.
+ */
+const BUSINESS: Readonly<Record<string, Business>> = {
+  'op-02': { rsvps: [['u2', 31]] },
+  'op-11': {
+    reactivated: 7,
+    rsvps: [['u2', 21]],
+    orders: [
+      ['s3', 4],
+      ['s2', 2],
+    ],
+  },
+  'op-14': {
+    reactivated: 4,
+    rsvps: [
+      ['u1', 18],
+      ['u3', 6],
+    ],
+  },
+  'op-15': { reactivated: 3, vitrine: 6, orders: [['s2', 6]] },
+  'op-19': { reactivated: 5, orders: [['s3', 3]] },
+  'op-22': { reactivated: 2 },
+  'op-41': {
+    reactivated: 14,
+    rsvps: [['e3', 11]],
+    orders: [
+      ['s3', 5],
+      ['s2', 3],
+      ['s1', 1],
+    ],
+  },
+  'op-55': { reactivated: 5, orders: [['s3', 2]] },
+  'os-02': { rsvps: [['u1', 12]] },
+};
+
+export interface ContentDetail {
+  /** Cumulative likes + comments at 6, 12 … 48 hours. */
+  velocity48h: number[];
+  /** Who was reached, per today's band: example for a post, measured (`story_views`) for a story. */
+  reachByBand: ReportValue<Record<EngagementBand, number>>;
+  /** Videos only: % still watching at each tenth (example). */
+  retention: ExampleValue<number[]> | null;
+  /** Stories only: % that tapped forward, back or out (example). */
+  navigation: ExampleValue<{ forward: number; back: number; exit: number }> | null;
+  reactivated: number;
+  rsvps: { eventId: string; members: number }[];
+  orders: { count: number; cents: number; products: { productId: string; count: number }[] };
+  /** VIP posts only, while they were the VIP's shop window. */
+  vitrine: { subscriptions: number } | null;
+}
+
+function unitCents(productId: string): number {
+  const product = tenantOwnerPanel.store.products.find((row) => row.id === productId);
+  if (!product || product.orders === 0 || product.cents % product.orders !== 0) {
+    throw new Error(`no whole unit price for ${productId}`);
+  }
+  return product.cents / product.orders;
+}
+
+/** `total` split over the bands by weight × size (highest averages), never past a band's size. */
+function splitReach(total: number): Record<EngagementBand, number> {
+  const { counts } = tenantOwnerPanel.engagement;
+  const split: Record<EngagementBand, number> = {
+    new: 0,
+    superfan: 0,
+    engaged: 0,
+    occasional: 0,
+    at_risk: 0,
+    inactive: 0,
+  };
+  for (let unit = 0; unit < total; unit += 1) {
+    const band = topBand(
+      (row) => (REACH_WEIGHT[row] * counts[row]) / (split[row] + 1),
+      (row) => split[row] < counts[row],
+    );
+    if (!band) throw new Error(`a reach of ${total} is over the base`);
+    split[band] += 1;
+  }
+  return split;
+}
+
+function topBand(
+  score: (band: EngagementBand) => number,
+  open: (band: EngagementBand) => boolean,
+): EngagementBand | null {
+  let best: EngagementBand | null = null;
+  for (const band of ['new', 'superfan', 'engaged', 'occasional', 'at_risk', 'inactive'] as const) {
+    if (open(band) && (best === null || score(band) > score(best))) best = band;
+  }
+  return best;
+}
+
+function curve(total: number, kind: ContentKind): number[] {
+  return VELOCITY[kind].map((share) => Math.floor(total * share));
+}
+
+function retentionOf(item: ContentItem, index: number): number[] {
+  const base = (item.durationSeconds ?? 0) <= 90 ? RETENTION_SHORT : RETENTION_LONG;
+  return base.map((value, k) => (k === 0 ? value : Math.max(0, value - (index % 4))));
+}
+
+/**
+ * One publication's detail (D-06), an unknown id throws: the 48-hour curve, the reach by band, the
+ * retention (videos) or taps (stories), and what only the app knows. Curves are formulas over the
+ * item's own numbers (VELOCITY, RETENTION_*); the business rows are the BUSINESS table.
+ */
+export function ownerContentDetail(itemId: string): ContentDetail {
+  const item = ownerContentItem(itemId);
+  const index = ownerContentItems.indexOf(item);
+  const business = BUSINESS[itemId] ?? {};
+  const products = (business.orders ?? []).map(([productId, count]) => ({ productId, count }));
+  const split = splitReach(item.reach.value);
+  return {
+    velocity48h: curve(item.likes + item.comments, item.kind),
+    reachByBand: item.reach.example
+      ? { example: true, reason: item.reach.reason, value: split }
+      : { example: false, value: split },
+    retention:
+      item.kind === 'video'
+        ? { example: true, reason: 'needs_video_playback', value: retentionOf(item, index) }
+        : null,
+    navigation:
+      item.kind === 'story'
+        ? {
+            example: true,
+            reason: 'needs_story_taps',
+            value: { forward: 18 + (index % 9), back: 3 + (index % 3), exit: 7 + (index % 5) },
+          }
+        : null,
+    reactivated: business.reactivated ?? 0,
+    rsvps: (business.rsvps ?? []).map(([eventId, members]) => ({ eventId, members })),
+    orders: {
+      count: products.reduce((sum, row) => sum + row.count, 0),
+      cents: products.reduce((sum, row) => sum + row.count * unitCents(row.productId), 0),
+      products,
+    },
+    vitrine: business.vitrine === undefined ? null : { subscriptions: business.vitrine },
+  };
+}
+
+/** A kind's average 48-hour curve: its likes + comments per publication on its kind's shares. */
+export function ownerContentKindVelocity(kind: ContentKind): number[] {
+  const items = ownerContentItems.filter((item) => item.kind === kind);
+  const total = items.reduce((sum, item) => sum + item.likes + item.comments, 0);
+  return curve(items.length > 0 ? Math.round(total / items.length) : 0, kind);
+}
+
+/** The videos' average retention, point by point (example). */
+export function ownerContentKindRetention(): number[] {
+  const curves = ownerContentItems
+    .filter((item) => item.kind === 'video')
+    .map((item) => ownerContentDetail(item.id).retention?.value ?? []);
+  return RETENTION_SHORT.map((_, k) =>
+    Math.round(curves.reduce((sum, row) => sum + (row[k] ?? 0), 0) / Math.max(1, curves.length)),
+  );
 }

@@ -7,8 +7,9 @@ import {
   ownerContentItem,
   ownerContentPeople,
 } from '@rede-social/module-dashboard/fixtures';
-import { Card } from '@rede-social/ui';
+import { Card, StatusPill } from '@rede-social/ui';
 import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
 import {
   contentBackHref,
   contentMemberAnchor,
@@ -40,11 +41,13 @@ function PeopleCards({
   people,
   total,
   hrefOf,
+  statusOf,
 }: {
   t: DashboardT;
   people: readonly ContentPerson[];
   total: number;
   hrefOf: (memberId: string) => string;
+  statusOf?: (person: ContentPerson) => ReactNode;
 }) {
   const shown = people.slice(0, OWNER_BAND_LIST_LIMIT);
   const more = total - shown.length;
@@ -67,6 +70,7 @@ function PeopleCards({
                 band={person.band}
                 id={contentMemberAnchor(person.id)}
                 href={hrefOf(person.id)}
+                status={statusOf?.(person)}
               />
             </li>
           ))}
@@ -87,7 +91,8 @@ function PeopleCards({
 /**
  * Who did one of a publication's numbers (D-06, P1): "Voltar" to that number, the title, which
  * publication, the count (the publication's own number, the list's "exemplo" for saves and shares),
- * then the member cards most recent first. Each card opens the member's insights.
+ * then the member cards most recent first — commenters the team has not answered first, marked "Sem
+ * resposta" (PD-9: never the comment's text). Each card opens the member's insights.
  */
 export function OwnerContentPeople({ t, view }: { t: DashboardT; view: OwnerContentView }) {
   const back = contentBackHref(view);
@@ -113,6 +118,11 @@ export function OwnerContentPeople({ t, view }: { t: DashboardT; view: OwnerCont
             people={people}
             total={total}
             hrefOf={(memberId) => ownerContentHref({ ...view, memberId, list: null })}
+            statusOf={(person) =>
+              person.answered === false ? (
+                <StatusPill tone="warning">{t(`${KEY}.unanswered`)}</StatusPill>
+              ) : null
+            }
           />
         )}
       </PanelSection>

@@ -2098,6 +2098,214 @@ test('dono-do-cliente conteudo: the overview and its lists at 1440x900, inside t
   }
 });
 
+const DETAIL_TITLES = [
+  'Interações',
+  'Primeiras 48 horas',
+  'Quem a publicação alcançou, por faixa',
+  'O que só o app sabe',
+  'Comentários',
+];
+
+function detailSection(page: Page, title: string) {
+  return sectionTitled(ownerArea(page), title);
+}
+
+test.describe('dono-do-cliente conteudo: the publication detail', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('a video shows every section, in order, and its sales from 5 orders', async ({ page }) => {
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11`);
+    const area = ownerArea(page);
+    const ys: number[] = [];
+    for (const title of [...DETAIL_TITLES, 'Retenção do vídeo']) {
+      const heading = area.getByRole('heading', { name: title, exact: true });
+      await expect(heading, title).toHaveCount(1);
+      ys.push((await heading.boundingBox())?.y ?? Number.NaN);
+    }
+    expect([...ys].sort((a, b) => a - b)).toEqual(ys);
+    await expect(area.getByText('Recomendação', { exact: true })).toBeVisible();
+    await expect(area.getByRole('button', { name: 'Enviar push' })).toBeDisabled();
+    await expect(area.getByRole('heading', { name: 'Toques no story' })).toHaveCount(0);
+
+    const app = detailSection(page, 'O que só o app sabe');
+    await expect(app).toContainText(/R\$\s?502,00/);
+    await expect(app).toContainText('6 pedidos');
+    await expect(app).toContainText('Live de dúvidas · 15/10: 21');
+    await expect(app).toContainText('Não quer dizer que a publicação causou.');
+    await expect(detailSection(page, 'Primeiras 48 horas').getByRole('img')).toHaveCount(1);
+    await expect(
+      detailSection(page, 'Retenção do vídeo').getByText('exemplo', { exact: true }),
+    ).toHaveCount(1);
+
+    // P3: who was reached is totals only, and no reach or views number is a link.
+    await expect(
+      detailSection(page, 'Quem a publicação alcançou, por faixa').getByRole('link'),
+    ).toHaveCount(0);
+    const links = await area
+      .getByRole('link')
+      .evaluateAll((els) => els.map((el) => el.getAttribute('href') ?? ''));
+    expect(links.some((href) => /quem=(visualizacoes|alcance)/.test(href))).toBe(false);
+  });
+
+  test('sales under 5 orders show no value; the shop window shows its subscriptions', async ({
+    page,
+  }) => {
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-19`);
+    const app = detailSection(page, 'O que só o app sabe');
+    await expect(app).toContainText('menos de 5 pedidos');
+    await expect(app).not.toContainText('R$');
+    await expect(detailSection(page, 'Comentários')).toContainText(
+      '9 sem resposta · o mais antigo há 8 dias',
+    );
+
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-15`);
+    await expect(detailSection(page, 'O que só o app sabe')).toContainText(
+      'Assinaturas da Comunidade VIP enquanto era a vitrine',
+    );
+    await expect(detailSection(page, 'O que só o app sabe')).toContainText(/R\$\s?1\.182,00/);
+  });
+
+  test('a story shows its taps, a text post neither taps nor retention', async ({ page }) => {
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=story&post=os-02`);
+    await expect(area.getByRole('heading', { name: 'Toques no story' })).toBeVisible();
+    await expect(area.getByRole('heading', { name: 'Retenção do vídeo' })).toHaveCount(0);
+    await expect(area.locator('#quem-salvamentos')).toHaveCount(0);
+    await expect(
+      detailSection(page, 'Quem a publicação alcançou, por faixa').getByText('exemplo', {
+        exact: true,
+      }),
+    ).toHaveCount(0);
+
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-19`);
+    await expect(area.getByRole('heading', { name: 'Toques no story' })).toHaveCount(0);
+    await expect(area.getByRole('heading', { name: 'Retenção do vídeo' })).toHaveCount(0);
+  });
+
+  test('each interaction number opens who did it, with that number first', async ({ page }) => {
+    const area = ownerArea(page);
+    for (const slug of ['curtidas', 'comentarios', 'salvamentos', 'compartilhamentos']) {
+      await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11`);
+      const kpi = area.locator(`#quem-${slug}`);
+      const value = await numberIn(kpi);
+      await kpi.click();
+      await expect(page, slug).toHaveURL(new RegExp(`&post=op-11&quem=${slug}$`));
+      await expect(
+        area.getByText(new RegExp(`^${value} .* · mais recentes primeiro$`)),
+        slug,
+      ).toBeVisible();
+    }
+  });
+
+  test('the commenters put the unanswered first', async ({ page }) => {
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-12&quem=comentarios`);
+    const rows = ownerArea(page).getByRole('listitem');
+    await expect(rows.first()).toContainText('Sem resposta');
+    const flags = await rows.evaluateAll((els) =>
+      els.map((el) => (el.textContent ?? '').includes('Sem resposta')),
+    );
+    expect(flags.indexOf(false)).toBeGreaterThan(0);
+    expect(flags.slice(flags.indexOf(false)).some(Boolean)).toBe(false);
+  });
+
+  test('views and reach never open people, and forged values fall one level up', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    const detail = `${CONTENT_AREA}&vista=publicacoes&post=op-11`;
+    for (const quem of ['visualizacoes', 'alcance', 'xyz']) {
+      await page.goto(`${detail}&quem=${quem}`);
+      await expect(area.locator('#quem-curtidas'), quem).toBeVisible();
+    }
+    await page.goto(`${detail}&quem=curtidas`);
+    const href =
+      (await area.getByRole('listitem').first().getByRole('link').getAttribute('href')) ?? '';
+    const liker = /membro=(om-\d\d)$/.exec(href)?.[1] ?? '';
+    const cases: [string, Locator][] = [
+      [`${CONTENT_AREA}&vista=xyz`, area.locator('#numero-publicacoes')],
+      [`${CONTENT_AREA}&vista=tipos&tipo=xyz`, area.locator('#tipo-video').getByRole('link')],
+      [
+        `${CONTENT_AREA}&vista=tipos&tipo=video&post=op-15`,
+        area.getByRole('link', { name: 'Voltar aos tipos' }),
+      ],
+      [
+        `${CONTENT_AREA}&vista=tipos&tipo=story&post=op-11`,
+        area.getByRole('link', { name: 'Voltar aos tipos' }),
+      ],
+      [`${CONTENT_AREA}&vista=publicacoes&post=xyz`, area.getByText('e mais 51 publicações')],
+      [`${detail}&quem=curtidas&membro=om-60`, area.getByRole('heading', { name: 'Quem curtiu' })],
+      [
+        `${detail}&quem=curtidas&membro=${liker}&lista=xyz`,
+        area.getByRole('heading', { name: 'Últimos 30 dias' }),
+      ],
+      [`${detail}&membro=${liker}`, area.locator('#quem-curtidas')],
+    ];
+    for (const [url, shows] of cases) {
+      const response = await page.goto(url);
+      expect(response?.status(), url).toBe(200);
+      await expect(shows, url).toBeVisible();
+    }
+  });
+});
+
+const CONTENT_DETAIL_VIEWS = [
+  '&vista=publicacoes&post=op-41',
+  '&vista=tipos&tipo=story&post=os-01',
+  '&vista=publicacoes&post=op-19',
+  '&vista=publicacoes&post=op-11&quem=curtidas',
+  '&vista=tipos&tipo=video',
+  '&vista=publicacoes',
+];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente conteudo: details and lists at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const query of CONTENT_DETAIL_VIEWS) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      await expect(ownerArea(page), query).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    }
+  });
+}
+
+test('dono-do-cliente conteudo: details and lists at 1440x900, inside the phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const query of CONTENT_DETAIL_VIEWS) {
+    await page.goto(`${CONTENT_AREA}${query}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, query).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, query).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible'), query).toHaveCount(
+      0,
+    );
+  }
+});
+
+test.describe('dono-do-cliente conteudo without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('the tab, a type card and a publication card are plain links', async ({ page }) => {
+    await page.goto(CONTENT_AREA);
+    await contentTabs(page).getByRole('link', { name: 'Por tipo' }).click();
+    await expect(page).toHaveURL(/\?area=conteudo&vista=tipos$/);
+    await ownerArea(page).locator('#tipo-carrossel').getByRole('link').click();
+    await expect(page).toHaveURL(/&vista=tipos&tipo=carrossel$/);
+    await postCards(ownerArea(page)).first().getByRole('link').click();
+    await expect(page).toHaveURL(/&vista=tipos&tipo=carrossel&post=op-\d\d$/);
+    await expect(ownerArea(page).locator('#quem-curtidas')).toBeVisible();
+  });
+});
+
 test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/dono-do-cliente?area=eventos');

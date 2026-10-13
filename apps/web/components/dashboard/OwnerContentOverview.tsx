@@ -47,6 +47,7 @@ import { InteractionList, InteractorList } from './OwnerContentPeople';
 import {
   ContentPostCard,
   ContentPostList,
+  contentAgeText,
   SavesSharesNote,
   savesSharesExample,
 } from './OwnerContentPostCard';
@@ -84,13 +85,6 @@ function totals() {
     views: sumOf(POSTS, (item) => item.views.value),
     reachPerPost: perItem(reach, POSTS.length),
   };
-}
-
-/** "2 dias" from 50 hours, "18 h" under two days. */
-function ageText(t: DashboardT, hours: number): string {
-  return hours < 48
-    ? t(`${KEY}.age.hours`, { count: hours })
-    : t(`${KEY}.age.days`, { count: Math.floor(hours / 24) });
 }
 
 /** A number that opens its list: the whole card is a plain link landing back on itself. */
@@ -220,7 +214,7 @@ function Attention({ t }: { t: DashboardT }) {
                     <span className="text-sm font-bold text-text">
                       {t(`${key}.row`, {
                         count: item.comments - item.commentMeta.answered,
-                        age: ageText(t, item.commentMeta.oldestUnansweredHours ?? 0),
+                        age: contentAgeText(t, item.commentMeta.oldestUnansweredHours ?? 0),
                       })}
                     </span>
                     <span className="line-clamp-2 text-xs text-text-secondary">{item.excerpt}</span>

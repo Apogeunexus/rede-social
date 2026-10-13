@@ -755,7 +755,72 @@
           "interactions": "{count, plural, one {{value} interação} other {{value} interações}}",
           "vsKind": "{ratio}× a média dos {kinds}",
           "inProgress": "Em andamento",
-          "interactionsTitle": "Interações"
+          "interactionsTitle": "Interações",
+          "velocity": {
+            "title": "Primeiras 48 horas",
+            "note": "Curtidas e comentários acumulados, a cada 6 horas",
+            "label": "Curtidas e comentários acumulados nas primeiras 48 horas, desta publicação e da média do tipo",
+            "hour": "{hours} h",
+            "current": "Esta publicação",
+            "average": "Média dos {kinds}",
+            "inProgress": "Ainda nas primeiras 48 horas: o gráfico aparece quando elas terminarem."
+          },
+          "reach": {
+            "title": "Quem a publicação alcançou, por faixa",
+            "exampleNote": "Alcance por faixa: valores de exemplo",
+            "note": "Membros alcançados, pela faixa de hoje. Só totais: ninguém é listado."
+          },
+          "app": {
+            "title": "O que só o app sabe",
+            "reactivated": "Membros que voltaram após 30+ dias parados",
+            "rsvps": "Inscrições em eventos até 7 dias depois",
+            "rsvp": "{name} · {date}: {count}",
+            "noRsvps": "nenhuma",
+            "sales": "Vendas até 7 dias depois",
+            "salesValue": "{count, plural, one {# pedido} other {# pedidos}} · {value}",
+            "salesFloor": "menos de {floor} pedidos",
+            "vitrine": "Assinaturas da Comunidade VIP enquanto era a vitrine",
+            "note": "Associação: ações do mesmo membro até 7 dias depois de interagir com a publicação. Não quer dizer que a publicação causou."
+          },
+          "comments": {
+            "title": "Comentários",
+            "none": "Nenhum comentário nesta publicação.",
+            "answered": "{answered} de {comments} respondidos pela equipe ({percent})",
+            "firstReply": "1ª resposta em {time}",
+            "waiting": "{count, plural, one {# sem resposta} other {# sem resposta}} · o mais antigo há {age}",
+            "seeWho": "Ver quem comentou"
+          },
+          "recommendation": {
+            "title": "Recomendação",
+            "push": {
+              "detail": "{interactions} interações até agora: envie um push para os {withPush} membros em risco com push ativo, para ela chegar a mais gente.",
+              "action": "Enviar push"
+            },
+            "series": {
+              "detail": "Teve {ratio}× a média dos {kinds}: repita o tema como série, {day} às {from}h.",
+              "action": "Planejar série"
+            },
+            "reel": {
+              "detail": "Ficou em {ratio}× a média dos {kinds}: transforme em um reel de até 90 segundos e publique {day} às {from}h.",
+              "action": "Criar reel"
+            }
+          },
+          "retention": {
+            "title": "Retenção do vídeo",
+            "exampleNote": "Retenção: valores de exemplo",
+            "label": "% de quem ainda assistia a cada décimo do vídeo, desta publicação e da média dos vídeos",
+            "watched": "% assistido",
+            "completion": "Até o fim",
+            "current": "Este vídeo",
+            "average": "Média dos vídeos"
+          },
+          "taps": {
+            "title": "Toques no story",
+            "exampleNote": "Toques: valores de exemplo",
+            "forward": "Avançaram",
+            "back": "Voltaram",
+            "exit": "Saíram"
+          }
         },
         "people": {
           "title": {
@@ -775,7 +840,8 @@
             "comments": "Ninguém comentou esta publicação ainda.",
             "saves": "Ninguém salvou esta publicação ainda.",
             "shares": "Ninguém compartilhou esta publicação ainda."
-          }
+          },
+          "unanswered": "Sem resposta"
         },
         "weekday": {
           "mon": "Segunda",

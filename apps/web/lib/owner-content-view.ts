@@ -279,6 +279,43 @@ export function contentCoverRatio(item: Pick<ContentItem, 'kind' | 'media'>): nu
   }
 }
 
+/** What the detail recommends (D-06): push it now, repeat it as a series, or remake it as a reel. */
+export type ContentRecommendation = 'push' | 'series' | 'reel';
+
+/** A video up to this long is already a reel. */
+const REEL_MAX_SECONDS = 90;
+/** At this multiple of its kind's average, a publication is worth a series. */
+const SERIES_FACTOR = 1.5;
+/** Under this many days a publication is still collecting (the header's "Em andamento"). */
+const IN_PROGRESS_DAYS = 2;
+
+/**
+ * The deterministic rule behind the detail's Recomendação: still in its first 48 hours → push it to
+ * more members; 1,5× its kind's average or more → a series; a story or a short video → push; anything
+ * else → remake it as a short reel.
+ */
+export function contentRecommendation({
+  kind,
+  interactions,
+  kindAverage,
+  daysAgo,
+  durationSeconds,
+}: {
+  kind: ContentKind;
+  interactions: number;
+  kindAverage: number;
+  daysAgo: number;
+  durationSeconds: number | null;
+}): ContentRecommendation {
+  if (daysAgo < IN_PROGRESS_DAYS) return 'push';
+  if (kindAverage > 0 && interactions >= SERIES_FACTOR * kindAverage) return 'series';
+  if (kind === 'story') return 'push';
+  if (kind === 'video' && durationSeconds !== null && durationSeconds <= REEL_MAX_SECONDS) {
+    return 'push';
+  }
+  return 'reel';
+}
+
 /** A tab screen with nothing open below it. */
 export function contentTabView(tab: ContentTab): OwnerContentView {
   return {

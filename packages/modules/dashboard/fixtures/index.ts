@@ -16,6 +16,7 @@ export {
 export {
   CONTENT_KIND_ORDER,
   type ContentCommentMeta,
+  type ContentDetail,
   type ContentInteraction,
   type ContentItem,
   type ContentKind,
@@ -23,6 +24,7 @@ export {
   type ContentPerson,
   type ContentWho,
   ownerContent,
+  ownerContentDetail,
   ownerContentIncludes,
   ownerContentInteractions,
   ownerContentInteractorIncludes,
@@ -30,6 +32,8 @@ export {
   ownerContentItem,
   ownerContentItems,
   ownerContentKindMetric,
+  ownerContentKindRetention,
+  ownerContentKindVelocity,
   ownerContentPeople,
 } from './owner-content';
 export { type OwnerMemberInsights, ownerMemberInsights } from './owner-member-insights';

@@ -37,6 +37,13 @@ const KIND_ICON: Record<ContentItem['kind'], LucideIcon | null> = {
   story: Play,
 };
 
+/** How long a comment has waited: "18 h" under two days, else whole days ("2 dias"). */
+export function contentAgeText(t: DashboardT, hours: number): string {
+  return hours < 48
+    ? t(`${KEY}.overview.age.hours`, { count: hours })
+    : t(`${KEY}.overview.age.days`, { count: Math.floor(hours / 24) });
+}
+
 /** The kind's name ("Vídeo"). */
 export function contentKindLabel(t: DashboardT, kind: ContentItem['kind']): string {
   return t(`${KEY}.kinds.${kind}`);
