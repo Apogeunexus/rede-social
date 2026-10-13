@@ -3,12 +3,14 @@ import {
   type ContentWho,
   ownerBandRoster,
   ownerContentIncludes,
+  ownerContentInteractorIncludes,
   ownerContentItems,
 } from '@rede-social/module-dashboard/fixtures';
 import { describe, expect, it } from 'vitest';
-import { OWNER_MEMBER_LISTS } from './owner-band-scope';
+import { OWNER_BAND_SLUGS, OWNER_MEMBER_LISTS } from './owner-band-scope';
 import {
   CONTENT_KIND_SLUGS,
+  CONTENT_NUMBER_SLUGS,
   CONTENT_WHO_SLUGS,
   contentBackHref,
   contentCoverRatio,
@@ -23,6 +25,8 @@ const AREA = '/painel-preview/dono-do-cliente?area=conteudo';
 
 const EMPTY: OwnerContentView = {
   tab: 'overview',
+  number: null,
+  band: null,
   kind: null,
   postId: null,
   who: null,
@@ -53,6 +57,12 @@ function firstIn(postId: string, who: ContentWho): string | undefined {
 function firstLiker(postId: string): string {
   const id = firstIn(postId, 'likes');
   if (!id) throw new Error(`no likers for ${postId}`);
+  return id;
+}
+
+function firstInteractor(band: Parameters<typeof ownerContentInteractorIncludes>[0]): string {
+  const id = ownerBandRoster.find((row) => ownerContentInteractorIncludes(band, row.id))?.id;
+  if (!id) throw new Error(`no interactor in ${band}`);
   return id;
 }
 
@@ -194,6 +204,102 @@ describe('parseOwnerContentView: who did it (D-06, P1, P3)', () => {
   });
 });
 
+describe('parseOwnerContentView: the overview numbers and bands (D-02)', () => {
+  it('opens a number only on Visão geral', () => {
+    expect(CONTENT_NUMBER_SLUGS).toEqual({
+      posts: 'publicacoes',
+      interactions: 'interacoes',
+      rate: 'taxa',
+      members: 'membros',
+      views: 'visualizacoes',
+      reach: 'alcance',
+    });
+    for (const [number, slug] of Object.entries(CONTENT_NUMBER_SLUGS)) {
+      expect(parseOwnerContentView({ numero: slug })).toEqual(
+        view({ number: number as OwnerContentView['number'] }),
+      );
+    }
+    for (const numero of ['xyz', 'MEMBROS', ['taxa', 'taxa']]) {
+      expect(parseOwnerContentView({ numero } as Params), String(numero)).toEqual(EMPTY);
+    }
+    expect(parseOwnerContentView({ vista: 'publicacoes', numero: 'taxa' })).toEqual(
+      view({ tab: 'posts' }),
+    );
+  });
+
+  it('opens a band with interactors only, never with a number', () => {
+    expect(parseOwnerContentView({ faixa: 'engajados' })).toEqual(view({ band: 'engaged' }));
+    for (const faixa of ['em-risco', 'inativos', 'xyz']) {
+      expect(parseOwnerContentView({ faixa }), faixa).toEqual(EMPTY);
+    }
+    expect(parseOwnerContentView({ numero: 'membros', faixa: 'engajados' })).toEqual(
+      view({ number: 'members' }),
+    );
+    expect(parseOwnerContentView({ vista: 'tipos', faixa: 'engajados' })).toEqual(
+      view({ tab: 'types' }),
+    );
+  });
+
+  it('a number of publications opens any feed post; members and bands take none', () => {
+    for (const numero of ['publicacoes', 'interacoes', 'taxa', 'visualizacoes', 'alcance']) {
+      expect(parseOwnerContentView({ numero, post: 'op-11' }).postId, numero).toBe('op-11');
+      expect(parseOwnerContentView({ numero, post: 'os-01' }).postId, numero).toBeNull();
+    }
+    expect(parseOwnerContentView({ numero: 'membros', post: 'op-11' })).toEqual(
+      view({ number: 'members' }),
+    );
+    expect(parseOwnerContentView({ faixa: 'engajados', post: 'op-11' })).toEqual(
+      view({ band: 'engaged' }),
+    );
+  });
+
+  it('a member comes from who interacted, or from that band', () => {
+    const any = firstInteractor(null);
+    expect(parseOwnerContentView({ numero: 'membros', membro: any })).toEqual(
+      view({ number: 'members', memberId: any }),
+    );
+    const atRisk = ownerBandRoster.find((row) => row.band === 'at_risk')?.id;
+    expect(parseOwnerContentView({ numero: 'membros', membro: atRisk })).toEqual(
+      view({ number: 'members' }),
+    );
+    const engaged = firstInteractor('engaged');
+    expect(parseOwnerContentView({ faixa: 'engajados', membro: engaged })).toEqual(
+      view({ band: 'engaged', memberId: engaged }),
+    );
+    const superfan = firstInteractor('superfan');
+    expect(parseOwnerContentView({ faixa: 'engajados', membro: superfan })).toEqual(
+      view({ band: 'engaged' }),
+    );
+    expect(parseOwnerContentView({ numero: 'taxa', membro: any })).toEqual(
+      view({ number: 'rate' }),
+    );
+    expect(parseOwnerContentView({ membro: any })).toEqual(EMPTY);
+    expect(OWNER_BAND_SLUGS.engaged).toBe('engajados');
+  });
+
+  it('builds the links and goes back to the number, the band and the card', () => {
+    const member = firstInteractor('engaged');
+    expect(ownerContentHref(view({ number: 'members', memberId: member }))).toBe(
+      `${AREA}&numero=membros&membro=${member}`,
+    );
+    expect(ownerContentHref(view({ band: 'engaged', memberId: member }))).toBe(
+      `${AREA}&faixa=engajados&membro=${member}`,
+    );
+    expect(contentBackHref(view({ number: 'rate' }))).toBe(`${AREA}#numero-taxa`);
+    expect(contentBackHref(view({ number: 'rate', postId: 'op-11' }))).toBe(
+      `${AREA}&numero=taxa#post-op-11`,
+    );
+    expect(contentBackHref(view({ band: 'engaged', memberId: member }))).toBe(
+      `${AREA}&faixa=engajados#membro-${member}`,
+    );
+    expect(contentBackHref(view({ number: 'members', memberId: member }))).toBe(
+      `${AREA}&numero=membros#membro-${member}`,
+    );
+    expect(contentBackHref(view({ postId: 'op-19' }))).toBe(`${AREA}#post-op-19`);
+    expect(contentBackHref(view({ band: 'engaged' }))).toBeNull();
+  });
+});
+
 describe('ownerContentHref and contentBackHref', () => {
   it('builds the tabs and the params in order', () => {
     expect(ownerContentHref(EMPTY)).toBe(AREA);
@@ -265,6 +371,24 @@ describe('ownerContentHref and contentBackHref', () => {
         withPost(view({ tab: 'posts' }), item);
         withPost(EMPTY, item);
       }
+    }
+    for (const number of Object.keys(CONTENT_NUMBER_SLUGS) as NonNullable<
+      OwnerContentView['number']
+    >[]) {
+      views.push(view({ number }));
+      if (number === 'members') {
+        const member = firstInteractor(null);
+        views.push(view({ number, memberId: member }));
+        for (const list of OWNER_MEMBER_LISTS) views.push(view({ number, memberId: member, list }));
+      } else {
+        withPost(view({ number }), ownerContentItems[0] as ContentItem);
+      }
+    }
+    for (const band of ['new', 'superfan', 'engaged', 'occasional'] as const) {
+      views.push(view({ band }));
+      const member = firstInteractor(band);
+      views.push(view({ band, memberId: member }));
+      views.push(view({ band, memberId: member, list: 'curtidas' }));
     }
     for (const expected of views) {
       expect(parseOwnerContentView(paramsOf(ownerContentHref(expected)))).toEqual(expected);

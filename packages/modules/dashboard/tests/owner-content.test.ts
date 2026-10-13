@@ -3,7 +3,11 @@ import {
   CONTENT_KIND_ORDER,
   type ContentItem,
   type ContentKind,
+  ownerContent,
   ownerContentIncludes,
+  ownerContentInteractions,
+  ownerContentInteractorIncludes,
+  ownerContentInteractors,
   ownerContentItem,
   ownerContentItems,
   ownerContentKindMetric,
@@ -13,6 +17,7 @@ import {
 } from '../fixtures';
 import { buildOwnerContentPeople } from '../fixtures/owner-content';
 import { daysSince, ownerBandRoster } from '../fixtures/owner-members';
+import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import { ownerPostTable } from '../fixtures/owner-posts';
 
 /**
@@ -313,3 +318,142 @@ describe('the people behind each number (P1)', () => {
     expect(buildOwnerContentPeople()).toEqual(buildOwnerContentPeople());
   });
 });
+
+describe('the overview numbers (D-02, D-08)', () => {
+  const { engagement, publishing } = tenantOwnerPanel;
+
+  it('compare with the 30 days before', () => {
+    const { deltas } = ownerContent;
+    expect(deltas.posts).toMatchObject({ amount: 5, kind: 'count', direction: 'up' });
+    expect(deltas.interactions).toMatchObject({ amount: 9, kind: 'percent', direction: 'up' });
+    expect(deltas.rate).toMatchObject({ amount: 1, kind: 'points', direction: 'up' });
+    expect(deltas.interactors).toMatchObject({ amount: 4, kind: 'percent', direction: 'up' });
+    expect(deltas.views).toMatchObject({ amount: 6, kind: 'percent', direction: 'up' });
+    expect(deltas.reach).toMatchObject({ amount: 6, kind: 'percent', direction: 'up' });
+    for (const delta of Object.values(deltas)) expect(delta.basis).toBe('previous_30_days');
+  });
+
+  it('count who interacted per band, within the band and above the roster sample', () => {
+    const { interactorsByBand } = ownerContent;
+    expect(interactorsByBand).toEqual({
+      new: 41,
+      superfan: 62,
+      engaged: 189,
+      occasional: 136,
+      at_risk: 0,
+      inactive: 0,
+    });
+    expect(Object.values(interactorsByBand).reduce((a, b) => a + b, 0)).toBe(428);
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      expect(interactorsByBand[band], band).toBeLessThanOrEqual(engagement.counts[band]);
+      expect(interactorsByBand[band], band).toBeGreaterThanOrEqual(
+        ownerContentInteractors(band).people.length,
+      );
+    }
+    expect(interactorsByBand.new).toBeLessThanOrEqual(engagement.newActivated);
+  });
+
+  it('trend over 12 weeks against the 12 before', () => {
+    expect(ownerContent.weeklyPerPost.current).toEqual([
+      52, 55, 54, 57, 58, 56, 60, 61, 63, 66, 64, 68,
+    ]);
+    expect(ownerContent.weeklyPerPost.previous).toEqual([
+      48, 50, 49, 51, 53, 52, 54, 55, 58, 60, 59, 62,
+    ]);
+  });
+
+  it('heatmap: 28 cells whose rows and columns are byWeekday and bySlot', () => {
+    const { heatmap } = ownerContent;
+    expect(heatmap).toHaveLength(28);
+    for (const day of publishing.byWeekday) {
+      const cells = heatmap.filter((cell) => cell.weekday === day.weekday);
+      expect(cells, day.weekday).toHaveLength(4);
+      expect(sumOf(cells, 'posts'), day.weekday).toBe(day.posts);
+      expect(sumOf(cells, 'interactions'), day.weekday).toBe(day.interactions);
+    }
+    for (const slot of publishing.bySlot) {
+      const cells = heatmap.filter((cell) => cell.fromHour === slot.fromHour);
+      expect(cells, String(slot.fromHour)).toHaveLength(7);
+      expect(cells.every((cell) => cell.toHour === slot.toHour)).toBe(true);
+      expect(sumOf(cells, 'posts'), String(slot.fromHour)).toBe(slot.posts);
+      expect(sumOf(cells, 'interactions'), String(slot.fromHour)).toBe(slot.interactions);
+    }
+    const perPost = heatmap.map((cell) => cell.interactions / cell.posts);
+    const best = heatmap[perPost.indexOf(Math.max(...perPost))];
+    expect(best).toMatchObject({ weekday: 'thu', fromHour: 20, posts: 4, interactions: 401 });
+    expect(Math.round(Math.max(...perPost))).toBe(100);
+    const worst = heatmap[perPost.indexOf(Math.min(...perPost))];
+    expect(worst).toMatchObject({ weekday: 'sun', fromHour: 7, posts: 1, interactions: 39 });
+  });
+
+  it("each post's comments: answered by the team, the oldest unanswered, the first reply", () => {
+    let late = 0;
+    for (const item of posts) {
+      const { answered, oldestUnansweredHours, firstReplyMedianMinutes } = item.commentMeta;
+      expect(answered, item.id).toBeGreaterThanOrEqual(0);
+      expect(answered, item.id).toBeLessThanOrEqual(item.comments);
+      expect(oldestUnansweredHours === null, item.id).toBe(answered === item.comments);
+      expect(firstReplyMedianMinutes === null, item.id).toBe(answered === 0);
+      if (oldestUnansweredHours !== null) {
+        expect(oldestUnansweredHours, item.id).toBeLessThanOrEqual(24 * (daysSince(item.date) + 1));
+        if (daysSince(item.date) < 2) expect(oldestUnansweredHours, item.id).toBeLessThan(24);
+        if (oldestUnansweredHours > 24) late += 1;
+      }
+    }
+    expect(late).toBeGreaterThanOrEqual(3);
+    const op19 = ownerContentItem('op-19');
+    expect(op19.comments - op19.commentMeta.answered).toBe(9);
+    expect(op19.commentMeta.oldestUnansweredHours).toBe(192);
+  });
+});
+
+describe('who interacts and the interactions (D-02, PD-5, PD-7)', () => {
+  const active = ROSTER.filter(
+    ({ insights }) => insights.lists.likes.length + insights.lists.comments.length > 0,
+  );
+
+  it('the interactors are the roster members with a like or comment, most recent first', () => {
+    const all = ownerContentInteractors(null);
+    expect(all.total).toBe(428);
+    expect(all.people.map((p) => p.id).sort()).toEqual(active.map(({ row }) => row.id).sort());
+    for (const [i, person] of all.people.entries()) {
+      const before = all.people[i - 1];
+      if (before) expect(before.when.daysAgo).toBeLessThanOrEqual(person.when.daysAgo);
+    }
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      const list = ownerContentInteractors(band);
+      expect(list.total, band).toBe(ownerContent.interactorsByBand[band]);
+      for (const person of list.people) {
+        expect(person.band, band).toBe(band);
+        expect(ownerContentInteractorIncludes(band, person.id), band).toBe(true);
+        expect(ownerContentInteractorIncludes(null, person.id), band).toBe(true);
+      }
+    }
+    const atRisk = ownerBandRoster.find((row) => row.band === 'at_risk');
+    expect(ownerContentInteractorIncludes(null, atRisk?.id ?? '')).toBe(false);
+    expect(
+      ownerContentInteractorIncludes(
+        'superfan',
+        all.people.find((p) => p.band === 'new')?.id ?? '',
+      ),
+    ).toBe(false);
+  });
+
+  it('the interactions are every roster like and comment, the same fact as the people', () => {
+    const { rows, total } = ownerContentInteractions();
+    expect(total).toBe(3940);
+    expect(rows).toHaveLength(759);
+    expect(rows.filter((row) => row.action === 'like')).toHaveLength(663);
+    for (const [i, row] of rows.entries()) {
+      const who = row.action === 'like' ? 'likes' : 'comments';
+      const person = ownerContentPeople(row.itemId, who).people.find((p) => p.id === row.person.id);
+      expect(person?.when, `${row.person.id} ${row.itemId}`).toEqual(row.when);
+      const before = rows[i - 1];
+      if (before) expect(before.when.daysAgo).toBeLessThanOrEqual(row.when.daysAgo);
+    }
+  });
+});
+
+function sumOf<T extends Record<K, number>, K extends string>(rows: readonly T[], key: K): number {
+  return rows.reduce((total, row) => total + row[key], 0);
+}
