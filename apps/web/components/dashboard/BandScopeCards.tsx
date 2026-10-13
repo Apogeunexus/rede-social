@@ -61,7 +61,7 @@ function Cell({ label, value, className }: { label: string; value: string; class
   return (
     <div className={`flex min-w-0 flex-col justify-between gap-0.5 ${className ?? ''}`}>
       <dt className="text-xs text-text-secondary">{label}</dt>
-      <dd className="text-lg font-bold text-text tabular-nums">{value}</dd>
+      <dd className="text-lg font-bold text-text tabular-nums [overflow-wrap:normal]">{value}</dd>
     </div>
   );
 }
@@ -149,17 +149,17 @@ export function EventScopeCard({ t, id, band, href }: ScopeCardProps) {
             <Cell
               label={t(`${key}.date`)}
               value={formatDayMonth(event.date)}
-              className="px-3 first:pl-0 last:pr-0"
+              className="px-2 first:pl-0 last:pr-0"
             />
             <Cell
               label={t(`${key}.duration`)}
               value={formatDuration(t, event.durationMinutes)}
-              className="px-3 first:pl-0 last:pr-0"
+              className="px-2 first:pl-0 last:pr-0"
             />
             <Cell
               label={t(`${key}.revenue`)}
               value={formatBrlCompact(event.confirmed * event.ticketCents.value)}
-              className="px-3 first:pl-0 last:pr-0"
+              className="px-2 first:pl-0 last:pr-0"
             />
           </dl>
           <InBand
