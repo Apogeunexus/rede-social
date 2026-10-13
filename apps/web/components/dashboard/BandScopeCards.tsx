@@ -53,10 +53,13 @@ function InBand({ t, count, linked }: { t: DashboardT; count: number; linked: bo
   );
 }
 
-/** One column of a card: the small gray label, then the large bold value. */
+/**
+ * One column of a card: the small gray label, then the large bold value. `justify-between` keeps the
+ * values on one line when a label wraps to two and its neighbor does not.
+ */
 function Cell({ label, value, className }: { label: string; value: string; className?: string }) {
   return (
-    <div className={`flex min-w-0 flex-col gap-0.5 ${className ?? ''}`}>
+    <div className={`flex min-w-0 flex-col justify-between gap-0.5 ${className ?? ''}`}>
       <dt className="text-xs text-text-secondary">{label}</dt>
       <dd className="text-lg font-bold text-text tabular-nums">{value}</dd>
     </div>
