@@ -76,7 +76,8 @@ export type NotMeasuredReason =
   | 'needs_story_view_time'
   | 'needs_waitlist'
   | 'needs_access_expiry'
-  | 'needs_support_subject';
+  | 'needs_support_subject'
+  | 'needs_event_tickets';
 
 /**
  * A metric the app does not collect yet: there is deliberately no value field, so no number can be

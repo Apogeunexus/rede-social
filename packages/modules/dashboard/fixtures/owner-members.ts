@@ -262,7 +262,7 @@ const unregistered: readonly UnregisteredMember[] = ENGAGEMENT_BAND_ORDER.flatMa
 );
 
 /** The scope's six bands; an id the fixture does not have is a bug, so it throws. */
-function scopeBands(scope: OwnerBandScope): EngagementBands {
+export function ownerScopeBands(scope: OwnerBandScope): EngagementBands {
   if (scope.kind === 'member') return tenantOwnerPanel.engagement;
   const rows =
     scope.kind === 'community'
@@ -286,7 +286,7 @@ function eligible(member: UnregisteredMember, event: { id: string; date: string 
  * band's registrant count, so every list adds up to the event's bands.
  */
 function registers(member: UnregisteredMember, event: { id: string; date: string }): boolean {
-  const count = scopeBands({ kind: 'event', id: event.id }).counts[member.band];
+  const count = ownerScopeBands({ kind: 'event', id: event.id }).counts[member.band];
   return unregistered
     .filter((row) => row.band === member.band && eligible(row, event))
     .slice(0, Math.min(count, PER_BAND))
@@ -323,7 +323,7 @@ function scopeEntry(
  * holds. An event's registrants sit in their whole-base band, with their whole-base last action.
  */
 export function ownerBandList(scope: OwnerBandScope, band: EngagementBand): OwnerBandList {
-  const count = scopeBands(scope).counts[band];
+  const count = ownerScopeBands(scope).counts[band];
   const members = ownerBandRoster
     .flatMap((row): OwnerBandMember[] => {
       const entry = scopeEntry(row, scope);

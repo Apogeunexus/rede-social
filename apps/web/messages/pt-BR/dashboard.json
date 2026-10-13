@@ -79,7 +79,8 @@
       "needs_story_view_time": "Precisa registrar quanto tempo cada story fica na tela",
       "needs_waitlist": "Precisa registrar a lista de espera dos eventos",
       "needs_access_expiry": "Precisa preencher o vencimento dos acessos",
-      "needs_support_subject": "Precisa registrar o assunto de cada atendimento"
+      "needs_support_subject": "Precisa registrar o assunto de cada atendimento",
+      "needs_event_tickets": "Precisa registrar a venda de ingressos dos eventos"
     },
     "example": "exemplo",
     "belowFloor": "menos de {floor}",
@@ -544,13 +545,30 @@
         "byMember": "Por membro",
         "byCommunity": "Por comunidade",
         "byEvent": "Por evento",
-        "communityLabel": "Comunidade das faixas",
-        "eventLabel": "Evento das faixas",
         "exclusive": "Comunidade {name}",
         "event": "{name} · {date}",
-        "note": "{community}: {count, plural, one {# membro com acesso} other {# membros com acesso}}. Contam só as ações feitas nesta comunidade.",
-        "eventNote": "{event}: {count, plural, one {# inscrito} other {# inscritos}}. Cada um aparece na faixa que tem hoje na base toda.",
+        "communityNote": "A contagem de cada faixa é da base toda. Em cada comunidade, o membro aparece na faixa das ações feitas nela.",
+        "eventNote": "A contagem de cada faixa é da base toda. Em cada evento, o inscrito aparece na faixa que tem hoje na base toda.",
         "movementNote": "Subiram e Caíram contam toda a base."
+      },
+      "scopeCards": {
+        "inBand": "{count} nesta faixa",
+        "membersIn": "{band} em {item}",
+        "backCommunities": "Voltar às comunidades",
+        "backEvents": "Voltar aos eventos",
+        "community": {
+          "members": "Membros",
+          "activeWeek": "Ativos na semana",
+          "posts": "Publicações no mês",
+          "interactions": "Interações no mês",
+          "interactionsNote": "Interações: comentários e curtidas"
+        },
+        "event": {
+          "date": "Data",
+          "duration": "Duração",
+          "revenue": "Receita",
+          "revenueNote": "Receita: valores de exemplo"
+        }
       },
       "bandMembers": {
         "summary": "{count} · {percent}",

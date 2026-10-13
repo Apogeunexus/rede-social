@@ -47,6 +47,14 @@ export interface OwnerPastEvent {
   checkIns: number;
   /** Check-ins of members with no RSVP. */
   walkIns: number;
+  /** `ends_at` − `starts_at`, in minutes (measured). */
+  durationMinutes: number;
+  /**
+   * The ticket price in cents (0 = free): an example, no ticket sale is recorded yet. The revenue a
+   * card shows is `confirmed` × this, computed in the web tier like every per-item figure; it is
+   * not part of the store revenue (Financeiro).
+   */
+  ticketCents: ReportValue<number>;
 }
 
 /** An event still to come: `events.capacity` (null = no limit) and the RSVPs "vou" so far. */
@@ -59,6 +67,10 @@ export interface OwnerUpcomingEvent {
   startsAtHour: number;
   capacity: number | null;
   confirmed: number;
+  /** `ends_at` − `starts_at`, in minutes (measured). */
+  durationMinutes: number;
+  /** The ticket price in cents (0 = free): an example, as `OwnerPastEvent.ticketCents`. */
+  ticketCents: ReportValue<number>;
 }
 
 /**
@@ -134,9 +146,16 @@ export interface TenantOwnerPanel {
   byCommunity: {
     id: string;
     name: string;
+    /**
+     * `communities.description`: the community's own text, tenant content like `name` (not a UI
+     * sentence), shown on its card (quick 261012-tru D-03).
+     */
+    description: string;
     exclusive: boolean;
     posts: number;
     interactions: number;
+    /** Members with a counted action in this community in the last 7 days. */
+    activeWeek: number;
   }[];
   /**
    * Last 14 days, best first: level 5's posts. Likes and comments are `feed_likes` and
@@ -355,10 +374,42 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     { type: 'link', posts: 8, interactions: 184 },
   ],
   byCommunity: [
-    { id: 'c-vip', name: 'VIP', exclusive: true, posts: 22, interactions: 1650 },
-    { id: 'c-geral', name: 'Geral', exclusive: false, posts: 25, interactions: 1580 },
-    { id: 'c-iniciantes', name: 'Iniciantes', exclusive: false, posts: 8, interactions: 430 },
-    { id: 'c-eventos', name: 'Eventos', exclusive: false, posts: 6, interactions: 280 },
+    {
+      id: 'c-vip',
+      name: 'VIP',
+      description: 'Aulas, lives e materiais exclusivos para quem é VIP.',
+      exclusive: true,
+      posts: 22,
+      interactions: 1650,
+      activeWeek: 104,
+    },
+    {
+      id: 'c-geral',
+      name: 'Geral',
+      description: 'Conversa aberta com toda a comunidade: dicas, recados e novidades.',
+      exclusive: false,
+      posts: 25,
+      interactions: 1580,
+      activeWeek: 296,
+    },
+    {
+      id: 'c-iniciantes',
+      name: 'Iniciantes',
+      description: 'Primeiros passos para quem acabou de chegar.',
+      exclusive: false,
+      posts: 8,
+      interactions: 430,
+      activeWeek: 92,
+    },
+    {
+      id: 'c-eventos',
+      name: 'Eventos',
+      description: 'Avisos, fotos e conversas dos encontros e das lives.',
+      exclusive: false,
+      posts: 6,
+      interactions: 280,
+      activeWeek: 41,
+    },
   ],
   topPosts: [
     {
@@ -448,6 +499,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         confirmed: 100,
         checkIns: 82,
         walkIns: 6,
+        durationMinutes: 180,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 6000 },
       },
       {
         id: 'e2',
@@ -458,6 +511,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         confirmed: 148,
         checkIns: 86,
         walkIns: 0,
+        durationMinutes: 60,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 0 },
       },
       {
         id: 'e3',
@@ -468,6 +523,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         confirmed: 50,
         checkIns: 32,
         walkIns: 0,
+        durationMinutes: 240,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 12000 },
       },
       {
         id: 'e4',
@@ -478,6 +535,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         confirmed: 61,
         checkIns: 30,
         walkIns: 0,
+        durationMinutes: 90,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 0 },
       },
     ],
     upcoming: [
@@ -489,6 +548,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         startsAtHour: 19,
         capacity: 100,
         confirmed: 92,
+        durationMinutes: 180,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 6000 },
       },
       {
         id: 'u2',
@@ -498,6 +559,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         startsAtHour: 20,
         capacity: null,
         confirmed: 64,
+        durationMinutes: 60,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 0 },
       },
       {
         id: 'u3',
@@ -507,6 +570,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         startsAtHour: 9,
         capacity: 40,
         confirmed: 40,
+        durationMinutes: 480,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 35000 },
       },
     ],
     waitlist: {

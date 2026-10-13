@@ -7,9 +7,10 @@ import {
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import { ActionCard, BarList, KpiCard, KpiGrid, LineChart } from '@rede-social/module-dashboard/ui';
-import { Card, cn, StatusPill, type StatusTone } from '@rede-social/ui';
-import { ChevronLeft, Lightbulb } from 'lucide-react';
-import { type OwnerMembersView, ownerScopeHref } from '@/lib/owner-band-scope';
+import { Card, StatusPill, type StatusTone } from '@rede-social/ui';
+import { Lightbulb } from 'lucide-react';
+import { type OwnerMembersView, ownerListScope, ownerMembersHref } from '@/lib/owner-band-scope';
+import { BackLink } from './BackLink';
 import { ExamplePill } from './ExamplePill';
 import {
   communityLabel,
@@ -36,9 +37,6 @@ const BAND_TONE: Record<EngagementBand, StatusTone> = {
 
 /** How far back each history entry is (the fixture's 60 and 30 days, then today). */
 const HISTORY_DAYS = [60, 30] as const;
-
-const FOCUS_RING =
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg';
 
 const ALL_EVENTS = [...tenantOwnerPanel.events.past, ...tenantOwnerPanel.events.upcoming];
 
@@ -311,34 +309,30 @@ function Support({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights
 
 /**
  * One member's insights in the level-4 Membros area (quick 261012-qer B-3), opened from their band
- * card: "Voltar" to the same scope with the same band open at #faixas, then the header (the community
+ * card: "Voltar" one step back in the cascade (the same tab, band and opened community or event at
+ * #faixas, quick 261012-tru D-06), then the header (the community
  * band next to the whole-base one when they differ, quick 261012-ri4 R-4), the last 30
  * days (example values marked), the band history with the weekly active days, where they interact,
  * their events, purchases and support counts (never message text), and a suggested next step whose
  * button is disabled like every preview action. Visible to the client's management only.
  */
 export function OwnerMemberDetail({ t, view }: { t: DashboardT; view: OwnerMembersView }) {
-  // The parser only lets a roster member through together with the band they hold in the scope
-  // (R-5), so a missing member or band is a bug.
+  // The parser only lets a roster member through together with the band they hold in the opened
+  // list (R-5, D-06), so a missing member, band or list is a bug.
   const insights = view.memberId ? ownerMemberInsights(view.memberId) : null;
-  if (!insights || !view.band) {
+  const scope = ownerListScope(view);
+  if (!insights || !view.band || !scope) {
     throw new Error(`no insights for member ${view.memberId ?? '(none)'} in band ${view.band}`);
   }
   const { kind, days } = insights.suggestion;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <a
-        href={ownerScopeHref(view.scope, view.band)}
-        className={cn(
-          'inline-flex min-h-11 w-fit items-center gap-1 rounded-md text-sm font-bold text-brand',
-          FOCUS_RING,
-        )}
-      >
-        <ChevronLeft aria-hidden size={18} />
-        {t('tenantOwner.memberDetail.back')}
-      </a>
-      <Header t={t} insights={insights} scope={view.scope} band={view.band} />
+      <BackLink
+        href={ownerMembersHref({ ...view, memberId: null })}
+        label={t('tenantOwner.memberDetail.back')}
+      />
+      <Header t={t} insights={insights} scope={scope} band={view.band} />
       <Last30 t={t} insights={insights} />
       <Evolution t={t} insights={insights} />
       <WhereInteracts t={t} insights={insights} />

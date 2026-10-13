@@ -4,6 +4,7 @@ import {
   type OwnerBandMember,
   type OwnerBandScope,
   ownerBandList,
+  ownerScopeBands,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import {
@@ -16,7 +17,16 @@ import {
 import { Card, cn } from '@rede-social/ui';
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { ownerMemberHref } from '@/lib/owner-band-scope';
+import { type OwnerMembersView, ownerMembersHref } from '@/lib/owner-band-scope';
+import { BackLink } from './BackLink';
+import {
+  CommunityScopeCard,
+  EventScopeCard,
+  ownerCommunity,
+  ownerEvent,
+  RevenueExampleNote,
+  ScopeItemCards,
+} from './BandScopeCards';
 import { ExamplePill } from './ExamplePill';
 import {
   bandLabel,
@@ -24,6 +34,7 @@ import {
   type DashboardT,
   exampleBadge,
   formatCount,
+  formatDayMonth,
   formatHoursMinutes,
   formatMonthYear,
   formatPercent,
@@ -31,13 +42,15 @@ import {
 } from './format';
 import { PreviewAction } from './PanelSection';
 
+/** The cascade levels the bands render (the member level replaces the area, see OwnerMembers). */
+type BandView = Pick<OwnerMembersView, 'kind' | 'band' | 'itemId'>;
+
 export interface BandMembersProps {
   t: DashboardT;
+  /** The whole base's bands: every tab's headers count each member once (quick 261012-tru D-02). */
   bands: EngagementBands;
-  /** The scope (allow-listed by `parseOwnerMembersView`). */
-  scope: OwnerBandScope;
-  /** The band to render open (coming back from a member's insights); null = all closed. */
-  openBand: EngagementBand | null;
+  /** The tab, the open band and the opened community or event (allow-listed by the parser). */
+  view: BandView;
 }
 
 function topCommunityLabel(t: DashboardT, id: string): string {
@@ -145,69 +158,163 @@ function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMembe
 }
 
 /**
- * The six engagement bands of the level-4 Membros area (quick 261012-pkd D-02), each a closed native
- * `<details>`: the summary reads count · share with a mini bar (only Em risco solid, the band to act
- * on). Opened, the band lists its 10 most recent members as cards; over 10 it says so on top and
- * ends with how many more plus a disabled "Ver todos" (A-3); a band with no members says so (A-4).
- * When a listed daily time is an example, one line on top says so with the pill (quick 261012-ri4
- * R-2), instead of a pill on every card.
- * The body keys on the band count, so it always agrees with the summary. Each card opens the
- * member's insights; coming back, `openBand` renders that band open. Names reach the client's own
- * team only (D-03).
+ * One band's member list (quick 261012-pkd D-02, kept as is by quick 261012-tru D-02): the 10 most
+ * recent members of the list scope as cards; over 10 it says so on top and ends with how many more
+ * plus a disabled "Ver todos" (A-3); no members says so (A-4). When a listed daily time is an
+ * example, one line on top says so with the pill (quick 261012-ri4 R-2). `count` is the band's count
+ * in the list scope, so the body always agrees with what led here. Each card opens the member's
+ * insights one level down.
  */
-export function BandMembers({ t, bands, scope, openBand }: BandMembersProps) {
+function MemberList({
+  t,
+  view,
+  scope,
+  band,
+  count,
+}: {
+  t: DashboardT;
+  view: BandView;
+  scope: OwnerBandScope;
+  band: EngagementBand;
+  count: number;
+}) {
+  if (count === 0) {
+    return <p className="text-sm text-text-secondary">{t('tenantOwner.bandMembers.empty')}</p>;
+  }
+  const { members, more } = ownerBandList(scope, band);
+  const example = members.find((member) => member.dailyMinutes.example)?.dailyMinutes;
+  return (
+    <>
+      {more > 0 || example ? (
+        <div className="flex flex-col gap-1">
+          {more > 0 ? (
+            <p className="text-xs text-text-secondary">
+              {t('tenantOwner.bandMembers.recent', { count: members.length })}
+            </p>
+          ) : null}
+          {example ? (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+              {t('tenantOwner.bandMembers.exampleNote')}
+              <ExamplePill text={exampleBadge(t, example)} />
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      <ul className="flex flex-col gap-3">
+        {members.map((member) => (
+          <li key={member.id} className="min-w-0">
+            <MemberCard
+              t={t}
+              member={member}
+              href={ownerMembersHref({ ...view, band, memberId: member.id })}
+            />
+          </li>
+        ))}
+      </ul>
+      {more > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-text-secondary">
+            {t('tenantOwner.bandMembers.more', { count: more })}
+          </p>
+          <PreviewAction>{t('tenantOwner.bandMembers.seeAll')}</PreviewAction>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** `Encontro mensal · 12/10` or `Comunidade VIP`: the opened item as the members line names it. */
+function itemName(t: DashboardT, kind: 'community' | 'event', id: string): string {
+  if (kind === 'community') return communityLabel(t, ownerCommunity(id));
+  const event = ownerEvent(id);
+  return t('tenantOwner.bandScope.event', { name: event.name, date: formatDayMonth(event.date) });
+}
+
+/**
+ * A community or event opened inside its band (quick 261012-tru D-05): the way back to the band's
+ * cards, the item's own card (not a link here), then that band's members in it.
+ */
+function OpenedItem({
+  t,
+  view,
+  kind,
+  id,
+  band,
+}: {
+  t: DashboardT;
+  view: BandView;
+  kind: 'community' | 'event';
+  id: string;
+  band: EngagementBand;
+}) {
+  const scope: OwnerBandScope = { kind, id };
+  const Item = kind === 'community' ? CommunityScopeCard : EventScopeCard;
+  return (
+    <>
+      <BackLink
+        href={ownerMembersHref({ ...view, band, itemId: null, memberId: null })}
+        label={t(
+          kind === 'community'
+            ? 'tenantOwner.scopeCards.backCommunities'
+            : 'tenantOwner.scopeCards.backEvents',
+        )}
+      />
+      {kind === 'event' ? <RevenueExampleNote t={t} /> : null}
+      <Item t={t} id={id} band={band} href={null} />
+      <p className="text-sm font-bold text-text">
+        {t('tenantOwner.scopeCards.membersIn', {
+          band: bandLabel(t, band),
+          item: itemName(t, kind, id),
+        })}
+      </p>
+      <MemberList
+        t={t}
+        view={view}
+        scope={scope}
+        band={band}
+        count={ownerScopeBands(scope).counts[band]}
+      />
+    </>
+  );
+}
+
+/**
+ * The six engagement bands of the level-4 Membros area, one cascade in the three tabs (quick
+ * 261012-tru D-01, D-02): each band is a closed native `<details>` whose summary reads the whole-base
+ * count · share with a mini bar (only Em risco solid, the band to act on). Opened, Por membro lists
+ * its members; Por comunidade and Por evento list the community or event cards with how many of the
+ * band each holds, and a card opens that item in place with its members in the band (D-05). A member
+ * card opens the member's insights (D-06); coming back, the view renders the same band (and item)
+ * open. Names reach the client's own team only (261012-pkd D-03).
+ */
+export function BandMembers({ t, bands, view }: BandMembersProps) {
   const total = bandTotal(bands);
   return ENGAGEMENT_BAND_ORDER.map((band) => {
-    const count = bands.counts[band];
-    const { members, more } = ownerBandList(scope, band);
-    const example = members.find((member) => member.dailyMinutes.example)?.dailyMinutes;
+    const open = band === view.band;
+    let body: ReactNode;
+    if (view.kind === 'member') {
+      body = (
+        <MemberList
+          t={t}
+          view={view}
+          scope={{ kind: 'member' }}
+          band={band}
+          count={bands.counts[band]}
+        />
+      );
+    } else if (open && view.itemId !== null) {
+      body = <OpenedItem t={t} view={view} kind={view.kind} id={view.itemId} band={band} />;
+    } else {
+      body = <ScopeItemCards t={t} kind={view.kind} band={band} />;
+    }
     return (
       <Collapsible
         key={band}
-        open={band === openBand}
+        open={open}
         title={bandLabel(t, band)}
-        summary={<BandSummary t={t} band={band} count={count} total={total} />}
+        summary={<BandSummary t={t} band={band} count={bands.counts[band]} total={total} />}
       >
-        {count === 0 ? (
-          <p className="text-sm text-text-secondary">{t('tenantOwner.bandMembers.empty')}</p>
-        ) : (
-          <>
-            {more > 0 || example ? (
-              <div className="flex flex-col gap-1">
-                {more > 0 ? (
-                  <p className="text-xs text-text-secondary">
-                    {t('tenantOwner.bandMembers.recent', { count: members.length })}
-                  </p>
-                ) : null}
-                {example ? (
-                  <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-                    {t('tenantOwner.bandMembers.exampleNote')}
-                    <ExamplePill text={exampleBadge(t, example)} />
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <ul className="flex flex-col gap-3">
-              {members.map((member) => (
-                <li key={member.id} className="min-w-0">
-                  <MemberCard
-                    t={t}
-                    member={member}
-                    href={ownerMemberHref(scope, band, member.id)}
-                  />
-                </li>
-              ))}
-            </ul>
-            {more > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-text-secondary">
-                  {t('tenantOwner.bandMembers.more', { count: more })}
-                </p>
-                <PreviewAction>{t('tenantOwner.bandMembers.seeAll')}</PreviewAction>
-              </div>
-            ) : null}
-          </>
-        )}
+        {body}
       </Collapsible>
     );
   });

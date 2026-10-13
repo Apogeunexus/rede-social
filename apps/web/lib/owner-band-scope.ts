@@ -3,6 +3,7 @@ import {
   type OwnerBandScope,
   ownerBandIncludes,
   ownerBandRoster,
+  ownerScopeBands,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import { ENGAGEMENT_BAND_ORDER } from '@rede-social/module-dashboard/ui';
@@ -15,7 +16,7 @@ import { ownerAreaHref } from './dashboard-preview';
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-/** The id of the "Faixas de engajamento" section: every scope link lands on it. */
+/** The id of the "Faixas de engajamento" section: every cascade link lands on it. */
 export const OWNER_BANDS_ANCHOR = 'faixas';
 
 /**
@@ -47,27 +48,29 @@ export const OWNER_BAND_SLUGS: Readonly<Record<EngagementBand, string>> = {
 const OWNER_MEMBER_IDS: readonly string[] = ownerBandRoster.map((row) => row.id);
 
 /**
- * What the Membros area renders: the bands' scope, the band to reopen (null = all closed) and the
- * member whose insights replace the area (null = the area itself). A member is only ever set together
- * with the band they hold in the scope (quick 261012-ri4 R-5).
+ * Where the Membros area stands in the cascade (quick 261012-tru D-05, D-06): the tab (`kind`), the
+ * open band (null = all closed), the community or event opened inside that band (Por comunidade and
+ * Por evento only; null = the band lists the cards) and the member whose insights replace the area
+ * (null = the area itself). Each level is only ever set with the levels above it.
  */
 export interface OwnerMembersView {
-  scope: OwnerBandScope;
+  kind: OwnerBandScope['kind'];
   band: EngagementBand | null;
+  itemId: string | null;
   memberId: string | null;
 }
 
 const RECORTES = ['membro', 'comunidade', 'evento'] as const;
 
+const KIND_OF_RECORTE = {
+  membro: 'member',
+  comunidade: 'community',
+  evento: 'event',
+} as const satisfies Record<(typeof RECORTES)[number], OwnerBandScope['kind']>;
+
 /** A query value only when it is a single string, exactly one of `allowed`. */
 function pick<T extends string>(raw: string | string[] | undefined, allowed: readonly T[]) {
   return typeof raw === 'string' ? allowed.find((value) => value === raw) : undefined;
-}
-
-function first<T>(rows: readonly T[]): T {
-  const row = rows[0];
-  if (row === undefined) throw new Error('the fixture has no row to fall back to');
-  return row;
 }
 
 /** The band of a `faixa` slug: exact and single, else null. */
@@ -77,63 +80,89 @@ function parseBand(params: SearchParams): EngagementBand | null {
   return ENGAGEMENT_BAND_ORDER.find((band) => OWNER_BAND_SLUGS[band] === raw) ?? null;
 }
 
-function parseScope(params: SearchParams): OwnerBandScope {
-  const recorte = pick(params.recorte, RECORTES);
-  if (recorte === 'comunidade') {
+/** The allow-listed community or event the query names for the tab, else null. */
+function parseItem(params: SearchParams, kind: OwnerBandScope['kind']): string | null {
+  if (kind === 'community') {
     const slug = pick(
       params.comunidade,
       OWNER_COMMUNITIES.map((row) => row.slug),
     );
-    const community =
-      OWNER_COMMUNITIES.find((row) => row.slug === slug) ?? first(OWNER_COMMUNITIES);
-    return { kind: 'community', id: community.id };
+    return OWNER_COMMUNITIES.find((row) => row.slug === slug)?.id ?? null;
   }
-  if (recorte === 'evento') {
-    const id =
+  if (kind === 'event') {
+    return (
       pick(
         params.evento,
         OWNER_EVENTS.map((row) => row.id),
-      ) ?? first(OWNER_EVENTS).id;
-    return { kind: 'event', id };
+      ) ?? null
+    );
   }
-  return { kind: 'member' };
+  return null;
 }
 
 /**
- * The view the query asks for (untrusted). `recorte` picks Por membro, Por comunidade or Por evento;
- * anything else is Por membro, so a bare legacy `?comunidade=` too. Under a valid `recorte`, an
- * unknown `comunidade` or `evento` falls to that row's first item. `faixa` is a band slug, else null.
- * `membro` is a roster id that must hold `faixa` in the scope (R-5); otherwise it is null and the
- * scope and band stay, so the area falls back to that list with the band open. Only allow-listed
- * constants ever reach markup or URLs.
+ * The list a member card of the view comes from: the whole base in Por membro, the opened community
+ * or event otherwise, and none while a band only lists its cards.
+ */
+export function ownerListScope(
+  view: Pick<OwnerMembersView, 'kind' | 'itemId'>,
+): OwnerBandScope | null {
+  if (view.kind === 'member') return { kind: 'member' };
+  return view.itemId === null ? null : { kind: view.kind, id: view.itemId };
+}
+
+/**
+ * The view the query asks for (untrusted), read level by level; an invalid value at any level falls
+ * to the level above, never to an error (D-06):
+ * 1. `recorte` picks Por membro, Por comunidade or Por evento; anything else is Por membro.
+ * 2. `faixa` is a band slug, else every band is closed.
+ * 3. `comunidade` (Por comunidade) or `evento` (Por evento) opens that item inside the band, only
+ *    when the band is open, the value is exact and allow-listed, and the item has members in the
+ *    band; else the band lists the cards.
+ * 4. `membro` is a roster id that must sit in the band of the opened list (`ownerBandIncludes`);
+ *    else the list shows with its band open.
+ * Only allow-listed constants ever reach markup or URLs.
  */
 export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
-  const scope = parseScope(params);
+  const recorte = pick(params.recorte, RECORTES);
+  const kind = recorte ? KIND_OF_RECORTE[recorte] : 'member';
   const band = parseBand(params);
+  const item = band ? parseItem(params, kind) : null;
+  const itemId =
+    item !== null &&
+    kind !== 'member' &&
+    band &&
+    ownerScopeBands({ kind, id: item }).counts[band] > 0
+      ? item
+      : null;
+  const listScope = ownerListScope({ kind, itemId });
   const id = pick(params.membro, OWNER_MEMBER_IDS);
-  const memberId = id && band && ownerBandIncludes(scope, band, id) ? id : null;
-  return { scope, band, memberId };
+  const memberId = id && band && listScope && ownerBandIncludes(listScope, band, id) ? id : null;
+  return { kind, band, itemId, memberId };
 }
 
-/** A scope's query after `?area=membros` (empty for Por membro). */
-function scopeQuery(scope: OwnerBandScope): string {
-  if (scope.kind === 'member') return '';
-  if (scope.kind === 'event') return `&recorte=evento&evento=${scope.id}`;
-  const slug = OWNER_COMMUNITIES.find((row) => row.id === scope.id)?.slug;
-  if (!slug) throw new Error(`no community ${scope.id}`);
-  return `&recorte=comunidade&comunidade=${slug}`;
+/** A community's `?comunidade=` slug; an id the fixture does not have is a bug. */
+function communitySlug(id: string): string {
+  const slug = OWNER_COMMUNITIES.find((row) => row.id === id)?.slug;
+  if (!slug) throw new Error(`no community ${id}`);
+  return slug;
 }
 
-function bandQuery(band: EngagementBand | null | undefined): string {
-  return band ? `&faixa=${OWNER_BAND_SLUGS[band]}` : '';
-}
-
-/** A scope tab's or chip's link (or Voltar's, reopening `band`): the Membros area at #faixas. */
-export function ownerScopeHref(scope: OwnerBandScope, band?: EngagementBand | null): string {
-  return `${ownerAreaHref('membros')}${scopeQuery(scope)}${bandQuery(band)}#${OWNER_BANDS_ANCHOR}`;
-}
-
-/** A member card's link: the member's insights, remembering the scope and band to go back to. */
-export function ownerMemberHref(scope: OwnerBandScope, band: EngagementBand, id: string): string {
-  return `${ownerAreaHref('membros')}${scopeQuery(scope)}${bandQuery(band)}&membro=${id}`;
+/**
+ * The link to a cascade view: the Membros area, then `recorte`, the item, `faixa` and `membro` in
+ * that order. Landing on the bands (`#faixas`) until a member opens, whose insights start the area.
+ */
+export function ownerMembersHref(view: OwnerMembersView): string {
+  let query = '';
+  if (view.kind === 'community') query += '&recorte=comunidade';
+  if (view.kind === 'event') query += '&recorte=evento';
+  if (view.itemId !== null) {
+    query +=
+      view.kind === 'community'
+        ? `&comunidade=${communitySlug(view.itemId)}`
+        : `&evento=${view.itemId}`;
+  }
+  if (view.band) query += `&faixa=${OWNER_BAND_SLUGS[view.band]}`;
+  if (view.memberId !== null) return `${ownerAreaHref('membros')}${query}&membro=${view.memberId}`;
+  return `${ownerAreaHref('membros')}${query}#${OWNER_BANDS_ANCHOR}`;
 }

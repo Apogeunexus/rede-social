@@ -95,6 +95,7 @@ one per row (261012-oxi C-3):
 | Acessos que vencem em 7 dias, taxa de renovação | the `store` access `expires_at` column, never set | Fill `expires_at` when a time-limited access is granted (`needs_access_expiry`) |
 | Conversão por produto | none | Product page visits (`needs_product_page_views`) |
 | Atendimentos por assunto | none | A subject on each support conversation (`needs_support_subject`) |
+| Receita do cartão de evento | none (no ticket sale is recorded) | The ticket price and sales of each event (`needs_event_tickets`) |
 | Crescimento (entraram, saíram, novos por semana) | memberships (joined / left dates) | measured |
 | Interações por post, por comunidade | likes + comments joined to `feed_posts.community_id` | measured |
 | Melhor dia e horário para publicar | likes + comments by the post's São Paulo publication weekday and hour | measured |
@@ -106,32 +107,55 @@ one per row (261012-oxi C-3):
 | Faixas por comunidade | the counted actions joined to the community, plus access for the base (paid access for the exclusive VIP, membership for the others) | measured |
 | Membros de cada faixa | the same per-member band, plus the member's last counted action | measured |
 | Faixas por evento | the whole-base band of each member with an RSVP "vou" to the event | measured |
+| Cartão de comunidade | `communities.description`, access (the base), members with a counted action in the community in the last 7 days, the 30-day posts and their likes + comments (the Conteúdo numbers) | measured |
+| Cartão de evento | `events.starts_at` (data) and `ends_at` − `starts_at` (duração); receita = RSVPs "vou" × the ticket price | measured + receita example |
 | Insights do membro | one member's counted actions, RSVPs and check-ins, paid orders and support conversation counts; daily time, posts seen and access expiry are examples | measured + examples |
 
-#### Faixas por comunidade e membros de cada faixa (261012-pkd, 261012-qer)
+#### Faixas por comunidade e membros de cada faixa (261012-pkd, 261012-qer, 261012-tru)
 
-The "Faixas de engajamento" block of the Membros area opens with three equal tabs (261012-qer B-2):
-**Por membro** (the whole base), **Por comunidade** and **Por evento**. The last two add a second
-row: the four communities (Comunidade VIP first) or the seven panel events (upcoming soonest first,
-then past most recent first, each as "name · dd/mm"). The web tier reads `?recorte=`, `?comunidade=`
-and `?evento=` through the allow-lists in `apps/web/lib/owner-band-scope.ts` (the community slug is
-the fixture id without its `c-` prefix, the event value is its id). An unknown or repeated `recorte`,
-or a bare legacy `?comunidade=`, renders Por membro; an unknown community or event under a valid
-`recorte` renders that row's first item. Every tab and chip is a plain link that keeps
-`area=membros` and ends in `#faixas`, so it lands on the block and works without JavaScript.
+The "Faixas de engajamento" block of the Membros area is one cascade in three equal tabs
+(261012-tru D-01): **Por membro**, **Por comunidade** and **Por evento**, one row and no other menu
+below it at any level. Every tab opens on the same six bands with the whole base's counts, each
+member counted once (D-02); a note under the Por comunidade and Por evento tabs says so. A band
+opens its member cards (Por membro), or the four community cards or the seven event cards (upcoming
+soonest first, then past most recent first), each saying how many of the band it holds ("N nesta
+faixa"). A card with members in the band opens, in the same place, that band's members in that
+community or event (D-05), with a "Voltar às comunidades" / "Voltar aos eventos" link back to the
+cards; a member card opens the insights (D-06), whose "Voltar" returns to that exact step. A card
+with 0 in the band reads "0 nesta faixa" and is not a link (every event's Inativos).
+
+The levels live in the URL and the web tier reads them in `apps/web/lib/owner-band-scope.ts`, in
+order: `?recorte=` (`comunidade` or `evento`, else Por membro), `?faixa=` (one of six slugs, else all
+bands closed), `?comunidade=` (the fixture id without its `c-` prefix) or `?evento=` (the event id),
+then `?membro=`. An invalid value at any level falls one level up, never to an error: an unknown or
+repeated item, an item with no band, or an item with nobody in the band shows the band's cards; a
+`membro` outside the band of the opened list shows that list. `ownerMembersHref` builds every link
+in the same parameter order; until a member opens, it ends in `#faixas`, so it lands on the block,
+and every level works without JavaScript.
+
+The community card (D-03) is the communities module's own cover (`CommunityCover`, the `card` box at
+16:7, its `--brand-gradient` fallback since the preview has no photo), then the name, the
+description, a thin line, four columns (Membros = the community's base, Ativos na semana, Publicações
+no mês, Interações no mês) and the note "Interações: comentários e curtidas". The event card (D-04)
+is the events module's cover (`EventCover`, the `hero` box at 16:10), the name, a Presencial/Online
+pill, a thin line and three columns split by thin lines: Data, Duração and Receita (RSVPs "vou" × the
+example ticket price, one "Receita: valores de exemplo" line with the pill per list, never per
+card). Planner decision: this receita is a card example only, not part of the Financeiro store
+revenue, which counts paid store orders. Both covers come through the modules' public `/ui`
+surface, which `pnpm boundaries` allows for `apps/web`.
 
 Por evento shows today's whole-base band of everyone who RSVP'd "vou" to the event
 (`eventEngagement`). `tests/tenant-owner.test.ts` proves that each event's bands sum to its
 `confirmed`, that no band exceeds the base's, that nobody is inactive (no fixture RSVP is older than
 60 days), that a past event's em risco fit in its no-shows (a check-in within 30 days makes a member
 active today), and that past registrants are mostly superfãs and engajados, as `attendanceByBand`.
-Every registrant acted (the RSVP), so the "Novos: X ativados de Y" line is hidden in event mode. The
-roster knows each member's registrations: per event and band, the first eligible slots up to the
+The roster knows each member's registrations: per event and band, the first eligible slots up to the
 band count, never a past event the member joined after.
 
-The "Recuperar quem está em risco" card follows the scope (A-2): the whole base reads 168 em risco
-with 69 reachable by push, and each community and event carries its own `atRiskWithPush`, always
-between 0 and its em risco.
+The "Recuperar quem está em risco" card follows the opened community or event (261012-tru D-08,
+after 261012-qer A-2): with none opened it reads the whole base's 168 em risco with 69 reachable by
+push; each community and event carries its own `atRiskWithPush`, always between 0 and its em risco
+(VIP 22 · 11, Encontro mensal 6 · 3).
 
 A community's bands follow the same rules as the whole base, counting only the member's actions in
 that community. Its base is who has access: the exclusive VIP counts who bought it (186), the other
@@ -140,12 +164,14 @@ communities count every member (1.240), and their novos are the base's novos.
 the VIP orders, that no community activates more novos than it has or than the base activated, and
 that no community ranks more members from superfã down to em risco than the whole base. Subiram and
 Caíram stay whole-base (a planner decision: per-community movement would need its own flows), and a
-line says so whenever a community is selected.
+line says so in the Por comunidade and Por evento tabs. Because every header is the whole base and a
+community lists the band of the actions made there, a community card can hold more of a band than
+the header (Geral Ocasionais 170 against 150): the note under the tab explains it.
 
 Each band is a closed `<details>` whose summary reads "count · percent" with a mini share bar (only
 Em risco is solid). A band with members whose share rounds to 0% reads "menos de 1%", and its bar
-keeps a 6 px minimum (A-1). Opened, it lists the 10 members of the band with the most recent
-activity in the scope. A band over 10 says "Os 10 com atividade mais recente" on top and ends with
+keeps a 6 px minimum (A-1). A member list shows the 10 members of the band with the most recent
+activity in its list (the whole base, or the opened community or event). A band over 10 says "Os 10 com atividade mais recente" on top and ends with
 "e mais N membros" beside a disabled "Ver todos" (A-3); a band with 0 members opens to "Nenhum membro
 nesta faixa." (A-4, live in every event's Inativos). The body keys on the band count, so it always
 agrees with the summary.
@@ -163,8 +189,9 @@ proves this, the band windows, and that every list adds up to its band count.
 #### Insights do membro (261012-qer B-3)
 
 Tapping a member card opens that member's insights in place of the Membros area
-(`&faixa=<band>&membro=om-NN`; `faixa` is one of six slugs and `membro` a roster id, anything else
-renders the area). "Voltar" returns to the same scope with the same band open, at `#faixas`. Top to
+(`&faixa=<band>&membro=om-NN`, after the tab and the opened community or event; `membro` must sit
+in that band of that list, anything else renders the list). "Voltar" returns one step: the same
+tab, band and opened community or event, at `#faixas`. Top to
 bottom: the header (initials, name, band pill, Membro desde, top community); the last 30 days
 (active days, likes, comments, strong actions, plus the example daily time and posts seen); the
 band 60 and 30 days ago and today with a 12-week chart of active days; where they interact

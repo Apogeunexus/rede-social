@@ -1,6 +1,8 @@
 import {
   type EngagementBand,
-  ownerBandList,
+  type OwnerBandScope,
+  ownerBandIncludes,
+  ownerBandRoster,
   ownerScopeBands,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
@@ -28,6 +30,11 @@ function view(
   memberId: string | null = null,
 ): OwnerMembersView {
   return { kind, band, itemId, memberId };
+}
+
+/** The first roster member in `band` of a list (the band lists stay BandMembers.tsx's to read). */
+function firstMember(scope: OwnerBandScope, band: EngagementBand): string | undefined {
+  return ownerBandRoster.find((row) => ownerBandIncludes(scope, band, row.id))?.id;
 }
 
 describe('OWNER_COMMUNITIES (quick 261012-pkd D-01)', () => {
@@ -178,7 +185,7 @@ describe('parseOwnerMembersView: the member level (quick 261012-tru D-06)', () =
   });
 
   it('opens an event registrant listed in that event’s band', () => {
-    const first = ownerBandList({ kind: 'event', id: 'u1' }, 'engaged').members[0]?.id;
+    const first = firstMember({ kind: 'event', id: 'u1' }, 'engaged');
     expect(first).toBeDefined();
     expect(
       parseOwnerMembersView({ recorte: 'evento', evento: 'u1', faixa: 'engajados', membro: first }),
@@ -250,8 +257,7 @@ describe('ownerMembersHref', () => {
           }
           const base = view(kind, band, itemId);
           const listScope = ownerListScope(base);
-          const first =
-            band && listScope ? (ownerBandList(listScope, band).members[0]?.id ?? null) : null;
+          const first = band && listScope ? (firstMember(listScope, band) ?? null) : null;
           for (const memberId of first ? [null, first] : [null]) {
             const target = { ...base, memberId };
             const query = new URL(ownerMembersHref(target), 'http://x').searchParams;

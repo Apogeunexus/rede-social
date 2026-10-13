@@ -2,7 +2,6 @@ import { type OwnerBandScope, tenantOwnerPanel } from '@rede-social/module-dashb
 import {
   ActionCard,
   BarList,
-  bandTotal,
   CohortHeatmap,
   Collapsible,
   KpiCard,
@@ -15,19 +14,15 @@ import { HeartHandshake } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import {
   OWNER_BANDS_ANCHOR,
-  OWNER_COMMUNITIES,
-  OWNER_EVENTS,
   type OwnerMembersView,
-  ownerScopeHref,
+  ownerListScope,
+  ownerMembersHref,
 } from '@/lib/owner-band-scope';
 import { BandMembers } from './BandMembers';
 import {
   bandLabel,
-  communityLabel,
-  type DashboardT,
   formatChange,
   formatCount,
-  formatDayMonth,
   formatMonthAbbrev,
   formatPercent,
   formatSignedCount,
@@ -35,86 +30,32 @@ import {
 import { OwnerMemberDetail } from './OwnerMemberDetail';
 import { PanelSection, PreviewAction } from './PanelSection';
 
-/**
- * The scope's bands, its em risco reachable by push (A-2) and its note under the tabs (none for the
- * whole base). A missing entry is a fixture bug, so it fails loud.
- */
-function scopeEntry(t: DashboardT, scope: OwnerBandScope) {
-  const { engagement, atRiskWithPush, byCommunity, communityEngagement, eventEngagement } =
-    tenantOwnerPanel;
-  if (scope.kind === 'member') return { bands: engagement, atRiskWithPush, note: null };
-  if (scope.kind === 'community') {
-    const community = byCommunity.find((row) => row.id === scope.id);
-    const entry = communityEngagement.find((row) => row.id === scope.id);
-    if (!community || !entry) throw new Error(`no engagement bands for community ${scope.id}`);
-    return {
-      ...entry,
-      note: t('tenantOwner.bandScope.note', {
-        community: communityLabel(t, community),
-        count: bandTotal(entry.bands),
-      }),
-    };
-  }
-  const event = OWNER_EVENTS.find((row) => row.id === scope.id);
-  const entry = eventEngagement.find((row) => row.id === scope.id);
-  if (!event || !entry) throw new Error(`no engagement bands for event ${scope.id}`);
-  return {
-    ...entry,
-    note: t('tenantOwner.bandScope.eventNote', {
-      event: eventLabel(t, event),
-      count: bandTotal(entry.bands),
-    }),
-  };
-}
-
-/** `Encontro mensal · 12/10`: the date tells the two "Live de dúvidas" apart. */
-function eventLabel(t: DashboardT, event: { name: string; date: string }): string {
-  return t('tenantOwner.bandScope.event', { name: event.name, date: formatDayMonth(event.date) });
-}
-
 const SCOPE_TABS = [
   { kind: 'member', labelKey: 'tenantOwner.bandScope.byMember' },
   { kind: 'community', labelKey: 'tenantOwner.bandScope.byCommunity' },
   { kind: 'event', labelKey: 'tenantOwner.bandScope.byEvent' },
 ] as const satisfies readonly { kind: OwnerBandScope['kind']; labelKey: string }[];
 
-/** A tab's link: the whole base, or its row's first item. */
-function tabScope(kind: OwnerBandScope['kind']): OwnerBandScope {
-  if (kind === 'member') return { kind };
-  const id = (kind === 'community' ? OWNER_COMMUNITIES : OWNER_EVENTS)[0]?.id;
-  if (!id) throw new Error(`no ${kind} to scope the bands to`);
-  return { kind, id };
-}
+const TAB_NOTES = {
+  member: null,
+  community: 'tenantOwner.bandScope.communityNote',
+  event: 'tenantOwner.bandScope.eventNote',
+} as const satisfies Record<OwnerBandScope['kind'], string | null>;
 
-/** The second row under Por comunidade or Por evento: one chip per community or event. */
-function ScopeItems({ t, scope }: { t: DashboardT; scope: OwnerBandScope }) {
-  if (scope.kind === 'member') return null;
-  const items =
-    scope.kind === 'community'
-      ? tenantOwnerPanel.byCommunity.map((row) => ({ id: row.id, label: communityLabel(t, row) }))
-      : OWNER_EVENTS.map((row) => ({ id: row.id, label: eventLabel(t, row) }));
-  return (
-    <nav
-      aria-label={t(
-        scope.kind === 'community'
-          ? 'tenantOwner.bandScope.communityLabel'
-          : 'tenantOwner.bandScope.eventLabel',
-      )}
-    >
-      <ul className="flex flex-wrap gap-2">
-        {items.map((item) => (
-          <li key={item.id}>
-            <Chip
-              href={ownerScopeHref({ kind: scope.kind, id: item.id })}
-              active={item.id === scope.id}
-            >
-              {item.label}
-            </Chip>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
+/**
+ * The em risco and their push reach for the win-back card (quick 261012-tru D-08): the opened
+ * community or event, else the whole base. A missing entry is a fixture bug, so it fails loud.
+ */
+function recoverReach(view: OwnerMembersView): { atRisk: number; withPush: number } {
+  const scope = ownerListScope(view);
+  const { engagement, atRiskWithPush, communityEngagement, eventEngagement } = tenantOwnerPanel;
+  if (!scope || scope.kind === 'member') {
+    return { atRisk: engagement.counts.at_risk, withPush: atRiskWithPush };
+  }
+  const rows = scope.kind === 'community' ? communityEngagement : eventEngagement;
+  const entry = rows.find((row) => row.id === scope.id);
+  if (!entry) throw new Error(`no engagement bands for ${scope.kind} ${scope.id}`);
+  return { atRisk: entry.bands.counts.at_risk, withPush: entry.atRiskWithPush };
 }
 
 /**
@@ -123,20 +64,20 @@ function ScopeItems({ t, scope }: { t: DashboardT; scope: OwnerBandScope }) {
  * a card to win back the members in risk, then retention by joining month (one number on a phone,
  * the cohort heatmap from `@3xl`).
  *
- * The bands have three scope tabs (quick 261012-qer B-2): Por membro (the whole base), Por comunidade
- * and Por evento (that event's registrants), each with a second row to pick the item; who moved stays
- * whole-base, and the win-back card follows the scope (A-2). Each band opens a named list of its
- * members (261012-pkd D-02); a member card opens that member's insights in place of the area
- * (261012-qer B-3). Those lists and insights are the only places this panel names a member, to the
- * client's own team (D-03); every other block is counts only.
+ * The bands are one cascade in three tabs (quick 261012-tru D-01): Por membro, Por comunidade and
+ * Por evento, one row and nothing else to pick. Every tab shows the whole base's six bands, each
+ * member counted once (D-02); a band opens its members (Por membro) or the community or event cards
+ * (the others), a card opens its members in the band (D-05), and a member card opens that member's
+ * insights in place of the area (D-06). Who moved stays whole-base; the win-back card follows the
+ * opened community or event (D-08). Those lists and insights are the only places this panel names a
+ * member, to the client's own team (261012-pkd D-03); every other block is counts only.
  */
 export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
   const t = await getTranslations('dashboard');
   if (members.memberId) return <OwnerMemberDetail t={t} view={members} />;
-  const { kpis, growth, cohorts, movement } = tenantOwnerPanel;
-  const { scope } = members;
-  const entry = scopeEntry(t, scope);
-  const scopeBands = entry.bands;
+  const { kpis, growth, cohorts, movement, engagement } = tenantOwnerPanel;
+  const note = TAB_NOTES[members.kind];
+  const recover = recoverReach(members);
   const balance = growth.joined - growth.left;
   const latest = cohorts.at(-1);
   const latestMonthOne = latest?.values[1];
@@ -183,13 +124,18 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
       {/* scroll-mt keeps the #faixas landing clear of the phone mockup's sticky status bar. */}
       <PanelSection id={OWNER_BANDS_ANCHOR} title={t('bands.title')} className="scroll-mt-20">
         <nav aria-label={t('tenantOwner.bandScope.label')}>
-          {/* Three equal tabs spanning the bar, as the area tabs. */}
+          {/* Three equal tabs spanning the bar, as the area tabs; the only row (D-01). */}
           <ul className="grid grid-cols-3 gap-2">
             {SCOPE_TABS.map((tab) => (
               <li key={tab.kind} className="min-w-0">
                 <Chip
-                  href={ownerScopeHref(tabScope(tab.kind))}
-                  active={tab.kind === scope.kind}
+                  href={ownerMembersHref({
+                    kind: tab.kind,
+                    band: null,
+                    itemId: null,
+                    memberId: null,
+                  })}
+                  active={tab.kind === members.kind}
                   className="w-full justify-center text-center"
                 >
                   {t(tab.labelKey)}
@@ -198,17 +144,13 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
             ))}
           </ul>
         </nav>
-        <ScopeItems t={t} scope={scope} />
-        {entry.note ? <p className="text-xs text-text-secondary">{entry.note}</p> : null}
-        <BandMembers t={t} bands={scopeBands} scope={scope} openBand={members.band} />
+        {note ? <p className="text-xs text-text-secondary">{t(note)}</p> : null}
+        <BandMembers t={t} bands={engagement} view={members} />
         <p className="text-xs text-text-secondary">
-          {/* Every event registrant acted (the RSVP), so the line would always read X de X. */}
-          {scope.kind === 'event'
-            ? null
-            : `${t('bands.newActivated', {
-                activated: formatCount(scopeBands.newActivated),
-                total: formatCount(scopeBands.counts.new),
-              })} `}
+          {t('bands.newActivated', {
+            activated: formatCount(engagement.newActivated),
+            total: formatCount(engagement.counts.new),
+          })}{' '}
           {t('bands.footnote')}
         </p>
         <KpiGrid>
@@ -223,7 +165,7 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
             note={t('tenantOwner.movement.note')}
           />
         </KpiGrid>
-        {scope.kind === 'member' ? null : (
+        {members.kind === 'member' ? null : (
           <p className="text-xs text-text-secondary">{t('tenantOwner.bandScope.movementNote')}</p>
         )}
         <Collapsible
@@ -249,8 +191,8 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
         icon={HeartHandshake}
         title={t('tenantOwner.recover.title')}
         detail={t('tenantOwner.recover.detail', {
-          atRisk: formatCount(scopeBands.counts.at_risk),
-          withPush: formatCount(entry.atRiskWithPush),
+          atRisk: formatCount(recover.atRisk),
+          withPush: formatCount(recover.withPush),
         })}
         action={<PreviewAction variant="outline">{t('tenantOwner.recover.action')}</PreviewAction>}
       />

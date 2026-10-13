@@ -22,6 +22,7 @@ export {
   ownerBandIncludes,
   ownerBandList,
   ownerBandRoster,
+  ownerScopeBands,
 } from './owner-members';
 export {
   type ActivationStep,
