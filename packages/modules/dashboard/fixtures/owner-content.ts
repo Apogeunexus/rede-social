@@ -7,7 +7,7 @@ import {
   ownerBandRoster,
   PREVIEW_TODAY,
 } from './owner-members';
-import { type OwnerPostMedia, ownerPostTable } from './owner-posts';
+import { OWNER_POST_UNANSWERED, type OwnerPostMedia, ownerPostTable } from './owner-posts';
 import type { RelativeMoment } from './platform-panels';
 import type { Delta, EngagementBand, ExampleValue, NotMeasuredReason, ReportValue } from './shared';
 import { tenantOwnerPanel, type Weekday } from './tenant-owner';
@@ -25,17 +25,21 @@ import { tenantOwnerPanel, type Weekday } from './tenant-owner';
  * (`story_views`, aggregate only). A post's views and reach, its saves and shares, the video
  * retention, the carousel's last card, the link clicks and the story taps are EXAMPLES: no table
  * records them yet, each carries its reason and the screen marks it "exemplo". The post reach adds up
- * to 61 × `reach.value.perPost` (612): VIP posts reach at most the VIP's 186 members, except the
- * 06/10 carousel that was the VIP's shop window.
+ * to 61 × `reach.value.perPost` (385): a post reaches at most 530 members — the 513 active ones and
+ * a small slice of em risco; inativos are never reached (quick 261013-orf E-03.4). VIP posts reach
+ * at most the VIP's 186 members, except the 06/10 carousel that was the VIP's shop window.
  *
  * People (P1). Who liked or commented on a post is the inverse of every roster member's insights
  * lists (`ownerMemberInsights(id).lists.likes` / `comments`, same moment), so "a member liked this
- * post" and "this post's likers" are one fact. Story likers and repliers are picked from the active
- * bands' roster members who had joined and had not acted after the story's day for the last time
- * (the insights count feed actions only, so nothing contradicts them). Who saved or shared is an
- * example: a subset of the item's likers, never longer than the value. The roster is a sample of the
- * base, so a list holds fewer names than its number; the screen says how many more. Visible to the
- * client's management only, never a comment's text.
+ * post" and "this post's likers" are one fact; the roster's likes and comments are assigned so every
+ * list holds min(its number, 10) people, or every member who could act on a post of today or
+ * yesterday (`assignRosterInteractions`, quick 261013-orf E-03.1). Story likers and repliers are
+ * picked from the active bands' roster members who had joined and had not acted after the story's
+ * day for the last time (the insights count feed actions only, so nothing contradicts them). Who
+ * saved or shared is an example: a subset of the item's likers, never longer than the value. The
+ * roster is a sample of the base, so a list holds fewer names than its number; the screen says how
+ * many more. Visible to the client's management only; a comment's text only for the unanswered ones
+ * (`ownerContentUnanswered`, quick 261013-orf E-02).
  */
 
 export type ContentKind = 'video' | 'photo' | 'carousel' | 'text' | 'link' | 'story';
@@ -114,66 +118,66 @@ function example(reason: NotMeasuredReason, value: number): ExampleValue<number>
 /** `[reach, views, saves, shares]` per feed post: examples (no table records them yet). */
 const POST_EXAMPLES: Readonly<Record<string, readonly [number, number, number, number]>> = {
   'op-01': [66, 99, 3, 1],
-  'op-02': [687, 1099, 3, 1],
+  'op-02': [530, 848, 3, 1],
   'op-03': [66, 112, 2, 1],
-  'op-04': [726, 1307, 2, 1],
-  'op-05': [687, 1305, 2, 1],
-  'op-06': [1000, 1500, 11, 3],
-  'op-07': [838, 1341, 6, 2],
+  'op-04': [530, 954, 2, 1],
+  'op-05': [530, 1007, 2, 1],
+  'op-06': [530, 795, 11, 3],
+  'op-07': [530, 848, 6, 2],
   'op-08': [126, 214, 14, 4],
-  'op-09': [661, 1190, 4, 1],
+  'op-09': [530, 954, 4, 1],
   'op-10': [157, 298, 15, 6],
-  'op-11': [1100, 1650, 18, 7],
+  'op-11': [530, 795, 18, 7],
   'op-12': [89, 142, 5, 2],
-  'op-13': [870, 1479, 4, 1],
-  'op-14': [935, 1683, 5, 3],
+  'op-13': [530, 901, 4, 1],
+  'op-14': [530, 954, 5, 3],
   'op-15': [402, 764, 15, 4],
-  'op-16': [838, 1257, 3, 1],
-  'op-17': [1088, 1741, 14, 4],
+  'op-16': [530, 795, 3, 1],
+  'op-17': [530, 848, 14, 4],
   'op-18': [117, 199, 6, 3],
-  'op-19': [935, 1683, 11, 2],
+  'op-19': [530, 954, 11, 2],
   'op-20': [167, 317, 16, 6],
-  'op-21': [700, 1050, 5, 1],
-  'op-22': [713, 1141, 6, 1],
+  'op-21': [530, 795, 5, 1],
+  'op-22': [530, 848, 6, 1],
   'op-23': [86, 146, 9, 2],
-  'op-24': [903, 1625, 4, 1],
-  'op-25': [903, 1716, 9, 2],
+  'op-24': [530, 954, 4, 1],
+  'op-25': [530, 1007, 9, 2],
   'op-26': [152, 228, 14, 6],
-  'op-27': [1088, 1741, 14, 4],
-  'op-28': [1100, 1870, 16, 6],
-  'op-29': [1033, 1859, 12, 3],
+  'op-27': [530, 848, 14, 4],
+  'op-28': [530, 901, 16, 6],
+  'op-29': [530, 954, 12, 3],
   'op-30': [84, 160, 4, 1],
-  'op-31': [838, 1257, 3, 1],
+  'op-31': [530, 795, 3, 1],
   'op-32': [162, 259, 15, 6],
   'op-33': [82, 139, 4, 1],
-  'op-34': [661, 1190, 4, 1],
-  'op-35': [883, 1678, 4, 1],
-  'op-36': [1098, 1647, 11, 5],
+  'op-34': [530, 954, 4, 1],
+  'op-35': [530, 1007, 4, 1],
+  'op-36': [530, 795, 11, 5],
   'op-37': [182, 291, 18, 7],
-  'op-38': [935, 1590, 8, 3],
+  'op-38': [530, 901, 8, 3],
   'op-39': [107, 193, 5, 3],
-  'op-40': [1000, 1900, 6, 3],
-  'op-41': [1100, 1650, 20, 8],
+  'op-40': [530, 1007, 6, 3],
+  'op-41': [530, 795, 20, 8],
   'op-42': [146, 234, 13, 5],
-  'op-43': [870, 1479, 4, 1],
+  'op-43': [530, 901, 4, 1],
   'op-44': [81, 146, 4, 1],
-  'op-45': [831, 1579, 3, 1],
-  'op-46': [740, 1110, 6, 1],
-  'op-47': [903, 1445, 9, 2],
+  'op-45': [530, 1007, 3, 1],
+  'op-46': [530, 795, 6, 1],
+  'op-47': [530, 848, 9, 2],
   'op-48': [60, 102, 3, 1],
-  'op-49': [805, 1449, 3, 1],
+  'op-49': [530, 954, 3, 1],
   'op-50': [138, 262, 12, 5],
-  'op-51': [1065, 1598, 7, 3],
-  'op-52': [870, 1392, 7, 3],
-  'op-53': [857, 1457, 3, 1],
+  'op-51': [530, 795, 7, 3],
+  'op-52': [530, 848, 7, 3],
+  'op-53': [530, 901, 3, 1],
   'op-54': [128, 230, 14, 4],
-  'op-55': [1100, 2090, 21, 8],
+  'op-55': [530, 1007, 21, 8],
   'op-56': [82, 123, 4, 1],
-  'op-57': [596, 954, 2, 0],
-  'op-58': [726, 1234, 2, 1],
+  'op-57': [530, 848, 2, 0],
+  'op-58': [530, 901, 2, 1],
   'op-59': [138, 248, 12, 5],
-  'op-60': [935, 1777, 4, 1],
-  'op-61': [896, 1344, 4, 1],
+  'op-60': [530, 1007, 4, 1],
+  'op-61': [530, 795, 4, 1],
 };
 
 /**
@@ -201,23 +205,9 @@ const STORY_ROWS: readonly (readonly [number, string, number, number, number, nu
 
 const STORY_MEDIA: OwnerPostMedia = { width: 1080, height: 1920 };
 
-/**
- * `[unanswered, oldest unanswered in hours]` of the items whose comments the team left without an
- * answer; every other item's comments are all answered. Over 24 h is "Precisa de atenção"; an item
- * younger than 2 days only ever waits under 24 h.
- */
-const UNANSWERED: Readonly<Record<string, readonly [number, number]>> = {
-  'op-02': [1, 3],
-  'op-03': [2, 18],
-  'op-04': [1, 9],
-  'op-08': [3, 60],
-  'op-12': [4, 110],
-  'op-19': [9, 192],
-  'op-24': [2, 250],
-};
-
+/** The unanswered comments of an item (`OWNER_POST_UNANSWERED`; every story's are answered). */
 function commentMeta(id: string, comments: number, index: number): ContentCommentMeta {
-  const [unanswered, oldest] = UNANSWERED[id] ?? [0, null];
+  const [unanswered, oldest] = OWNER_POST_UNANSWERED[id] ?? [0, null];
   const answered = comments - unanswered;
   return {
     answered,
@@ -345,9 +335,10 @@ function storyPeople(item: ContentItem, index: number): Pick<ItemPeople, 'likes'
     rotate(candidates, offset, count)
       .map((row) => personOf(row, when(row)))
       .sort(byRecency);
+  // Up to a list's 10 cards (quick 261013-orf E-03.1); `rotate` stops at the candidates.
   return {
-    likes: pick(index * 5, Math.floor(item.likes / 4)),
-    comments: pick(index * 5 + 3, Math.floor(item.comments / 2)),
+    likes: pick(index * 5, Math.min(item.likes, 10)),
+    comments: pick(index * 5 + 3, Math.min(item.comments, 10)),
   };
 }
 
@@ -367,8 +358,9 @@ function answerFlags(item: ContentItem, comments: readonly ContentPerson[]): Con
 }
 
 /**
- * Every item's people, built once from the roster (exported for the determinism test). Saves and
- * shares take alternate likers (even and odd places), at most the example value.
+ * Every item's people, built once from the roster (exported for the determinism test). Saves take
+ * the first likers and shares the last ones, at most the example value, so both lists are as full as
+ * the likers allow (quick 261013-orf E-03.1).
  */
 export function buildOwnerContentPeople(): Map<string, ItemPeople> {
   const posts = new Map<string, { likes: ContentPerson[]; comments: ContentPerson[] }>(
@@ -392,12 +384,12 @@ export function buildOwnerContentPeople(): Map<string, ItemPeople> {
         : (posts.get(item.id) ?? { likes: [], comments: [] });
     const likes = [...base.likes].sort(byRecency);
     const comments = answerFlags(item, [...base.comments].sort(byRecency));
-    const every = (rest: number) => likes.filter((_, i) => i % 2 === rest);
+    const shares = Math.min(item.shares.value, likes.length);
     people.set(item.id, {
       likes,
       comments,
-      saves: item.saves === null ? null : every(0).slice(0, item.saves.value),
-      shares: every(1).slice(0, item.shares.value),
+      saves: item.saves === null ? null : likes.slice(0, item.saves.value),
+      shares: likes.slice(likes.length - shares),
     });
   }
   return people;
@@ -434,6 +426,70 @@ export function ownerContentPeople(itemId: string, who: ContentWho): ContentPeop
 export function ownerContentIncludes(itemId: string, who: ContentWho, memberId: string): boolean {
   const people = peopleOf(ownerContentItem(itemId), who);
   return people?.some((person) => person.id === memberId) ?? false;
+}
+
+/**
+ * The text of each unanswered comment, oldest first, exactly as many as the item's unanswered count
+ * (`OWNER_POST_UNANSWERED`): fictional members' questions and notes about the post's subject.
+ */
+const UNANSWERED_TEXTS: Readonly<Record<string, readonly string[]>> = {
+  'op-02': ['Vai ficar gravada? Na quinta eu saio do trabalho às 20h30.'],
+  'op-03': [
+    'Minhas três de amanhã: academia cedo, terminar o relatório e ligar para minha mãe.',
+    'Vale colocar uma prioridade pessoal no meio das de trabalho ou atrapalha o foco?',
+  ],
+  'op-04': ['Voto em um tema sobre organizar a rotina de quem trabalha por turnos.'],
+  'op-08': [
+    'Dá para mandar o checklist em PDF? No celular as imagens ficam pequenas.',
+    'Comecei ontem e já dormi melhor. A parte de desligar as telas é a mais difícil.',
+    'Quem acorda às 5h deve começar o checklist a que horas da noite?',
+  ],
+  'op-12': [
+    'Perdi a mentoria de terça. A gravação vai para a área VIP?',
+    'Fiquei com dúvida no exercício das metas: é para escrever por semana ou por mês?',
+    'Gostei do resumo, mas faltou o link da planilha que foi comentada no encontro.',
+    'Tem como mudar o horário da próxima? Às terças eu dou aula à noite.',
+  ],
+  'op-19': [
+    'Precisava ler isso hoje. Faltei três dias da rotina e já estava pensando em desistir.',
+    'Como vocês fazem para voltar depois de uma semana parada sem se cobrar demais?',
+    'Constância para mim é o mais difícil. Tem alguma aula da mentoria sobre isso?',
+    'Salvei para reler. Tem algum material mais completo sobre recomeçar?',
+    'Eu me cobro demais quando falho um dia. Alguma dica para lidar com isso?',
+    'Isso vale para exercício também? Sempre paro na segunda semana.',
+    'Comecei agora na comunidade. Por onde começo a montar a minha rotina?',
+    'Vocês usam algum aplicativo para acompanhar os hábitos ou só a planilha?',
+    'Achei ótimo. Dá para fazer uma live só sobre esse tema?',
+  ],
+  'op-24': [
+    'Quantos itens você recomenda na lista do dia? Sempre coloco uns quinze.',
+    'E o que faço com o que sobra da lista? Passo para o dia seguinte?',
+  ],
+};
+
+/** One comment the client's team has not answered yet: who wrote it, when, and its text. */
+export interface ContentUnansweredComment {
+  person: ContentPerson;
+  text: string;
+}
+
+/**
+ * The item's unanswered comments, oldest first, with their text (quick 261013-orf E-02): the
+ * `answered: false` commenters of `ownerContentPeople(itemId, 'comments')`, so the count matches the
+ * overview's "Precisa de atenção" row. By the user's decision E-02 this replaces the 261013-h51 rule
+ * "never a comment's text", only for unanswered comments and only for the client's management
+ * (level 4). An item with every comment answered has none; a missing text is a bug, so it throws.
+ */
+export function ownerContentUnanswered(itemId: string): ContentUnansweredComment[] {
+  const open = ownerContentPeople(itemId, 'comments')
+    .people.filter((person) => person.answered === false)
+    .reverse();
+  const texts = UNANSWERED_TEXTS[itemId] ?? [];
+  return open.map((person, i) => {
+    const text = texts[i];
+    if (text === undefined) throw new Error(`no text for the unanswered comment ${i} of ${itemId}`);
+    return { person, text };
+  });
 }
 
 function up(amount: number, kind: Delta['kind']): Delta {
@@ -636,14 +692,18 @@ const VELOCITY: Record<ContentKind, readonly number[]> = {
 const RETENTION_SHORT = [100, 84, 76, 70, 65, 61, 57, 54, 51, 48, 45] as const;
 const RETENTION_LONG = [100, 72, 60, 52, 46, 41, 37, 33, 30, 27, 24] as const;
 
-/** How likely a member of each band is to be reached, against the band's size. */
+/**
+ * How likely a member of each band is to be reached, against the band's size. Inativos opened
+ * nothing in 60 days and em risco nothing in 30 (the bands' own definition), so a publication never
+ * reaches inativos and only a small slice of em risco (quick 261013-orf E-03.4).
+ */
 const REACH_WEIGHT: Record<EngagementBand, number> = {
   new: 0.6,
   superfan: 1,
   engaged: 0.95,
   occasional: 0.9,
-  at_risk: 0.6,
-  inactive: 0.25,
+  at_risk: 0.1,
+  inactive: 0,
 };
 
 interface Business {
@@ -715,7 +775,10 @@ function unitCents(productId: string): number {
   return product.cents / product.orders;
 }
 
-/** `total` split over the bands by weight × size (highest averages), never past a band's size. */
+/**
+ * `total` split over the bands by weight × size (highest averages), never past a band's size; a band
+ * of weight 0 is never opened.
+ */
 function splitReach(total: number): Record<EngagementBand, number> {
   const { counts } = tenantOwnerPanel.engagement;
   const split: Record<EngagementBand, number> = {
@@ -729,7 +792,7 @@ function splitReach(total: number): Record<EngagementBand, number> {
   for (let unit = 0; unit < total; unit += 1) {
     const band = topBand(
       (row) => (REACH_WEIGHT[row] * counts[row]) / (split[row] + 1),
-      (row) => split[row] < counts[row],
+      (row) => REACH_WEIGHT[row] > 0 && split[row] < counts[row],
     );
     if (!band) throw new Error(`a reach of ${total} is over the base`);
     split[band] += 1;

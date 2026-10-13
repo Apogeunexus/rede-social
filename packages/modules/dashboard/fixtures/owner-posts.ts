@@ -264,3 +264,20 @@ export const ownerPostTable: readonly OwnerPost[] = ROWS.map((row, order) => ({ 
     comments,
     ...media,
   }));
+
+/**
+ * `[unanswered, oldest unanswered in hours]` of the posts whose comments the team left without an
+ * answer (quick 261013-h51 D-06); every other post's comments are all answered. Over 24 h is
+ * "Precisa de atenção"; a post younger than 2 days only ever waits under 24 h. It lives with the
+ * posts because Conteúdo (`owner-content.ts`) and the roster's comments (`owner-member-lists.ts`,
+ * whose oldest unanswered commenter comments that many hours ago) both read it.
+ */
+export const OWNER_POST_UNANSWERED: Readonly<Record<string, readonly [number, number]>> = {
+  'op-02': [1, 3],
+  'op-03': [2, 18],
+  'op-04': [1, 9],
+  'op-08': [3, 60],
+  'op-12': [4, 110],
+  'op-19': [9, 192],
+  'op-24': [2, 250],
+};

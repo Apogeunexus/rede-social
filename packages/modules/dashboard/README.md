@@ -225,11 +225,18 @@ community (22 / 25 / 8 / 6) and per format (18 / 15 / 20 / 8), with the four top
 their dates do not model the weekday and time-slot split (no list shows a weekday).
 `fixtures/owner-member-lists.ts` builds, from the same active days, attended events and VIP order,
 the member's active days (with their actions), likes (distinct posts the member can reach, published
-before the like, the newest at the roster's last activity), comments (one a day on the most recent
-active days, on a post liked that day), strong actions (comments, check-ins, the 30-day order) and
-posts seen. Each list's length is its KPI, and the builder throws otherwise. "Posts vistos" now
-counts the distinct posts of that list (every liked one plus one per active day) and stays an
-example (`needs_post_views`); `tests/owner-member-lists.test.ts` proves all of it for the 72 members.
+before the like, the newest at the roster's last activity), comments (distinct reachable posts, each
+on an active day after the post was published), strong actions (comments, check-ins, the 30-day
+order) and posts seen. Each list's length is its KPI, and the builder throws otherwise. Which posts
+the roster liked and commented on is assigned once for the whole roster (`assignRosterInteractions`,
+261013-orf E-03.1): each post gets min(its likes, 10) likers and min(its comments, 10) commenters
+among the members who reach it and were active after it was published; the posts of today and
+yesterday (op-01, op-02, op-03) reach fewer active members, so their lists hold every one who could
+act. The likes KPI is unchanged (active days + the band's extras, every active day with a like); the
+comments KPI is the assigned comments (527 in all: superfãs 26-36 in 30 days, engajados 3-13), and the actions
+since joining are never fewer than the 30-day ones. "Posts vistos" counts the distinct posts of
+that list (every liked or commented one plus one per active day) and stays an example
+(`needs_post_views`); `tests/owner-member-lists.test.ts` proves all of it for the 72 members.
 
 On screen, Dias ativos, Curtidas, Comentários, Ações fortes and Posts vistos are links ("Ver lista")
 to `&membro=om-NN&lista=<slug>#lista`, the slug one of `dias-ativos`, `curtidas`, `comentarios`,
@@ -267,7 +274,14 @@ previous URL, landing on the card or number it closed. A member opens the same `
 Data: `fixtures/owner-content.ts` holds the 61 posts of `owner-posts.ts` (now with likes, comments
 and media) and 16 stories, the people behind each number (the inverse of the roster's insights lists,
 so a member's like and a post's liker are one fact), the overview aggregates and each publication's
-detail; `tests/owner-content.test.ts` proves the sums and both directions. Only
+detail; `tests/owner-content.test.ts` proves the sums and both directions. Every people list with a
+number has people: at least min(the number, 10), or, on op-01, op-02, op-03 and the story os-01 (today
+and yesterday), every active member who could act — a ceiling the test computes (261013-orf E-03.1).
+Saves take the first likers and shares the last ones. A post reaches at most 530 members (the 513
+active ones and a slice of em risco), never an inativo, and em risco is at most 10% of a reach;
+`reach.value.perPost` is 385, the average of the 61 posts (261013-orf E-03.4).
+`ownerContentUnanswered(itemId)` gives an item's unanswered comments, oldest first, with their text
+(261013-orf E-02); the oldest one is as old as the "Precisa de atenção" row says. Only
 `OwnerContentPeople.tsx` reads `ownerContentPeople`, `ownerContentInteractors` and
 `ownerContentInteractions`.
 

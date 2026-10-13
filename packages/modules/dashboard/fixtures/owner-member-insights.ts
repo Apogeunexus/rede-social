@@ -1,4 +1,9 @@
-import { buildOwnerMemberLists, type OwnerMemberLists } from './owner-member-lists';
+import {
+  assignRosterInteractions,
+  buildOwnerMemberLists,
+  type OwnerMemberLists,
+  type RosterInteractions,
+} from './owner-member-lists';
 import {
   daysBefore,
   daysSince,
@@ -26,7 +31,10 @@ import type { PostType } from './tenant-panels';
  * The lists behind the numbers (quick 261012-tru D-07, `owner-member-lists.ts`) are built from the
  * same active days, attended events and VIP order, and `build` throws when a list's length differs
  * from its 30-day count. "Posts vistos" is the number of distinct posts in the seen list (still an
- * example: no post views are recorded yet).
+ * example: no post views are recorded yet). Which posts each member liked and commented on is
+ * assigned once for the whole roster (`assignRosterInteractions`, quick 261013-orf E-03.1): the
+ * likes KPI stays active days + the band's extras, the comments KPI is what was assigned, and the
+ * actions since joining are never fewer than the last 30 days'.
  *
  * Visible to the client's management only: with real data the privacy notice must say that the
  * management sees each member's individual behavior. Support is counts and dates, never message text.
@@ -116,15 +124,6 @@ const ATTENDS: Record<EngagementBand, (j: number) => boolean> = {
   inactive: () => false,
 };
 
-const COMMENTS: Record<EngagementBand, (j: number) => number> = {
-  new: (j) => j % 3,
-  superfan: (j) => 3 + (j % 4),
-  engaged: (j) => 1 + (j % 3),
-  occasional: (j) => j % 2,
-  at_risk: () => 0,
-  inactive: () => 0,
-};
-
 /** Likes beyond one per active day. */
 const EXTRA_LIKES: Record<EngagementBand, (j: number) => number> = {
   new: (j) => j % 3,
@@ -186,7 +185,19 @@ function vipUnitCents(): number {
   return vip.cents / vip.orders;
 }
 
-function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
+/** A member's days, events and order: everything but which posts they liked and commented on. */
+interface MemberBase {
+  j: number;
+  joined: number;
+  days: Set<number>;
+  attended: Set<string>;
+  pastByRecency: { id: string; daysAgo: number }[];
+  purchaseDay: number | null;
+  activeDays: number;
+  likes: number;
+}
+
+function baseOf(row: OwnerRosterMember): MemberBase {
   const { band } = row;
   const j = ownerBandRoster.filter((other) => other.band === band).indexOf(row);
   const last = row.lastActive.daysAgo;
@@ -239,16 +250,42 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
   }
 
   const activeDays = countIn(days, 0, 29);
+  const likes = activeDays === 0 ? 0 : activeDays + EXTRA_LIKES[band](j);
+  return { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes };
+}
+
+let assignment: RosterInteractions | null = null;
+
+/**
+ * Which posts every active member liked and commented on, assigned once for the whole roster
+ * (quick 261013-orf E-03.1): the Conteúdo people lists are the inverse of these, so they must be
+ * built together. Memoized: the roster is fixed, and this keeps every render the same.
+ */
+function rosterInteractions(): RosterInteractions {
+  assignment ??= assignRosterInteractions(
+    ownerBandRoster.flatMap((row) => {
+      const base = baseOf(row);
+      if (base.activeDays === 0) return [];
+      return [{ row, days: [...base.days].filter((day) => day <= 29), likes: base.likes }];
+    }),
+  );
+  return assignment;
+}
+
+function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
+  const { band } = row;
+  const { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes } = baseOf(row);
+  const last = row.lastActive.daysAgo;
   const checkIns = attended.size;
   const orders = purchaseDay !== null && purchaseDay < 30 ? 1 : 0;
-  const comments = COMMENTS[band](j);
-  const likes = activeDays === 0 ? 0 : activeDays + EXTRA_LIKES[band](j);
+  const assigned = rosterInteractions().get(row.id) ?? { likes: [], comments: [] };
+  const comments = assigned.comments.length;
   const lists = buildOwnerMemberLists({
     row,
     j,
     activeDays: [...days].filter((day) => day <= 29),
-    likes,
-    comments,
+    likes: assigned.likes,
+    comments: assigned.comments,
     attended: pastByRecency
       .filter((event) => attended.has(event.id))
       .map((event) => ({ eventId: event.id, daysAgo: event.daysAgo })),
@@ -271,7 +308,8 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
     }
   }
 
-  const lifetime = LIFETIME_ACTIONS[band](j);
+  // Since joining is never fewer than the last 30 days (quick 261013-orf).
+  const lifetime = Math.max(LIFETIME_ACTIONS[band](j), likes + comments + checkIns + orders);
   const others = byCommunity.filter(
     (community) => community.id !== row.topCommunityId && row.communities[community.id],
   );

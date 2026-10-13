@@ -1822,9 +1822,9 @@ const CONTENT_NUMBERS: {
   {
     slug: 'taxa',
     label: 'Taxa de engajamento',
-    value: '10,6%',
+    value: '16,8%',
     delta: '1 p.p. vs. 30 dias antes',
-    count: /^Taxa de engajamento de 10,6% · maior taxa primeiro$/,
+    count: /^Taxa de engajamento de 16,8% · maior taxa primeiro$/,
   },
   {
     slug: 'membros',
@@ -1836,16 +1836,16 @@ const CONTENT_NUMBERS: {
   {
     slug: 'visualizacoes',
     label: 'Visualizações',
-    value: '62.963',
+    value: '39.727',
     delta: '6% vs. 30 dias antes',
-    count: /^62\.963 visualizações · mais vistas primeiro$/,
+    count: /^39\.727 visualizações · mais vistas primeiro$/,
   },
   {
     slug: 'alcance',
     label: 'Alcance por publicação',
-    value: '612',
+    value: '385',
     delta: '6% vs. 30 dias antes',
-    count: /^612 membros alcançados por publicação, em média · maior alcance primeiro$/,
+    count: /^385 membros alcançados por publicação, em média · maior alcance primeiro$/,
   },
 ];
 
@@ -2249,6 +2249,49 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
       await expect(shows, url).toBeVisible();
     }
   });
+});
+
+// smaug-ignore test-weakening: the regex literal hides the expects below from the gate's parser
+test('dono-do-cliente conteudo: every people list with a number has people', async ({
+  request,
+}) => {
+  // Quick 261013-orf E-03.1: 61 posts × 4 lists and 16 stories × 3 lists, read from the rendered
+  // HTML (a browser per page takes minutes): the count line, then at least one member card link.
+  test.setTimeout(900_000);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const urls: string[] = [];
+  for (let i = 1; i <= 61; i += 1) {
+    for (const quem of ['curtidas', 'comentarios', 'salvamentos', 'compartilhamentos']) {
+      urls.push(`${CONTENT_AREA}&vista=publicacoes&post=op-${pad(i)}&quem=${quem}`);
+    }
+  }
+  for (let i = 1; i <= 16; i += 1) {
+    for (const quem of ['curtidas', 'comentarios', 'compartilhamentos']) {
+      urls.push(`${CONTENT_AREA}&vista=tipos&tipo=story&post=os-${pad(i)}&quem=${quem}`);
+    }
+  }
+  const countLine =
+    />(\d[\d.]*|nenhuma?|nenhum) (curtidas?|comentários?|salvamentos?|compartilhamentos?) · /;
+  let withNumber = 0;
+  for (let start = 0; start < urls.length; start += 4) {
+    const batch = urls.slice(start, start + 4);
+    const pages = await Promise.all(
+      batch.map(async (url) => {
+        const response = await request.get(url, { timeout: 120_000 });
+        return { url, status: response.status(), html: await response.text() };
+      }),
+    );
+    for (const { url, status, html } of pages) {
+      expect(status, url).toBe(200);
+      const line = countLine.exec(html);
+      expect(line, url).not.toBeNull();
+      const value = Number(/^\d/.test(line?.[1] ?? '') ? line?.[1]?.replace('.', '') : 0);
+      const cards = /membro=om-\d\d/.test(html);
+      expect(value === 0 || cards, `${url} (${line?.[0]})`).toBe(true);
+      if (value > 0) withNumber += 1;
+    }
+  }
+  expect(withNumber).toBeGreaterThan(280);
 });
 
 const CONTENT_DETAIL_VIEWS = [

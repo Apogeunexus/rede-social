@@ -260,7 +260,8 @@ describe('the people behind each number (P1)', () => {
       }
     }
     expect(likes).toBe(663);
-    expect(comments).toBe(96);
+    // Quick 261013-orf E-03.1: the roster's comments cover min(comments, 10) per post.
+    expect(comments).toBe(527);
   });
 
   it('carry their band and are listed most recent first', () => {
@@ -449,7 +450,7 @@ describe('who interacts and the interactions (D-02, PD-5, PD-7)', () => {
   it('the interactions are every roster like and comment, the same fact as the people', () => {
     const { rows, total } = ownerContentInteractions();
     expect(total).toBe(3940);
-    expect(rows).toHaveLength(759);
+    expect(rows).toHaveLength(1190);
     expect(rows.filter((row) => row.action === 'like')).toHaveLength(663);
     for (const [i, row] of rows.entries()) {
       const who = row.action === 'like' ? 'likes' : 'comments';

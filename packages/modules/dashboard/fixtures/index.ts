@@ -22,6 +22,7 @@ export {
   type ContentKind,
   type ContentPeople,
   type ContentPerson,
+  type ContentUnansweredComment,
   type ContentWho,
   ownerContent,
   ownerContentDetail,
@@ -35,6 +36,7 @@ export {
   ownerContentKindRetention,
   ownerContentKindVelocity,
   ownerContentPeople,
+  ownerContentUnanswered,
 } from './owner-content';
 export { type OwnerMemberInsights, ownerMemberInsights } from './owner-member-insights';
 export type { OwnerMemberLists } from './owner-member-lists';

@@ -453,7 +453,8 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       shares: { example: true, reason: 'needs_shares', value: 1 },
     },
   ],
-  reach: { example: true, reason: 'needs_post_views', value: { perPost: 612 } },
+  // The 61 posts' average reach (owner-content.ts): active members plus a slice of em risco.
+  reach: { example: true, reason: 'needs_post_views', value: { perPost: 385 } },
   videoPlayback: {
     watchedPercent: { example: true, reason: 'needs_video_playback', value: 58 },
     completionPercent: { example: true, reason: 'needs_video_playback', value: 34 },
