@@ -82,6 +82,31 @@ describe('CoverThumb (row)', () => {
     expect(el.textContent).toBe('');
   });
 
+  it('a card-sized vertical video keeps its ratio, 7rem high and at most 8rem wide', () => {
+    const el = thumb({
+      kind: 'video',
+      seed: 'op-41',
+      durationSeconds: 41,
+      variant: 'card',
+      ratio: 9 / 16,
+    });
+    expect(el.dataset.ratio).toBe('0.5625');
+    expect(el.classList).not.toContain('size-14');
+    const style = el.getAttribute('style') ?? '';
+    // 7rem × 9/16 = 3.938rem wide; the ratio then gives the 7rem height.
+    expect(style).toContain('width: min(8rem, 3.938rem)');
+    expect(style).toContain('aspect-ratio: 0.5625');
+    const badge = el.querySelector('span');
+    expect(badge?.textContent).toBe('0:41');
+    expect(badge?.classList).toContain('text-xs');
+  });
+
+  it('a card-sized text post is a square with its icon', () => {
+    const el = thumb({ kind: 'text', seed: 'op-19', variant: 'card', ratio: null });
+    expect(el.dataset.ratio).toBe('1');
+    expect(el.querySelectorAll('svg')).toHaveLength(1);
+  });
+
   it('an event check-in and an order have their own icon and kind', () => {
     for (const kind of ['event', 'order'] as const) {
       const el = thumb({ kind, seed: 'e3' });
