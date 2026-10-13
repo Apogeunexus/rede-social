@@ -9,6 +9,7 @@ import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-preview';
 import type { OwnerMembersView } from '@/lib/owner-band-scope';
+import type { OwnerContentView } from '@/lib/owner-content-view';
 import { type DashboardT, formatCount } from './format';
 import { OwnerContent } from './OwnerContent';
 import { OwnerEvents } from './OwnerEvents';
@@ -63,14 +64,19 @@ const AREAS = {
   atendimento: { labelKey: 'tenantOwner.areas.support', Area: OwnerSupport },
 } satisfies Record<OwnerArea, { labelKey: string; Area: AreaComponent }>;
 
-/** An area component; only Membros reads the members view, the others ignore it. */
-type AreaComponent = (props: { members: OwnerMembersView }) => Promise<ReactNode>;
+/** An area component: Membros reads the members view, Conteúdo the content view, the others neither. */
+type AreaComponent = (props: {
+  members: OwnerMembersView;
+  content: OwnerContentView;
+}) => Promise<ReactNode>;
 
 export interface TenantOwnerPanelProps {
   /** The open area (allow-listed by `parseOwnerArea`). */
   area: OwnerArea;
   /** The Membros area's view (allow-listed by `parseOwnerMembersView`). */
   members: OwnerMembersView;
+  /** The Conteúdo area's view (allow-listed by `parseOwnerContentView`). */
+  content: OwnerContentView;
 }
 
 /**
@@ -80,7 +86,7 @@ export interface TenantOwnerPanelProps {
  * server component. The Membros band lists name members to the client's own team (261012-pkd D-03);
  * the bell and every other block stay counts only.
  */
-export async function TenantOwnerPanel({ area, members }: TenantOwnerPanelProps) {
+export async function TenantOwnerPanel({ area, members, content }: TenantOwnerPanelProps) {
   const t = await getTranslations('dashboard');
   const Area: AreaComponent = AREAS[area].Area;
 
@@ -111,7 +117,7 @@ export async function TenantOwnerPanel({ area, members }: TenantOwnerPanelProps)
       </nav>
 
       <div data-owner-area={area} className="flex flex-col gap-6">
-        <Area members={members} />
+        <Area members={members} content={content} />
       </div>
     </TenantColumn>
   );

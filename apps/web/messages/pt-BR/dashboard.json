@@ -80,7 +80,10 @@
       "needs_waitlist": "Precisa registrar a lista de espera dos eventos",
       "needs_access_expiry": "Precisa preencher o vencimento dos acessos",
       "needs_support_subject": "Precisa registrar o assunto de cada atendimento",
-      "needs_event_tickets": "Precisa registrar a venda de ingressos dos eventos"
+      "needs_event_tickets": "Precisa registrar a venda de ingressos dos eventos",
+      "needs_gallery_swipes": "Precisa registrar até qual imagem cada membro passou no carrossel",
+      "needs_link_clicks": "Precisa registrar os cliques nos links",
+      "needs_story_taps": "Precisa registrar os toques nos stories"
     },
     "example": "exemplo",
     "belowFloor": "menos de {floor}",
@@ -609,6 +612,7 @@
       "bandMembers": {
         "summary": "{count} · {percent}",
         "underOnePercent": "menos de 1%",
+        "band": "Faixa:",
         "since": "Membro desde:",
         "lastActive": "Última atividade:",
         "topCommunity": "Comunidade que mais interage:",
@@ -738,7 +742,95 @@
         "team": "Admins: {admins} · Equipe: {staff}",
         "billing": "Cobrança: em breve"
       },
-      "adminLink": "Ver operação do dia (painel do admin)"
+      "adminLink": "Ver operação do dia (painel do admin)",
+      "content": {
+        "tabs": {
+          "label": "Vistas do conteúdo",
+          "overview": "Visão geral",
+          "types": "Por tipo",
+          "posts": "Publicações"
+        },
+        "kinds": {
+          "video": "Vídeo",
+          "photo": "Foto",
+          "carousel": "Carrossel",
+          "text": "Texto",
+          "link": "Link",
+          "story": "Story"
+        },
+        "kindsPlural": {
+          "video": "vídeos",
+          "photo": "fotos",
+          "carousel": "carrosséis",
+          "text": "textos",
+          "link": "links",
+          "story": "stories"
+        },
+        "card": {
+          "meta": "{date} · {community} · {kind}",
+          "metaStory": "{date} · {kind}",
+          "likes": "Curtidas",
+          "comments": "Comentários",
+          "saves": "Salvamentos",
+          "shares": "Compartilhamentos",
+          "none": "—",
+          "open": "Ver publicação"
+        },
+        "list": {
+          "exampleNote": "Salvamentos e compartilhamentos: valores de exemplo",
+          "more": "e mais {count, plural, one {# publicação} other {# publicações}}",
+          "seeAll": "Ver todas",
+          "empty": "Nenhuma publicação nos últimos 30 dias."
+        },
+        "types": {
+          "title": "Tipos de publicação",
+          "note": "Métricas próprias: valores de exemplo, exceto Texto",
+          "posts": "Publicações",
+          "perPost": "Interações por post",
+          "metric": {
+            "video": "% assistido",
+            "photo": "Salvamentos por post",
+            "carousel": "Até o último cartão",
+            "text": "% de comentários",
+            "link": "Clicaram no link",
+            "story": "Avançaram"
+          },
+          "open": "Ver publicações",
+          "back": "Voltar aos tipos",
+          "postsOf": "Os {kinds}, da melhor para a pior publicação"
+        },
+        "posts": {
+          "title": "Todas as publicações",
+          "order": "{count, plural, one {# publicação} other {# publicações}} nos últimos 30 dias, da melhor para a pior"
+        },
+        "detail": {
+          "back": "Voltar",
+          "interactions": "{count, plural, one {{value} interação} other {{value} interações}}",
+          "vsKind": "{ratio}× a média dos {kinds}",
+          "inProgress": "Em andamento",
+          "interactionsTitle": "Interações"
+        },
+        "people": {
+          "title": {
+            "likes": "Quem curtiu",
+            "comments": "Quem comentou",
+            "saves": "Quem salvou",
+            "shares": "Quem compartilhou"
+          },
+          "count": {
+            "likes": "{count, plural, one {# curtida} other {# curtidas}} · mais recentes primeiro",
+            "comments": "{count, plural, one {# comentário} other {# comentários}} · mais recentes primeiro",
+            "saves": "{count, plural, one {# salvamento} other {# salvamentos}} · mais recentes primeiro",
+            "shares": "{count, plural, one {# compartilhamento} other {# compartilhamentos}} · mais recentes primeiro"
+          },
+          "empty": {
+            "likes": "Ninguém curtiu esta publicação ainda.",
+            "comments": "Ninguém comentou esta publicação ainda.",
+            "saves": "Ninguém salvou esta publicação ainda.",
+            "shares": "Ninguém compartilhou esta publicação ainda."
+          }
+        }
+      }
     },
     "tenantAdmin": {
       "header": {

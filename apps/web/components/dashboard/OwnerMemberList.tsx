@@ -5,13 +5,7 @@ import {
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import { Card } from '@rede-social/ui';
-import {
-  OWNER_MEMBER_LIST_ANCHOR,
-  type OwnerMemberListSlug,
-  type OwnerMembersView,
-  ownerInsightAnchor,
-  ownerMembersHref,
-} from '@/lib/owner-band-scope';
+import { OWNER_MEMBER_LIST_ANCHOR, type OwnerMemberListSlug } from '@/lib/owner-band-scope';
 import { BackLink } from './BackLink';
 import { ownerCommunity, ownerEvent } from './BandScopeCards';
 import { ExamplePill } from './ExamplePill';
@@ -165,28 +159,32 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
   }),
 };
 
+export interface OwnerMemberListProps {
+  t: DashboardT;
+  /** A roster member the opening cascade's parser let through. */
+  memberId: string;
+  list: OwnerMemberListSlug;
+  /** "Voltar": the insights, landing on the number that opened the list. */
+  backHref: string;
+}
+
 /**
  * The list behind one of a member's insight numbers (quick 261012-tru D-07, the level-7 pattern of
- * quick 261012-hqr): "Voltar" to the number that opened it, the title, the member and the window,
- * the count with the order of the rows (and the "exemplo" pill for the example Posts vistos), then
- * the rows, or one sentence when there are none. Its count is the number on the insights card by
- * construction. Visible to the client's management only: which posts a member liked, commented on
- * and saw, never a comment's text.
+ * quick 261012-hqr), from Membros or from Conteúdo (quick 261013-h51): "Voltar" to the number that
+ * opened it, the title, the member and the window, the count with the order of the rows (and the
+ * "exemplo" pill for the example Posts vistos), then the rows, or one sentence when there are none.
+ * Its count is the number on the insights card by construction. Visible to the client's management
+ * only: which posts a member liked, commented on and saw, never a comment's text.
  */
-export function OwnerMemberList({ t, view }: { t: DashboardT; view: OwnerMembersView }) {
-  // The parser only sets a list together with a member it let through, so a gap here is a bug.
-  const insights = view.memberId ? ownerMemberInsights(view.memberId) : null;
-  if (!insights || view.list === null) {
-    throw new Error(`no list ${view.list} for member ${view.memberId ?? '(none)'}`);
-  }
-  const list = VIEWS[view.list](t, insights.lists);
+export function OwnerMemberList({ t, memberId, list: slug, backHref }: OwnerMemberListProps) {
+  // Each opening parser only sets a list together with a member it let through: a gap is a bug.
+  const insights = ownerMemberInsights(memberId);
+  if (!insights) throw new Error(`no list ${slug} for member ${memberId}`);
+  const list = VIEWS[slug](t, insights.lists);
 
   return (
     <div id={OWNER_MEMBER_LIST_ANCHOR} className="flex min-w-0 scroll-mt-20 flex-col gap-3">
-      <BackLink
-        href={`${ownerMembersHref({ ...view, list: null })}#${ownerInsightAnchor(view.list)}`}
-        label={t('tenantOwner.memberDetail.back')}
-      />
+      <BackLink href={backHref} label={t('tenantOwner.memberDetail.back')} />
       <PanelSection
         title={list.title}
         period={t(`${KEY}.period`, { name: insights.name })}

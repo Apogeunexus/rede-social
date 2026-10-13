@@ -1618,6 +1618,229 @@ test('dono-do-cliente ?area=conteudo', async ({ page }) => {
   }
 });
 
+/* ---------------------------------------------------- Conteúdo in three tabs (quick 261013-h51) */
+
+const CONTENT_AREA = '/painel-preview/dono-do-cliente?area=conteudo';
+const CONTENT_TABS = ['Visão geral', 'Por tipo', 'Publicações'];
+
+/** The content tabs (D-01): Visão geral | Por tipo | Publicações. */
+function contentTabs(page: Page) {
+  return page.getByRole('navigation', { name: 'Vistas do conteúdo' });
+}
+
+/** The publication cards of a list (each card's wrapper carries `post-<id>`). */
+function postCards(scope: Locator) {
+  return scope.getByRole('listitem').filter({ has: scope.page().locator('[id^="post-"]') });
+}
+
+/** The Voltar link of a deeper step. */
+function backLink(page: Page) {
+  return ownerArea(page).getByRole('link', { name: 'Voltar', exact: true });
+}
+
+async function coverRatio(scope: Page | Locator) {
+  return boxRatio(scope.locator('[data-testid="content-cover"]').first());
+}
+
+/** A detail's interaction number as an integer ("1.240" -> 1240). */
+async function numberIn(locator: Locator) {
+  return Number((await locator.locator('span.text-2xl').innerText()).trim().replace('.', ''));
+}
+
+test.describe('dono-do-cliente conteudo', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('one row of three equal tabs, no period row', async ({ page }) => {
+    const hrefs = [
+      CONTENT_AREA,
+      `${CONTENT_AREA}&vista=tipos`,
+      `${CONTENT_AREA}&vista=publicacoes`,
+    ];
+    for (const [i, href] of hrefs.entries()) {
+      await page.goto(href);
+      const nav = contentTabs(page);
+      await expect(nav).toHaveCount(1);
+      expect(await linkTexts(nav)).toEqual(CONTENT_TABS);
+      const links = nav.getByRole('link');
+      const widths: number[] = [];
+      for (let k = 0; k < 3; k += 1) {
+        expect(await links.nth(k).getAttribute('href')).toBe(hrefs[k]);
+        widths.push((await links.nth(k).boundingBox())?.width ?? Number.NaN);
+      }
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(links.nth(i)).toHaveAttribute('aria-current', 'page');
+      await expect(ownerArea(page).getByRole('navigation')).toHaveCount(1);
+      // The bell's hidden "7 dias" alert tag is the header's, not a period choice of the area.
+      await expect(ownerArea(page).getByText('7 dias', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('90 dias', { exact: true })).toHaveCount(0);
+    }
+  });
+
+  test('Por tipo: six kinds, a kind opens its publications, a card its detail', async ({
+    page,
+  }) => {
+    await page.goto(`${CONTENT_AREA}&vista=tipos`);
+    const area = ownerArea(page);
+    const expected: [string, string, string, string][] = [
+      ['video', 'Vídeo', '18', '96'],
+      ['foto', 'Foto', '6', '62'],
+      ['carrossel', 'Carrossel', '9', '77'],
+      ['texto', 'Texto', '20', '48'],
+      ['link', 'Link', '8', '23'],
+      ['story', 'Story', '16', '30'],
+    ];
+    const ids = await area.locator('[id^="tipo-"]').evaluateAll((els) => els.map((el) => el.id));
+    expect(ids).toEqual(expected.map(([slug]) => `tipo-${slug}`));
+    for (const [slug, name, posts, perPost] of expected) {
+      const card = area.locator(`#tipo-${slug}`);
+      await expect(card, slug).toContainText(name);
+      await expect(cardCell(card, 'Publicações'), slug).toHaveText(posts);
+      await expect(cardCell(card, 'Interações por post'), slug).toHaveText(perPost);
+    }
+    await expect(cardCell(area.locator('#tipo-video'), '% assistido')).toHaveText('58%');
+    await expect(cardCell(area.locator('#tipo-texto'), '% de comentários')).toHaveText('38%');
+    await expect(area.getByText('exemplo', { exact: true })).toHaveCount(1);
+
+    await area.locator('#tipo-video').getByRole('link').click();
+    await expect(page).toHaveURL(/\?area=conteudo&vista=tipos&tipo=video$/);
+    await expect(contentTabs(page)).toHaveCount(1);
+    await expect(area.getByRole('link', { name: 'Voltar aos tipos' })).toHaveAttribute(
+      'href',
+      /\?area=conteudo&vista=tipos#tipo-video$/,
+    );
+    await expect(area.locator('#tipo-video').getByRole('link')).toHaveCount(0);
+    const cards = postCards(area);
+    await expect(cards).toHaveCount(10);
+    await expect(area.getByText('e mais 8 publicações', { exact: true })).toBeVisible();
+    const first = cards.first().locator('[id^="post-"]');
+    const id = await first.getAttribute('id');
+    await first.getByRole('link').click();
+    await expect(page).toHaveURL(new RegExp(`&vista=tipos&tipo=video&post=${id?.slice(5)}$`));
+    expect(await backLink(page).getAttribute('href')).toMatch(
+      new RegExp(`&vista=tipos&tipo=video#${id}$`),
+    );
+
+    await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=story`);
+    await expect(postCards(area)).toHaveCount(10);
+    await expect(area.getByText('e mais 6 publicações', { exact: true })).toBeVisible();
+  });
+
+  test('Publicações: the 61 posts best first, 10 cards and one example pill', async ({ page }) => {
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes`);
+    const area = ownerArea(page);
+    const cards = postCards(area);
+    await expect(cards).toHaveCount(10);
+    await expect(area.getByText('e mais 51 publicações', { exact: true })).toBeVisible();
+    await expect(area.getByRole('button', { name: 'Ver todas' })).toBeDisabled();
+    await expect(area.getByText('exemplo', { exact: true })).toHaveCount(1);
+    for (let i = 0; i < 10; i += 1) {
+      await expect(cards.nth(i).getByText('exemplo', { exact: true })).toHaveCount(0);
+    }
+    const totals: number[] = [];
+    for (let i = 0; i < 10; i += 1) {
+      const likes = Number(await cardCell(cards.nth(i), 'Curtidas').innerText());
+      const comments = Number(await cardCell(cards.nth(i), 'Comentários').innerText());
+      totals.push(likes + comments);
+    }
+    expect([...totals].sort((a, b) => b - a)).toEqual(totals);
+    await expect(cards.first()).toContainText('Como organizar a agenda');
+    await expect(cards.first()).toContainText('22/09 · Geral · Vídeo');
+  });
+
+  test('the tracer: a publication, who liked it, a member, a list and back', async ({ page }) => {
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes`);
+    const area = ownerArea(page);
+    await area.locator('#post-op-11').getByRole('link').click();
+    await expect(page).toHaveURL(/\?area=conteudo&vista=publicacoes&post=op-11$/);
+    await expect(contentTabs(page)).toHaveCount(0);
+    await expect(area.getByRole('heading', { level: 3 }).first()).toHaveText(
+      'Bastidores: como eu preparo o conteúdo da semana',
+    );
+    expect(Math.abs((await coverRatio(area)) - 9 / 16)).toBeLessThanOrEqual(0.02);
+    await expect(area.getByText('127 interações', { exact: true })).toBeVisible();
+    await expect(area.getByText('1,3× a média dos vídeos', { exact: true })).toBeVisible();
+
+    const likes = area.locator('#quem-curtidas');
+    const value = await numberIn(likes);
+    expect(value).toBe(96);
+    await likes.click();
+    await expect(page).toHaveURL(/&post=op-11&quem=curtidas$/);
+    await expect(area.getByRole('heading', { name: 'Quem curtiu' })).toBeVisible();
+    await expect(
+      area.getByText(new RegExp(`^${value} curtidas · mais recentes primeiro$`)),
+    ).toBeVisible();
+    const rows = area.getByRole('listitem');
+    const count = await rows.count();
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThanOrEqual(10);
+    await expect(area.getByText(`e mais ${value - count} membros`, { exact: true })).toBeVisible();
+    await expect(rows.first()).toContainText('Faixa:');
+
+    const card = rows.first().getByRole('link');
+    const name = (await card.locator('.text-lg').innerText()).trim();
+    const memberHref = (await card.getAttribute('href')) ?? '';
+    const member = /membro=(om-\d\d)$/.exec(memberHref)?.[1];
+    expect(member).toBeDefined();
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`&quem=curtidas&membro=${member}$`));
+    await expect(area.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+
+    await area.locator('#insight-curtidas').click();
+    await expect(page).toHaveURL(new RegExp(`&membro=${member}&lista=curtidas$`));
+    await expect(
+      area.getByRole('heading', { level: 3, name: 'Curtidas', exact: true }),
+    ).toBeVisible();
+    await expect(area.getByText(`${name} · últimos 30 dias`, { exact: true })).toBeVisible();
+
+    const steps = [
+      new RegExp(`&post=op-11&quem=curtidas&membro=${member}#insight-curtidas$`),
+      new RegExp(`&post=op-11&quem=curtidas#membro-${member}$`),
+      /&vista=publicacoes&post=op-11#quem-curtidas$/,
+      /\?area=conteudo&vista=publicacoes#post-op-11$/,
+    ];
+    for (const step of steps) {
+      expect(await backLink(page).getAttribute('href')).toMatch(step);
+      await backLink(page).click();
+      await expect(page).toHaveURL(step);
+    }
+    await expect(contentTabs(page).getByRole('link', { name: 'Publicações' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  test('covers take the feed ratio; a text post has none', async ({ page }) => {
+    const cases: [string, number | null][] = [
+      ['&vista=publicacoes&post=op-41', 9 / 16],
+      ['&vista=publicacoes&post=op-37', 16 / 9],
+      ['&vista=publicacoes&post=op-18', 4 / 5],
+      ['&vista=publicacoes&post=op-23', 16 / 9],
+      ['&vista=tipos&tipo=story&post=os-01', 9 / 16],
+      ['&vista=publicacoes&post=op-19', null],
+    ];
+    for (const [query, ratio] of cases) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      const covers = ownerArea(page).locator('[data-testid="content-cover"]');
+      if (ratio === null) {
+        await expect(covers, query).toHaveCount(0);
+        await expect(ownerArea(page).getByText('60 interações', { exact: true })).toBeVisible();
+        continue;
+      }
+      await expect(covers, query).toHaveCount(1);
+      expect(Math.abs((await coverRatio(ownerArea(page))) - ratio), query).toBeLessThanOrEqual(
+        0.02,
+      );
+    }
+    await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=texto`);
+    await expect(postCards(ownerArea(page))).toHaveCount(10);
+    await expect(ownerArea(page).locator('[data-testid="content-cover"]')).toHaveCount(0);
+  });
+});
+
 test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/painel-preview/dono-do-cliente?area=eventos');

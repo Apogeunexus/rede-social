@@ -13,9 +13,23 @@ export {
   type ViewedPost,
   type WatchedVideo,
 } from './member-lists';
+export {
+  CONTENT_KIND_ORDER,
+  type ContentItem,
+  type ContentKind,
+  type ContentPeople,
+  type ContentPerson,
+  type ContentWho,
+  ownerContentIncludes,
+  ownerContentItem,
+  ownerContentItems,
+  ownerContentKindMetric,
+  ownerContentPeople,
+} from './owner-content';
 export { type OwnerMemberInsights, ownerMemberInsights } from './owner-member-insights';
 export type { OwnerMemberLists } from './owner-member-lists';
 export {
+  daysSince,
   OWNER_BAND_LIST_LIMIT,
   type OwnerBandList,
   type OwnerBandMember,
@@ -25,7 +39,7 @@ export {
   ownerBandRoster,
   ownerScopeBands,
 } from './owner-members';
-export type { OwnerPost } from './owner-posts';
+export type { OwnerPost, OwnerPostMedia } from './owner-posts';
 export {
   type ActivationStep,
   type ClientPlan,

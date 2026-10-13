@@ -58,7 +58,10 @@ describe('the content items', () => {
     for (const row of byCommunity) {
       const rows = posts.filter((item) => item.communityId === row.id);
       expect(rows, row.id).toHaveLength(row.posts);
-      expect(sum(rows, (item) => item.likes + item.comments), row.id).toBe(row.interactions);
+      expect(
+        sum(rows, (item) => item.likes + item.comments),
+        row.id,
+      ).toBe(row.interactions);
     }
     for (const row of byFormat) {
       const rows = ownerPostTable.filter((post) => post.type === row.type);
@@ -81,8 +84,14 @@ describe('the content items', () => {
     for (const [kind, [count, likes, comments]] of Object.entries(expected)) {
       const rows = posts.filter((item) => item.kind === kind);
       expect(rows, kind).toHaveLength(count);
-      expect(sum(rows, (item) => item.likes), kind).toBe(likes);
-      expect(sum(rows, (item) => item.comments), kind).toBe(comments);
+      expect(
+        sum(rows, (item) => item.likes),
+        kind,
+      ).toBe(likes);
+      expect(
+        sum(rows, (item) => item.comments),
+        kind,
+      ).toBe(comments);
     }
   });
 

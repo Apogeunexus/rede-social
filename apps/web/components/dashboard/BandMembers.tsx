@@ -117,12 +117,27 @@ function CardLine({ label, children }: { label: string; children: ReactNode }) {
  * the initials on the brand color (the profile photo replaces them once profiles are wired), the
  * large name, four labeled lines, and a chevron saying it opens (R-3). The whole card links to the
  * member's insights (B-3). The daily time is an example; the list says so once on top (R-2).
+ * Outside a band list (the Conteúdo people, quick 261013-h51 P1) `band` adds a first line with the
+ * member's band; `id` lets a "Voltar" land on the card.
  */
-function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMember; href: string }) {
+export function MemberCard({
+  t,
+  member,
+  href,
+  band,
+  id,
+}: {
+  t: DashboardT;
+  member: OwnerBandMember;
+  href: string;
+  band?: EngagementBand;
+  id?: string;
+}) {
   return (
     <a
+      id={id}
       href={href}
-      className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      className="block scroll-mt-20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
     >
       <Card className="flex items-start gap-4 p-4 transition-colors hover:bg-card-hover">
         <span
@@ -134,6 +149,9 @@ function MemberCard({ t, member, href }: { t: DashboardT; member: OwnerBandMembe
         <div className="flex min-w-0 flex-1 flex-col gap-2 [overflow-wrap:anywhere]">
           <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
           <dl className="flex flex-col gap-1">
+            {band ? (
+              <CardLine label={t('tenantOwner.bandMembers.band')}>{bandLabel(t, band)}</CardLine>
+            ) : null}
             <CardLine label={t('tenantOwner.bandMembers.since')}>
               {formatMonthYear(member.memberSince)}
             </CardLine>

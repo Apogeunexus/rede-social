@@ -1,8 +1,9 @@
 import {
   type ContentItem,
+  type ContentWho,
+  ownerBandRoster,
   ownerContentIncludes,
   ownerContentItems,
-  ownerContentPeople,
 } from '@rede-social/module-dashboard/fixtures';
 import { describe, expect, it } from 'vitest';
 import { OWNER_MEMBER_LISTS } from './owner-band-scope';
@@ -44,8 +45,13 @@ function paramsOf(href: string): Params {
   return params;
 }
 
+/** The first roster member in an item's list (the lists stay OwnerContentPeople.tsx's to read). */
+function firstIn(postId: string, who: ContentWho): string | undefined {
+  return ownerBandRoster.find((row) => ownerContentIncludes(postId, who, row.id))?.id;
+}
+
 function firstLiker(postId: string): string {
-  const id = ownerContentPeople(postId, 'likes').people[0]?.id;
+  const id = firstIn(postId, 'likes');
   if (!id) throw new Error(`no likers for ${postId}`);
   return id;
 }
@@ -86,9 +92,7 @@ describe('parseOwnerContentView: Por tipo (D-03)', () => {
     expect(parseOwnerContentView({ vista: 'publicacoes', tipo: 'video' })).toEqual(
       view({ tab: 'posts' }),
     );
-    expect(parseOwnerContentView({ vista: 'tipos', tipo: 'reel' })).toEqual(
-      view({ tab: 'types' }),
-    );
+    expect(parseOwnerContentView({ vista: 'tipos', tipo: 'reel' })).toEqual(view({ tab: 'types' }));
   });
 
   it('opens a publication only of the opened type', () => {
@@ -119,10 +123,9 @@ describe('parseOwnerContentView: Publicações (D-04) and Visão geral', () => {
     expect(parseOwnerContentView({ vista: 'publicacoes', post: 'os-01' }).postId).toBeNull();
     expect(parseOwnerContentView({ post: 'os-01' }).postId).toBeNull();
     for (const post of ['op-99', 'OP-11', ['op-11', 'op-11']]) {
-      expect(
-        parseOwnerContentView({ vista: 'publicacoes', post } as Params),
-        String(post),
-      ).toEqual(view({ tab: 'posts' }));
+      expect(parseOwnerContentView({ vista: 'publicacoes', post } as Params), String(post)).toEqual(
+        view({ tab: 'posts' }),
+      );
     }
   });
 });
@@ -130,9 +133,9 @@ describe('parseOwnerContentView: Publicações (D-04) and Visão geral', () => {
 describe('parseOwnerContentView: who did it (D-06, P1, P3)', () => {
   it('opens the four interactions only with a post', () => {
     for (const [who, slug] of Object.entries(CONTENT_WHO_SLUGS)) {
-      expect(
-        parseOwnerContentView({ vista: 'publicacoes', post: 'op-11', quem: slug }).who,
-      ).toBe(who);
+      expect(parseOwnerContentView({ vista: 'publicacoes', post: 'op-11', quem: slug }).who).toBe(
+        who,
+      );
     }
     expect(parseOwnerContentView({ vista: 'publicacoes', quem: 'curtidas' })).toEqual(
       view({ tab: 'posts' }),
@@ -163,9 +166,7 @@ describe('parseOwnerContentView: who did it (D-06, P1, P3)', () => {
         membro: member,
       }),
     ).toEqual(view({ tab: 'posts', postId: 'op-11', who: 'likes', memberId: member }));
-    const outsider = ownerContentItems
-      .flatMap((item) => ownerContentPeople(item.id, 'likes').people)
-      .find((person) => !ownerContentIncludes('op-11', 'likes', person.id));
+    const outsider = ownerBandRoster.find((row) => !ownerContentIncludes('op-11', 'likes', row.id));
     expect(outsider).toBeDefined();
     expect(
       parseOwnerContentView({
@@ -175,9 +176,9 @@ describe('parseOwnerContentView: who did it (D-06, P1, P3)', () => {
         membro: outsider?.id,
       }),
     ).toEqual(view({ tab: 'posts', postId: 'op-11', who: 'likes' }));
-    expect(
-      parseOwnerContentView({ vista: 'publicacoes', post: 'op-11', membro: member }),
-    ).toEqual(view({ tab: 'posts', postId: 'op-11' }));
+    expect(parseOwnerContentView({ vista: 'publicacoes', post: 'op-11', membro: member })).toEqual(
+      view({ tab: 'posts', postId: 'op-11' }),
+    );
   });
 
   it('opens a member list only with a member', () => {
@@ -242,9 +243,7 @@ describe('ownerContentHref and contentBackHref', () => {
 
   it('round-trips every valid level (parse of the href is the view)', () => {
     const views: OwnerContentView[] = [EMPTY, view({ tab: 'types' }), view({ tab: 'posts' })];
-    for (const kind of Object.keys(CONTENT_KIND_SLUGS) as NonNullable<
-      OwnerContentView['kind']
-    >[]) {
+    for (const kind of Object.keys(CONTENT_KIND_SLUGS) as NonNullable<OwnerContentView['kind']>[]) {
       views.push(view({ tab: 'types', kind }));
     }
     const withPost = (base: OwnerContentView, item: ContentItem) => {
@@ -252,7 +251,7 @@ describe('ownerContentHref and contentBackHref', () => {
       for (const who of Object.keys(CONTENT_WHO_SLUGS) as NonNullable<OwnerContentView['who']>[]) {
         if (who === 'saves' && item.saves === null) continue;
         views.push({ ...base, postId: item.id, who });
-        const member = ownerContentPeople(item.id, who).people[0]?.id;
+        const member = firstIn(item.id, who);
         if (!member) continue;
         views.push({ ...base, postId: item.id, who, memberId: member });
         for (const list of OWNER_MEMBER_LISTS) {

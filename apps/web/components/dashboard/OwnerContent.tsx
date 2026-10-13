@@ -1,238 +1,125 @@
-import { tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
-import {
-  BarList,
-  bandTotal,
-  Collapsible,
-  KpiCard,
-  KpiGrid,
-  percentOf,
-  perItem,
-  sumOf,
-  topBy,
-} from '@rede-social/module-dashboard/ui';
-import { Card } from '@rede-social/ui';
+import { ownerBandRoster, ownerContentItems } from '@rede-social/module-dashboard/fixtures';
+import { Chip } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
-import { ExamplePill } from './ExamplePill';
-import { exampleBadge, formatCount, formatDayMonth, formatPercent } from './format';
+import {
+  type ContentTab,
+  contentBackHref,
+  type OwnerContentView,
+  ownerContentHref,
+} from '@/lib/owner-content-view';
+import type { DashboardT } from './format';
+import { OwnerContentOverview } from './OwnerContentOverview';
+import { OwnerContentPeople } from './OwnerContentPeople';
+import { ContentPostList } from './OwnerContentPostCard';
+import { OwnerContentPostDetail } from './OwnerContentPostDetail';
+import { byInteractions, OwnerContentTypes } from './OwnerContentTypes';
+import { OwnerMemberDetail } from './OwnerMemberDetail';
+import { OwnerMemberList } from './OwnerMemberList';
 import { PanelSection } from './PanelSection';
 
-/** Likes + comments per post of a row, computed (C-4). */
-function perPostOf(row: { posts: number; interactions: number }): number {
-  return perItem(row.interactions, row.posts);
+const KEY = 'tenantOwner.content';
+
+const TABS = [
+  { tab: 'overview', labelKey: `${KEY}.tabs.overview` },
+  { tab: 'types', labelKey: `${KEY}.tabs.types` },
+  { tab: 'posts', labelKey: `${KEY}.tabs.posts` },
+] as const satisfies readonly { tab: ContentTab; labelKey: string }[];
+
+/** The one row of choices of the area (D-01): three equal tabs, as Membros' scope tabs. */
+function ContentTabs({ t, view }: { t: DashboardT; view: OwnerContentView }) {
+  return (
+    <nav aria-label={t(`${KEY}.tabs.label`)}>
+      <ul className="grid grid-cols-3 gap-2">
+        {TABS.map((row) => (
+          <li key={row.tab} className="min-w-0">
+            <Chip
+              href={ownerContentHref({
+                tab: row.tab,
+                kind: null,
+                postId: null,
+                who: null,
+                memberId: null,
+                list: null,
+              })}
+              active={row.tab === view.tab}
+              className="w-full justify-center text-center"
+            >
+              {t(row.labelKey)}
+            </Chip>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
+/** Publicações (D-04): the 61 feed posts best to worst, each opening its detail. */
+function PostsTab({ t, view }: { t: DashboardT; view: OwnerContentView }) {
+  const posts = ownerContentItems.filter((item) => item.kind !== 'story').sort(byInteractions);
+  return (
+    <PanelSection title={t(`${KEY}.posts.title`)}>
+      <p className="text-sm text-text-secondary">
+        {t(`${KEY}.posts.order`, { count: posts.length })}
+      </p>
+      <ContentPostList
+        t={t}
+        items={posts}
+        hrefOf={(item) => ownerContentHref({ ...view, postId: item.id })}
+      />
+    </PanelSection>
+  );
 }
 
 /**
- * Level 4, "Conteúdo": the posts that performed best (saves and shares are examples, marked by one
- * pill on the block's note line, not on every row: C-3), reach, video playback and stories (stories are aggregate only, never who viewed), then
- * closed: interactions per post by format and by community, the best day and time to publish, and
- * where members interact. Every "rende mais", best day/slot and top channel is picked by value with
- * `topBy`, never by the data's order (C-6). The "exemplo" pill comes from each value's `example`
- * flag (D-03).
+ * The member opened from a publication's people (P1): their insights, or the list behind one of
+ * their numbers, with the same components as Membros. Their band is today's whole-base band.
  */
-export async function OwnerContent() {
-  const t = await getTranslations('dashboard');
-  const {
-    topPosts,
-    reach,
-    videoPlayback,
-    stories,
-    byFormat,
-    byCommunity,
-    publishing,
-    channels,
-    engagement,
-  } = tenantOwnerPanel;
-  const base = bandTotal(engagement);
-  const formats = [...byFormat].sort((a, b) => perPostOf(b) - perPostOf(a));
-  const topFormat = formats[0];
-  const formatPosts = sumOf(byFormat, (row) => row.posts);
-  const topCommunity = topBy(byCommunity, perPostOf);
-  const communityPosts = sumOf(byCommunity, (row) => row.posts);
-  const bestDay = topBy(publishing.byWeekday, perPostOf);
-  const bestSlot = topBy(publishing.bySlot, perPostOf);
-  const topChannel = topBy(channels, (row) => row.count);
-  const postsExample = topPosts.some((post) => post.saves.example || post.shares.example);
+function ContentMember({
+  t,
+  view,
+  memberId,
+}: {
+  t: DashboardT;
+  view: OwnerContentView;
+  memberId: string;
+}) {
+  const back = contentBackHref(view);
+  if (!view.postId || !view.who || back === null) throw new Error('a member with no list');
+  if (view.list) {
+    return <OwnerMemberList t={t} memberId={memberId} list={view.list} backHref={back} />;
+  }
+  const person = ownerBandRoster.find((row) => row.id === memberId);
+  if (!person) throw new Error(`no roster member ${memberId}`);
+  return (
+    <OwnerMemberDetail
+      t={t}
+      memberId={memberId}
+      band={person.band}
+      scope={{ kind: 'member' }}
+      backHref={back}
+      listHref={(slug) => ownerContentHref({ ...view, list: slug })}
+    />
+  );
+}
 
+/**
+ * Level 4, "Conteúdo" (quick 261013-h51): one cascade of plain links, as Membros (D-01). The tab
+ * screens — Visão geral, Por tipo (an opened type included) and Publicações — carry the one row of
+ * three tabs; every deeper step (a publication, who did one of its numbers, a member's insights, the
+ * list behind one of them) replaces the area under its "Voltar" (PD-3). The period is the panel's
+ * fixed 30 days against the 30 before: there is no period selector.
+ */
+export async function OwnerContent({ content: view }: { content: OwnerContentView }) {
+  const t = await getTranslations('dashboard');
+  if (view.memberId) return <ContentMember t={t} view={view} memberId={view.memberId} />;
+  if (view.who) return <OwnerContentPeople t={t} view={view} />;
+  if (view.postId) return <OwnerContentPostDetail t={t} view={view} />;
   return (
     <>
-      <PanelSection title={t('tenantOwner.topPosts.title')}>
-        {postsExample ? (
-          <p className="flex flex-wrap items-center gap-2 text-sm text-text-secondary">
-            <span>{t('tenantOwner.topPosts.exampleNote')}</span>
-            <ExamplePill text={exampleBadge(t, { example: postsExample })} />
-          </p>
-        ) : null}
-        <Card>
-          <ul className="divide-y divide-border">
-            {topPosts.map((post) => (
-              <li key={post.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                <div className="flex min-w-0 flex-col gap-0.5 [overflow-wrap:anywhere]">
-                  <p className="text-sm font-semibold text-text">
-                    {t('tenantOwner.topPosts.post', {
-                      type: t(`postTypes.${post.type}`),
-                      community: post.community,
-                    })}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {t('tenantOwner.topPosts.measured', {
-                      likes: post.likes,
-                      comments: post.comments,
-                    })}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {t('tenantOwner.topPosts.saved', {
-                      saves: post.saves.value,
-                      shares: post.shares.value,
-                    })}
-                  </p>
-                </div>
-                <span className="shrink-0 text-xs font-bold tabular-nums text-text">
-                  {formatDayMonth(post.date)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </PanelSection>
-
-      <PanelSection title={t('tenantOwner.reach.title')}>
-        <KpiGrid>
-          <KpiCard
-            label={t('tenantOwner.reach.perPost')}
-            value={formatCount(reach.value.perPost)}
-            note={t('tenantOwner.reach.perPostNote', {
-              percent: formatPercent(percentOf(reach.value.perPost, base)),
-            })}
-            badge={exampleBadge(t, reach)}
-          />
-          <KpiCard
-            label={t('tenantOwner.reach.stories')}
-            value={formatCount(stories.averageUniqueViewers)}
-            note={t('tenantOwner.reach.storiesNote', {
-              count: formatCount(stories.count),
-              percent: formatPercent(percentOf(stories.averageUniqueViewers, base)),
-            })}
-          />
-          <KpiCard
-            label={t('tenantOwner.reach.watched')}
-            value={formatPercent(videoPlayback.watchedPercent.value)}
-            badge={exampleBadge(t, videoPlayback.watchedPercent)}
-          />
-          <KpiCard
-            label={t('tenantOwner.reach.completion')}
-            value={formatPercent(videoPlayback.completionPercent.value)}
-            badge={exampleBadge(t, videoPlayback.completionPercent)}
-          />
-        </KpiGrid>
-        <p className="text-xs text-text-secondary">{t('tenantOwner.reach.footnote')}</p>
-      </PanelSection>
-
-      {topFormat ? (
-        <Collapsible
-          title={t('tenantOwner.formats.title')}
-          summary={t('tenantOwner.formats.summary', {
-            format: t(`postTypes.${topFormat.type}`),
-            perPost: formatCount(perPostOf(topFormat)),
-          })}
-        >
-          <BarList
-            rows={formats.map((row, i) => ({
-              id: row.type,
-              label: t(`postTypes.${row.type}`),
-              value: perPostOf(row),
-              display: formatCount(perPostOf(row)),
-              rate: t('tenantOwner.formats.posts', { count: row.posts }),
-              highlight: i === 0,
-            }))}
-          />
-          <p className="text-xs text-text-secondary">
-            {t('tenantOwner.formats.footnote', { count: formatPosts })}
-          </p>
-        </Collapsible>
-      ) : null}
-
-      {topCommunity ? (
-        <Collapsible
-          title={t('tenantOwner.communities.title')}
-          summary={t('tenantOwner.communities.summary', {
-            name: topCommunity.name,
-            perPost: formatCount(perPostOf(topCommunity)),
-          })}
-        >
-          <BarList
-            rows={byCommunity.map((row) => ({
-              id: row.id,
-              label: row.exclusive
-                ? t('tenantAdmin.communities.exclusive', { name: row.name })
-                : row.name,
-              value: perPostOf(row),
-              display: formatCount(perPostOf(row)),
-              rate: t('tenantOwner.formats.posts', { count: row.posts }),
-              highlight: row.id === topCommunity.id,
-            }))}
-          />
-          <p className="text-xs text-text-secondary">
-            {t('tenantOwner.formats.footnote', { count: communityPosts })}
-          </p>
-        </Collapsible>
-      ) : null}
-
-      {bestDay && bestSlot ? (
-        <Collapsible
-          title={t('tenantOwner.bestTime.title')}
-          summary={t('tenantOwner.bestTime.summary', {
-            day: t(`tenantOwner.bestTime.weekday.${bestDay.weekday}`),
-            from: bestSlot.fromHour,
-            to: bestSlot.toHour,
-          })}
-        >
-          <p className="text-xs font-bold text-text-secondary">{t('tenantOwner.bestTime.byDay')}</p>
-          <BarList
-            rows={publishing.byWeekday.map((row) => ({
-              id: row.weekday,
-              label: t(`tenantOwner.bestTime.weekday.${row.weekday}`),
-              value: perPostOf(row),
-              display: formatCount(perPostOf(row)),
-              rate: t('tenantOwner.formats.posts', { count: row.posts }),
-              highlight: row === bestDay,
-            }))}
-          />
-          <p className="text-xs font-bold text-text-secondary">
-            {t('tenantOwner.bestTime.bySlot')}
-          </p>
-          <BarList
-            rows={publishing.bySlot.map((row) => ({
-              id: `${row.fromHour}-${row.toHour}`,
-              label: t('tenantOwner.bestTime.slot', { from: row.fromHour, to: row.toHour }),
-              value: perPostOf(row),
-              display: formatCount(perPostOf(row)),
-              rate: t('tenantOwner.formats.posts', { count: row.posts }),
-              highlight: row === bestSlot,
-            }))}
-          />
-          <p className="text-xs text-text-secondary">{t('tenantOwner.bestTime.footnote')}</p>
-        </Collapsible>
-      ) : null}
-
-      {topChannel ? (
-        <Collapsible
-          title={t('tenantOwner.channels.title')}
-          summary={t('tenantOwner.channels.summary', {
-            channel: t(`tenantOwner.channels.${topChannel.channel}`),
-            count: formatCount(topChannel.count),
-          })}
-        >
-          <BarList
-            rows={channels.map((row) => ({
-              id: row.channel,
-              label: t(`tenantOwner.channels.${row.channel}`),
-              value: row.count,
-              display: formatCount(row.count),
-              highlight: row.channel === topChannel.channel,
-            }))}
-          />
-        </Collapsible>
-      ) : null}
+      <ContentTabs t={t} view={view} />
+      {view.tab === 'types' ? <OwnerContentTypes t={t} view={view} /> : null}
+      {view.tab === 'posts' ? <PostsTab t={t} view={view} /> : null}
+      {view.tab === 'overview' ? <OwnerContentOverview /> : null}
     </>
   );
 }

@@ -57,7 +57,15 @@ function InBand({ t, count, linked }: { t: DashboardT; count: number; linked: bo
  * One column of a card: the small gray label, then the large bold value. `justify-between` keeps the
  * values on one line when a label wraps to two and its neighbor does not.
  */
-function Cell({ label, value, className }: { label: string; value: string; className?: string }) {
+export function Cell({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+}) {
   return (
     <div className={`flex min-w-0 flex-col justify-between gap-0.5 ${className ?? ''}`}>
       <dt className="text-xs text-text-secondary">{label}</dt>
@@ -67,7 +75,7 @@ function Cell({ label, value, className }: { label: string; value: string; class
 }
 
 /** The whole card is the link when it opens (the member card's focus ring), else plain. */
-function Linked({ href, children }: { href: string | null; children: ReactNode }) {
+export function Linked({ href, children }: { href: string | null; children: ReactNode }) {
   if (href === null) return children;
   return (
     <a

@@ -10,13 +10,7 @@ import { ActionCard, BarList, KpiCard, KpiGrid, LineChart } from '@rede-social/m
 import { Card, StatusPill, type StatusTone } from '@rede-social/ui';
 import { ChevronRight, Lightbulb } from 'lucide-react';
 import type { ReactNode } from 'react';
-import {
-  type OwnerMemberListSlug,
-  type OwnerMembersView,
-  ownerInsightAnchor,
-  ownerListScope,
-  ownerMembersHref,
-} from '@/lib/owner-band-scope';
+import { type OwnerMemberListSlug, ownerInsightAnchor } from '@/lib/owner-band-scope';
 import { BackLink } from './BackLink';
 import { ExamplePill } from './ExamplePill';
 import {
@@ -133,17 +127,17 @@ function Header({
  * pattern): the whole card is a plain link and carries the id the list's "Voltar" returns to.
  */
 function ListLink({
-  view,
+  listHref,
   slug,
   children,
 }: {
-  view: OwnerMembersView;
+  listHref: ListHref;
   slug: OwnerMemberListSlug;
   children: ReactNode;
 }) {
   return (
     <a
-      href={ownerMembersHref({ ...view, list: slug })}
+      href={listHref(slug)}
       id={ownerInsightAnchor(slug)}
       className="grid scroll-mt-20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
     >
@@ -155,11 +149,11 @@ function ListLink({
 function Last30({
   t,
   insights,
-  view,
+  listHref,
 }: {
   t: DashboardT;
   insights: OwnerMemberInsights;
-  view: OwnerMembersView;
+  listHref: ListHref;
 }) {
   const { last30 } = insights;
   const key = 'tenantOwner.memberDetail.last30';
@@ -172,24 +166,24 @@ function Last30({
   return (
     <PanelSection as="h4" title={t(`${key}.title`)}>
       <KpiGrid className="grid-cols-2">
-        <ListLink view={view} slug="dias-ativos">
+        <ListLink listHref={listHref} slug="dias-ativos">
           <KpiCard
             label={t(`${key}.activeDays`)}
             value={formatCount(last30.activeDays)}
             footer={seeList}
           />
         </ListLink>
-        <ListLink view={view} slug="curtidas">
+        <ListLink listHref={listHref} slug="curtidas">
           <KpiCard label={t(`${key}.likes`)} value={formatCount(last30.likes)} footer={seeList} />
         </ListLink>
-        <ListLink view={view} slug="comentarios">
+        <ListLink listHref={listHref} slug="comentarios">
           <KpiCard
             label={t(`${key}.comments`)}
             value={formatCount(last30.comments)}
             footer={seeList}
           />
         </ListLink>
-        <ListLink view={view} slug="acoes-fortes">
+        <ListLink listHref={listHref} slug="acoes-fortes">
           <KpiCard
             label={t(`${key}.strongActions`)}
             value={formatCount(last30.strongActions)}
@@ -202,7 +196,7 @@ function Last30({
           value={formatHoursMinutes(t, last30.dailyMinutes.value)}
           badge={exampleBadge(t, last30.dailyMinutes)}
         />
-        <ListLink view={view} slug="posts-vistos">
+        <ListLink listHref={listHref} slug="posts-vistos">
           <KpiCard
             label={t(`${key}.postsSeen`)}
             value={formatCount(last30.postsSeen.value)}
@@ -372,33 +366,50 @@ function Support({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights
   );
 }
 
+/** The link to the list behind one insight number, built by the cascade that opened the member. */
+type ListHref = (slug: OwnerMemberListSlug) => string;
+
+export interface OwnerMemberDetailProps {
+  t: DashboardT;
+  /** A roster member the opening cascade's parser let through. */
+  memberId: string;
+  /** The band the member was opened in, in `scope`. */
+  band: EngagementBand;
+  /** Where that band was counted: the whole base, a community or an event. */
+  scope: OwnerBandScope;
+  /** "Voltar": one step back in the cascade that opened the member. */
+  backHref: string;
+  listHref: ListHref;
+}
+
 /**
- * One member's insights in the level-4 Membros area (quick 261012-qer B-3), opened from their band
- * card: "Voltar" one step back in the cascade (the same tab, band and opened community or event at
- * #faixas, quick 261012-tru D-06), then the header (the community
+ * One member's insights, opened from a member card (quick 261012-qer B-3): in the level-4 Membros
+ * area from a band, and in Conteúdo from the people behind a publication's number (quick 261013-h51
+ * P1). "Voltar" one step back in the cascade that opened it, then the header (the community
  * band next to the whole-base one when they differ, quick 261012-ri4 R-4), the last 30
- * days (example values marked), the band history with the weekly active days, where they interact,
- * their events, purchases and support counts (never message text), and a suggested next step whose
- * button is disabled like every preview action. Visible to the client's management only.
+ * days (example values marked; each number opens its list), the band history with the weekly active
+ * days, where they interact, their events, purchases and support counts (never message text), and a
+ * suggested next step whose button is disabled like every preview action. Visible to the client's
+ * management only.
  */
-export function OwnerMemberDetail({ t, view }: { t: DashboardT; view: OwnerMembersView }) {
-  // The parser only lets a roster member through together with the band they hold in the opened
-  // list (R-5, D-06), so a missing member, band or list is a bug.
-  const insights = view.memberId ? ownerMemberInsights(view.memberId) : null;
-  const scope = ownerListScope(view);
-  if (!insights || !view.band || !scope) {
-    throw new Error(`no insights for member ${view.memberId ?? '(none)'} in band ${view.band}`);
-  }
+export function OwnerMemberDetail({
+  t,
+  memberId,
+  band,
+  scope,
+  backHref,
+  listHref,
+}: OwnerMemberDetailProps) {
+  // Each opening parser only lets a roster member through, so a missing one is a bug.
+  const insights = ownerMemberInsights(memberId);
+  if (!insights) throw new Error(`no insights for member ${memberId}`);
   const { kind, days } = insights.suggestion;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <BackLink
-        href={ownerMembersHref({ ...view, memberId: null, list: null })}
-        label={t('tenantOwner.memberDetail.back')}
-      />
-      <Header t={t} insights={insights} scope={scope} band={view.band} />
-      <Last30 t={t} insights={insights} view={view} />
+      <BackLink href={backHref} label={t('tenantOwner.memberDetail.back')} />
+      <Header t={t} insights={insights} scope={scope} band={band} />
+      <Last30 t={t} insights={insights} listHref={listHref} />
       <Evolution t={t} insights={insights} />
       <WhereInteracts t={t} insights={insights} />
       <Events t={t} insights={insights} />

@@ -15,6 +15,7 @@ import { getTranslations } from 'next-intl/server';
 import {
   OWNER_BANDS_ANCHOR,
   type OwnerMembersView,
+  ownerInsightAnchor,
   ownerListScope,
   ownerMembersHref,
 } from '@/lib/owner-band-scope';
@@ -77,10 +78,29 @@ function recoverReach(view: OwnerMembersView): { atRisk: number; withPush: numbe
 export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
   const t = await getTranslations('dashboard');
   if (members.memberId) {
-    return members.list ? (
-      <OwnerMemberList t={t} view={members} />
-    ) : (
-      <OwnerMemberDetail t={t} view={members} />
+    const { memberId, list, band } = members;
+    if (list) {
+      return (
+        <OwnerMemberList
+          t={t}
+          memberId={memberId}
+          list={list}
+          backHref={`${ownerMembersHref({ ...members, list: null })}#${ownerInsightAnchor(list)}`}
+        />
+      );
+    }
+    // The parser only lets a member through with the band they hold in the opened list (R-5, D-06).
+    const scope = ownerListScope(members);
+    if (!band || !scope) throw new Error(`member ${memberId} opened with no band or list`);
+    return (
+      <OwnerMemberDetail
+        t={t}
+        memberId={memberId}
+        band={band}
+        scope={scope}
+        backHref={ownerMembersHref({ ...members, memberId: null, list: null })}
+        listHref={(slug) => ownerMembersHref({ ...members, list: slug })}
+      />
     );
   }
   const { kpis, growth, cohorts, movement, engagement } = tenantOwnerPanel;
