@@ -13,7 +13,11 @@ import {
   OWNER_BANDS_ANCHOR,
   OWNER_COMMUNITIES,
   OWNER_EVENTS,
+  OWNER_MEMBER_LIST_ANCHOR,
+  OWNER_MEMBER_LISTS,
+  type OwnerMemberListSlug,
   type OwnerMembersView,
+  ownerInsightAnchor,
   ownerListScope,
   ownerMembersHref,
   parseOwnerMembersView,
@@ -28,8 +32,9 @@ function view(
   band: EngagementBand | null = null,
   itemId: string | null = null,
   memberId: string | null = null,
+  list: OwnerMemberListSlug | null = null,
 ): OwnerMembersView {
-  return { kind, band, itemId, memberId };
+  return { kind, band, itemId, memberId, list };
 }
 
 /** The first roster member in `band` of a list (the band lists stay BandMembers.tsx's to read). */
@@ -259,17 +264,85 @@ describe('ownerMembersHref', () => {
           const listScope = ownerListScope(base);
           const first = band && listScope ? (firstMember(listScope, band) ?? null) : null;
           for (const memberId of first ? [null, first] : [null]) {
-            const target = { ...base, memberId };
-            const query = new URL(ownerMembersHref(target), 'http://x').searchParams;
-            expect(
-              parseOwnerMembersView(Object.fromEntries(query)),
-              JSON.stringify(target),
-            ).toEqual(target);
-            checked += 1;
+            for (const list of memberId ? [null, ...OWNER_MEMBER_LISTS] : [null]) {
+              const target = { ...base, memberId, list };
+              const query = new URL(ownerMembersHref(target), 'http://x').searchParams;
+              expect(
+                parseOwnerMembersView(Object.fromEntries(query)),
+                JSON.stringify(target),
+              ).toEqual(target);
+              checked += 1;
+            }
           }
         }
       }
     }
-    expect(checked).toBeGreaterThan(100);
+    expect(checked).toBeGreaterThan(300);
+  });
+});
+
+describe('the member lists (quick 261012-tru D-07)', () => {
+  it('names the five lists behind the insight numbers', () => {
+    expect(OWNER_MEMBER_LISTS).toEqual([
+      'dias-ativos',
+      'curtidas',
+      'comentarios',
+      'acoes-fortes',
+      'posts-vistos',
+    ]);
+    expect(OWNER_MEMBER_LIST_ANCHOR).toBe('lista');
+    expect(ownerInsightAnchor('curtidas')).toBe('insight-curtidas');
+  });
+
+  it('opens a list of a member opened in their band', () => {
+    expect(
+      parseOwnerMembersView({ faixa: 'superfas', membro: 'om-13', lista: 'curtidas' }),
+    ).toEqual(view('member', 'superfan', null, 'om-13', 'curtidas'));
+    for (const slug of OWNER_MEMBER_LISTS) {
+      expect(
+        parseOwnerMembersView({ faixa: 'superfas', membro: 'om-13', lista: slug }).list,
+        slug,
+      ).toBe(slug);
+    }
+  });
+
+  it('falls to the insights for an unknown or repeated list', () => {
+    for (const lista of [
+      'xyz',
+      'CURTIDAS',
+      'curtidas ',
+      '',
+      '__proto__',
+      ['curtidas', 'curtidas'],
+    ]) {
+      expect(
+        parseOwnerMembersView({ faixa: 'superfas', membro: 'om-13', lista }),
+        JSON.stringify(lista),
+      ).toEqual(view('member', 'superfan', null, 'om-13'));
+    }
+  });
+
+  it('opens no list without a valid member', () => {
+    expect(parseOwnerMembersView({ lista: 'curtidas' })).toEqual(view('member'));
+    expect(parseOwnerMembersView({ faixa: 'novos', membro: 'om-13', lista: 'curtidas' })).toEqual(
+      view('member', 'new'),
+    );
+    expect(
+      parseOwnerMembersView({ recorte: 'comunidade', faixa: 'engajados', lista: 'curtidas' }),
+    ).toEqual(view('community', 'engaged'));
+  });
+
+  it('links a list at #lista, after the member', () => {
+    expect(ownerMembersHref(view('member', 'superfan', null, 'om-13', 'curtidas'))).toBe(
+      `${AREA}&faixa=superfas&membro=om-13&lista=curtidas#lista`,
+    );
+    expect(
+      ownerMembersHref(view('community', 'occasional', 'c-eventos', 'om-28', 'posts-vistos')),
+    ).toBe(
+      `${AREA}&recorte=comunidade&comunidade=eventos&faixa=ocasionais&membro=om-28&lista=posts-vistos#lista`,
+    );
+    expect(ownerMembersHref(view('member', 'superfan', null, 'om-13'))).toBe(
+      `${AREA}&faixa=superfas&membro=om-13`,
+    );
   });
 });
