@@ -2913,6 +2913,32 @@ for (const list of MEMBER_LIST_CASES) {
     await expect(title).toBeInViewport();
     await expect(page.getByText(list.count, { exact: true })).toBeVisible();
     await expect(sectionTitled(page, list.title).getByRole('listitem')).toHaveCount(list.rows);
+    // Quick 261013-orf D-01/D-02/D-04: one decorative publication thumbnail per row, 56 px square.
+    const thumbs = page.locator('#lista [data-testid="cover-thumb"]');
+    await expect(thumbs).toHaveCount(list.rows);
+    await expect(
+      page.locator('#lista li').filter({ has: page.locator('[data-testid="cover-thumb"]') }),
+    ).toHaveCount(list.rows);
+    await expect(
+      page.locator('#lista [data-testid="cover-thumb"]:not([aria-hidden="true"])'),
+    ).toHaveCount(0);
+    const firstBox = await thumbs.first().boundingBox();
+    expect(Math.abs((firstBox?.width ?? 0) - 56)).toBeLessThanOrEqual(1);
+    expect(Math.abs((firstBox?.height ?? 0) - 56)).toBeLessThanOrEqual(1);
+    if (list.slug === 'curtidas') {
+      await expect(thumbs.first()).toHaveAttribute('data-kind', 'video');
+      await expect(thumbs.first()).toHaveText('10:12');
+      const text = thumbs.and(page.locator('[data-kind="text"]'));
+      expect(await text.count()).toBeGreaterThan(0);
+      await expect(text.first().locator('svg')).toHaveCount(1);
+    }
+    if (list.slug === 'videos') {
+      await expect(thumbs.first()).toHaveText('10:12');
+      for (const label of await thumbs.allTextContents()) expect(label).toMatch(/^\d+:\d\d$/);
+    }
+    if (list.slug === 'stories') {
+      await expect(thumbs.and(page.locator('[data-kind="story"]'))).toHaveCount(list.rows);
+    }
     await expect(page.getByText('exemplo', { exact: true })).toHaveCount(
       (list.listExample ? 1 : 0) + list.rowExamples,
     );

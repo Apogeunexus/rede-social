@@ -1,3 +1,4 @@
+import type { ContentKind } from './owner-content';
 import type { RelativeMoment } from './platform-panels';
 import { previewTenant } from './preview-tenant';
 import type { MeasuredValue, ReportValue } from './shared';
@@ -10,6 +11,8 @@ import type { MeasuredValue, ReportValue } from './shared';
  * One table feeds every post list: `memberPostTable` holds the 60 posts the member viewed in the
  * window, and the likes, comments, saves and shares point at those posts with the post's last-seen
  * moment, so no row contradicts another ("curtido ontem" never sits next to "última vez há 6 dias").
+ * Each post carries its kind (23 videos, 16 texts, 7 carousels, 7 photos, 7 links) and a video's
+ * length, so every row can draw the publication's thumbnail (quick 261013-orf).
  *
  * The member sees only their OWN actions: the authors are the creator or a community, never another
  * member (D-05).
@@ -22,6 +25,10 @@ export interface PostRef {
   id: string;
   excerpt: string;
   community: MemberCommunity;
+  /** What the post is, for the list's thumbnail (quick 261013-orf D-03); stories are not posts. */
+  kind: Exclude<ContentKind, 'story'>;
+  /** A video's length; null for every other kind. */
+  durationSeconds: number | null;
 }
 
 export type LikedPost = PostRef & { when: RelativeMoment };
@@ -65,79 +72,96 @@ export interface SeenStory {
   seconds: ReportValue<number>;
 }
 
-/** `[excerpt, community]`, in the table's order. */
-const POST_ROWS: readonly (readonly [string, MemberCommunity])[] = [
-  ['Aula 14 da mentoria: como montar a rotina da semana', 'Comunidade VIP'],
-  ['Três hábitos simples para começar a semana com foco', 'Geral'],
-  ['Material de apoio da aula 14 já está na área da mentoria', 'Comunidade VIP'],
-  ['Encontro mensal: fotos e os próximos passos', 'Eventos'],
-  ['Live exclusiva VIP: perguntas sobre a rotina da manhã', 'Comunidade VIP'],
-  ['Live de dúvidas confirmada para quinta às 20h', 'Geral'],
-  ['Mentoria em grupo: o exercício de planejamento desta semana', 'Comunidade VIP'],
-  ['Como organizar a agenda sem lotar todos os horários', 'Geral'],
-  ['Aula 13 da mentoria: revisão da semana em 15 minutos', 'Comunidade VIP'],
-  ['Workshop de sábado: inscrições abertas para a turma 2', 'Eventos'],
-  ['Desafio VIP: registre um hábito por dia até domingo', 'Comunidade VIP'],
-  ['Bastidores da gravação das novas aulas', 'Geral'],
-  ['Resumo da mentoria em grupo de terça', 'Comunidade VIP'],
-  ['Uma pergunta da caixinha: como manter a constância?', 'Geral'],
-  ['Aula 12 da mentoria: prioridades e o que deixar para depois', 'Comunidade VIP'],
-  ['Workshop de sábado: o que levar e o horário de chegada', 'Eventos'],
-  ['Checklist da rotina noturna para baixar na área VIP', 'Comunidade VIP'],
-  ['Recado da semana: obrigado pelas mensagens de vocês', 'Geral'],
-  ['Live exclusiva VIP: como retomar a rotina depois de uma pausa', 'Comunidade VIP'],
-  ['Dica rápida: prepare a semana no domingo à noite', 'Geral'],
-  ['Aula 11 da mentoria: metas pequenas e possíveis', 'Comunidade VIP'],
-  ['Encontro mensal de outubro: data e local confirmados', 'Eventos'],
-  ['Mentoria em grupo: respostas às perguntas da última sessão', 'Comunidade VIP'],
-  ['O que vem por aí nas próximas semanas da comunidade', 'Geral'],
-  ['Planilha de hábitos da mentoria atualizada', 'Comunidade VIP'],
-  ['Leitura da semana: um capítulo sobre rotina e descanso', 'Geral'],
-  ['Aula 10 da mentoria: como lidar com os dias mais corridos', 'Comunidade VIP'],
-  ['Encontro mensal: a gravação da conversa já está disponível', 'Eventos'],
-  ['Desafio VIP: compartilhe sua manhã ideal em três passos', 'Comunidade VIP'],
-  ['Por que começar pequeno funciona melhor para criar hábitos', 'Geral'],
-  ['Mentoria em grupo: o mapa da semana preenchido juntos', 'Comunidade VIP'],
-  ['Enquete: qual horário vocês preferem para as lives?', 'Geral'],
-  ['Aula 9 da mentoria: revisão do mês e ajustes de rota', 'Comunidade VIP'],
-  ['Workshop de organização: vagas para a próxima turma', 'Eventos'],
-  ['Live exclusiva VIP: a rotina de estudos que eu sigo', 'Comunidade VIP'],
-  ['Boas-vindas aos novos membros da comunidade', 'Geral'],
-  ['Material extra: modelo de agenda semanal para imprimir', 'Comunidade VIP'],
-  ['Como evitar o excesso de tarefas no começo do dia', 'Geral'],
-  ['Aula 8 da mentoria: hábitos de pausa ao longo do dia', 'Comunidade VIP'],
-  ['Encontro mensal: perguntas que ficaram para a próxima', 'Eventos'],
-  ['Mentoria em grupo: troca de experiências da turma', 'Comunidade VIP'],
-  ['Dica rápida: uma lista curta vale mais que uma longa', 'Geral'],
-  ['Desafio VIP: uma semana sem pular o planejamento', 'Comunidade VIP'],
-  ['Respondendo comentários: rotina com filhos pequenos', 'Geral'],
-  ['Aula 7 da mentoria: como medir o próprio progresso', 'Comunidade VIP'],
-  ['Workshop de sábado: o resumo do que fizemos juntos', 'Eventos'],
-  ['Live exclusiva VIP: dúvidas sobre a planilha de hábitos', 'Comunidade VIP'],
-  ['Recomendação de leitura para o fim de semana', 'Geral'],
-  ['Aula 6 da mentoria: a manhã em três blocos', 'Comunidade VIP'],
-  ['Bastidores: como eu preparo o conteúdo da semana', 'Geral'],
-  ['Mentoria em grupo: metas do mês revisadas', 'Comunidade VIP'],
-  ['Encontro mensal: inscrições abertas para novembro', 'Eventos'],
-  ['Aula 5 da mentoria: o descanso também entra na agenda', 'Comunidade VIP'],
-  ['Enquete: qual tema vocês querem na próxima live?', 'Geral'],
-  ['Desafio VIP: escreva as três prioridades de amanhã', 'Comunidade VIP'],
-  ['Um lembrete gentil: constância não é perfeição', 'Geral'],
-  ['Aula 4 da mentoria: o que tirar da sua lista', 'Comunidade VIP'],
-  ['Workshop online: gravação disponível para quem se inscreveu', 'Eventos'],
-  ['Live exclusiva VIP: rotina de fim de semana', 'Comunidade VIP'],
-  ['Calendário de lives do mês publicado', 'Geral'],
+type PostMedia = Pick<PostRef, 'kind' | 'durationSeconds'>;
+
+function video(seconds: number): PostMedia {
+  return { kind: 'video', durationSeconds: seconds };
+}
+
+const PHOTO: PostMedia = { kind: 'photo', durationSeconds: null };
+const CAROUSEL: PostMedia = { kind: 'carousel', durationSeconds: null };
+const TEXT: PostMedia = { kind: 'text', durationSeconds: null };
+const LINK: PostMedia = { kind: 'link', durationSeconds: null };
+
+/**
+ * `[excerpt, community, media]`, in the table's order. A post that is also in the video list (the
+ * same lesson, live or meeting) has that video's length, so the two lists never disagree (D-03).
+ */
+const POST_ROWS: readonly (readonly [string, MemberCommunity, PostMedia])[] = [
+  ['Aula 14 da mentoria: como montar a rotina da semana', 'Comunidade VIP', video(612)],
+  ['Três hábitos simples para começar a semana com foco', 'Geral', video(90)],
+  ['Material de apoio da aula 14 já está na área da mentoria', 'Comunidade VIP', LINK],
+  ['Encontro mensal: fotos e os próximos passos', 'Eventos', CAROUSEL],
+  ['Live exclusiva VIP: perguntas sobre a rotina da manhã', 'Comunidade VIP', video(540)],
+  ['Live de dúvidas confirmada para quinta às 20h', 'Geral', TEXT],
+  ['Mentoria em grupo: o exercício de planejamento desta semana', 'Comunidade VIP', video(498)],
+  ['Como organizar a agenda sem lotar todos os horários', 'Geral', video(290)],
+  ['Aula 13 da mentoria: revisão da semana em 15 minutos', 'Comunidade VIP', video(360)],
+  ['Workshop de sábado: inscrições abertas para a turma 2', 'Eventos', PHOTO],
+  ['Desafio VIP: registre um hábito por dia até domingo', 'Comunidade VIP', TEXT],
+  ['Bastidores da gravação das novas aulas', 'Geral', PHOTO],
+  ['Resumo da mentoria em grupo de terça', 'Comunidade VIP', TEXT],
+  ['Uma pergunta da caixinha: como manter a constância?', 'Geral', TEXT],
+  ['Aula 12 da mentoria: prioridades e o que deixar para depois', 'Comunidade VIP', video(252)],
+  ['Workshop de sábado: o que levar e o horário de chegada', 'Eventos', CAROUSEL],
+  ['Checklist da rotina noturna para baixar na área VIP', 'Comunidade VIP', LINK],
+  ['Recado da semana: obrigado pelas mensagens de vocês', 'Geral', TEXT],
+  ['Live exclusiva VIP: como retomar a rotina depois de uma pausa', 'Comunidade VIP', video(3300)],
+  ['Dica rápida: prepare a semana no domingo à noite', 'Geral', TEXT],
+  ['Aula 11 da mentoria: metas pequenas e possíveis', 'Comunidade VIP', video(185)],
+  ['Encontro mensal de outubro: data e local confirmados', 'Eventos', PHOTO],
+  ['Mentoria em grupo: respostas às perguntas da última sessão', 'Comunidade VIP', TEXT],
+  ['O que vem por aí nas próximas semanas da comunidade', 'Geral', TEXT],
+  ['Planilha de hábitos da mentoria atualizada', 'Comunidade VIP', LINK],
+  ['Leitura da semana: um capítulo sobre rotina e descanso', 'Geral', LINK],
+  ['Aula 10 da mentoria: como lidar com os dias mais corridos', 'Comunidade VIP', video(330)],
+  ['Encontro mensal: a gravação da conversa já está disponível', 'Eventos', video(420)],
+  ['Desafio VIP: compartilhe sua manhã ideal em três passos', 'Comunidade VIP', CAROUSEL],
+  ['Por que começar pequeno funciona melhor para criar hábitos', 'Geral', LINK],
+  ['Mentoria em grupo: o mapa da semana preenchido juntos', 'Comunidade VIP', PHOTO],
+  ['Enquete: qual horário vocês preferem para as lives?', 'Geral', TEXT],
+  ['Aula 9 da mentoria: revisão do mês e ajustes de rota', 'Comunidade VIP', video(300)],
+  ['Workshop de organização: vagas para a próxima turma', 'Eventos', PHOTO],
+  ['Live exclusiva VIP: a rotina de estudos que eu sigo', 'Comunidade VIP', video(2700)],
+  ['Boas-vindas aos novos membros da comunidade', 'Geral', TEXT],
+  ['Material extra: modelo de agenda semanal para imprimir', 'Comunidade VIP', LINK],
+  ['Como evitar o excesso de tarefas no começo do dia', 'Geral', video(68)],
+  ['Aula 8 da mentoria: hábitos de pausa ao longo do dia', 'Comunidade VIP', video(270)],
+  ['Encontro mensal: perguntas que ficaram para a próxima', 'Eventos', TEXT],
+  ['Mentoria em grupo: troca de experiências da turma', 'Comunidade VIP', CAROUSEL],
+  ['Dica rápida: uma lista curta vale mais que uma longa', 'Geral', TEXT],
+  ['Desafio VIP: uma semana sem pular o planejamento', 'Comunidade VIP', CAROUSEL],
+  ['Respondendo comentários: rotina com filhos pequenos', 'Geral', TEXT],
+  ['Aula 7 da mentoria: como medir o próprio progresso', 'Comunidade VIP', video(280)],
+  ['Workshop de sábado: o resumo do que fizemos juntos', 'Eventos', CAROUSEL],
+  ['Live exclusiva VIP: dúvidas sobre a planilha de hábitos', 'Comunidade VIP', video(2400)],
+  ['Recomendação de leitura para o fim de semana', 'Geral', LINK],
+  ['Aula 6 da mentoria: a manhã em três blocos', 'Comunidade VIP', video(320)],
+  ['Bastidores: como eu preparo o conteúdo da semana', 'Geral', video(58)],
+  ['Mentoria em grupo: metas do mês revisadas', 'Comunidade VIP', CAROUSEL],
+  ['Encontro mensal: inscrições abertas para novembro', 'Eventos', PHOTO],
+  ['Aula 5 da mentoria: o descanso também entra na agenda', 'Comunidade VIP', video(300)],
+  ['Enquete: qual tema vocês querem na próxima live?', 'Geral', TEXT],
+  ['Desafio VIP: escreva as três prioridades de amanhã', 'Comunidade VIP', TEXT],
+  ['Um lembrete gentil: constância não é perfeição', 'Geral', TEXT],
+  ['Aula 4 da mentoria: o que tirar da sua lista', 'Comunidade VIP', video(150)],
+  ['Workshop online: gravação disponível para quem se inscreveu', 'Eventos', video(1800)],
+  ['Live exclusiva VIP: rotina de fim de semana', 'Comunidade VIP', video(3120)],
+  ['Calendário de lives do mês publicado', 'Geral', PHOTO],
 ];
 
 /**
  * The 60 posts the member viewed in the last 7 days, in recency order (index 0 = the most recently
  * seen): 30 in Comunidade VIP, 20 in Geral and 10 in Eventos, interleaved.
  */
-export const memberPostTable: readonly PostRef[] = POST_ROWS.map(([excerpt, community], i) => ({
-  id: `p${String(i + 1).padStart(2, '0')}`,
-  excerpt,
-  community,
-}));
+export const memberPostTable: readonly PostRef[] = POST_ROWS.map(
+  ([excerpt, community, media], i) => ({
+    id: `p${String(i + 1).padStart(2, '0')}`,
+    excerpt,
+    community,
+    ...media,
+  }),
+);
 
 /** The clock readings a day's items take, latest first (at most 10 items share a day). */
 const TIMES = [

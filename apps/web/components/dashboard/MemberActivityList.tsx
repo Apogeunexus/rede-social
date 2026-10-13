@@ -4,12 +4,15 @@ import { Card, cn } from '@rede-social/ui';
 import { ChevronLeft } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { MEMBER_LIST_ANCHOR, type MemberListSlug, memberReportHref } from '@/lib/dashboard-preview';
+import { CoverThumb, type CoverThumbProps } from './CoverThumb';
 import { ExamplePill } from './ExamplePill';
 import { type DashboardT, formatHoursMinutes, formatMinutesSeconds, momentText } from './format';
 import { PanelSection } from './PanelSection';
 
 interface ListRow {
   id: string;
+  /** The publication's cover, decorative, at the start of the row (quick 261013-orf D-01). */
+  thumb: CoverThumbProps;
   title: string;
   lines: string[];
   /** A short value on the right ("12 s", "visto 3×"). */
@@ -39,6 +42,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: row.kind, seed: row.id, durationSeconds: row.durationSeconds },
         title: row.excerpt,
         lines: [
           t('member.lists.likes.line', { community: row.community, when: momentText(t, row.when) }),
@@ -55,6 +59,11 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: {
+          kind: row.post.kind,
+          seed: row.post.id,
+          durationSeconds: row.post.durationSeconds,
+        },
         title: t('member.lists.comments.text', { text: row.text }),
         lines: [
           t('member.lists.comments.on', { post: row.post.excerpt }),
@@ -75,6 +84,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: row.kind, seed: row.id, durationSeconds: row.durationSeconds },
         title: row.excerpt,
         lines: [
           t('member.lists.saves.line', { community: row.community, when: momentText(t, row.when) }),
@@ -91,6 +101,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: row.kind, seed: row.id, durationSeconds: row.durationSeconds },
         title: row.excerpt,
         lines: [
           t('member.lists.shares.line', {
@@ -113,6 +124,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: row.kind, seed: row.id, durationSeconds: row.durationSeconds },
         title: row.excerpt,
         lines: [
           t('member.lists.posts.line', {
@@ -136,6 +148,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: 'video', seed: row.id, durationSeconds: row.durationSeconds },
         title: row.title,
         lines: [
           t('member.lists.videos.line', {
@@ -160,6 +173,7 @@ const VIEWS: Record<MemberListSlug, (t: DashboardT) => ListView> = {
       example: list.example,
       rows: list.value.map((row) => ({
         id: row.id,
+        thumb: { kind: 'story', seed: row.id },
         title: row.author,
         lines: [momentText(t, row.when)],
         aside: formatMinutesSeconds(t, row.seconds.value),
@@ -176,7 +190,9 @@ const FOCUS_RING =
  * The list behind one "Sua atividade" card (quick 261012-hqr): "Voltar" to the card that opened it,
  * the title, the window, the item count and the rows, newest or most first. The "exemplo" pill sits
  * next to the example value it marks: once next to the count when the whole list is fictional, or
- * on a row's value when only that value is (the story time). Rows are not links.
+ * on a row's value when only that value is (the story time). Rows are not links. Every row starts
+ * with the publication's decorative thumbnail (quick 261013-orf D-01/D-02), so the text wraps to
+ * its right and the column never misaligns.
  */
 export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
   const t = await getTranslations('dashboard');
@@ -206,8 +222,9 @@ export async function MemberActivityList({ slug }: { slug: MemberListSlug }) {
           <Card>
             <ul className="divide-y divide-border">
               {view.rows.map((row) => (
-                <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                  <div className="flex min-w-0 flex-col gap-0.5 [overflow-wrap:anywhere]">
+                <li key={row.id} className="flex items-start gap-3 px-3 py-2.5">
+                  <CoverThumb t={t} {...row.thumb} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 [overflow-wrap:anywhere]">
                     <p className="text-sm font-semibold text-text">{row.title}</p>
                     {row.lines.map((line) => (
                       <p key={line} className="text-xs text-text-secondary">

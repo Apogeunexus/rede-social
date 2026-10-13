@@ -4,17 +4,11 @@ import {
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import { Card } from '@rede-social/ui';
-import {
-  ChevronRight,
-  GalleryHorizontal,
-  Image as ImageIcon,
-  Link2,
-  type LucideIcon,
-  Play,
-} from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { contentCoverRatio, contentPostAnchor } from '@/lib/owner-content-view';
 import { Cell, Linked } from './BandScopeCards';
+import { COVER_ICON, coverStyle } from './CoverThumb';
 import { ExamplePill } from './ExamplePill';
 import {
   communityLabel,
@@ -27,15 +21,6 @@ import {
 import { PreviewAction } from './PanelSection';
 
 const KEY = 'tenantOwner.content';
-
-const KIND_ICON: Record<ContentItem['kind'], LucideIcon | null> = {
-  video: Play,
-  photo: ImageIcon,
-  carousel: GalleryHorizontal,
-  text: null,
-  link: Link2,
-  story: Play,
-};
 
 /** How long a comment has waited: "18 h" under two days, else whole days ("2 dias"). */
 export function contentAgeText(t: DashboardT, hours: number): string {
@@ -61,8 +46,8 @@ export function contentMeta(t: DashboardT, item: ContentItem): string {
 
 /**
  * The publication's media at the ratio the feed draws it (PD-2, `contentCoverRatio`): no photo in the
- * preview, so the `--brand-gradient` fallback with the kind's icon (and a video's length), as the
- * community and event covers. Its height is capped by narrowing it, never by changing the ratio, so a
+ * preview, so the `--brand-gradient` fallback with the kind's icon (and a video's length), at the
+ * publication's tone (`coverStyle`, shared with the list thumbnails), as the community and event covers. Its height is capped by narrowing it, never by changing the ratio, so a
  * 9:16 video does not fill a whole phone screen. A text post has no cover.
  */
 export function ContentCover({
@@ -76,7 +61,7 @@ export function ContentCover({
 }) {
   const ratio = contentCoverRatio(item);
   if (ratio === null) return null;
-  const Icon = KIND_ICON[item.kind];
+  const Icon = COVER_ICON[item.kind];
   return (
     <div className="flex justify-center bg-bg-tertiary">
       <div
@@ -86,11 +71,10 @@ export function ContentCover({
         style={{
           aspectRatio: ratio,
           width: `min(100%, ${(maxHeightRem * ratio).toFixed(3)}rem)`,
-          backgroundImage: 'var(--brand-gradient)',
-          color: 'var(--brand-on-primary)',
+          ...coverStyle(item.id),
         }}
       >
-        {Icon ? <Icon aria-hidden size={32} className="opacity-90" /> : null}
+        <Icon aria-hidden size={32} className="opacity-90" />
         {item.durationSeconds !== null ? (
           <span className="absolute right-2 bottom-2 rounded-md bg-black/50 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white">
             {formatClock(t, item.durationSeconds)}
