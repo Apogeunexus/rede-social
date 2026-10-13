@@ -123,8 +123,8 @@ Decisões do planejador, aplicadas como escritas:
 
 Desvios do plano:
 
-1. **[Ambiente] Execução no worktree, não no checkout principal.** O executor foi isolado pelo harness em `.claude/worktrees/agent-af0fa7bc274728be6` (branch `worktree-agent-af0fa7bc274728be6`), que bloqueia git no checkout principal. Alinhei o worktree em 271dd5d3 (commit do plano) e instalei as dependências com `pnpm install --frozen-lockfile` (nenhum pacote novo). Os 7 commits estão nessa branch, em fast-forward sobre `feat/painel-preview` (271dd5d3); falta levá-los para `feat/painel-preview`.
-2. **[Ambiente] Servidor religado com o comando do CONTEXT, que roda no checkout principal.** Ele responde 200 nas 5 URLs, mas serve o código de 271dd5d3 até a branch do worktree entrar em `feat/painel-preview` (o `next dev` recarrega sozinho depois). As capturas vieram de um servidor temporário rodando no worktree (código novo), parado antes do religamento.
+1. **[Ambiente] Execução no worktree, não no checkout principal.** O executor foi isolado pelo harness em `.claude/worktrees/agent-af0fa7bc274728be6` (branch `worktree-agent-af0fa7bc274728be6`), que bloqueia git no checkout principal. Alinhei o worktree em 271dd5d3 (commit do plano) e instalei as dependências com `pnpm install --frozen-lockfile` (nenhum pacote novo). Os commits entraram em `feat/painel-preview` por fast-forward (HEAD deaa72ef) e o worktree foi removido.
+2. **[Ambiente] Servidor religado com o comando do CONTEXT, que roda no checkout principal.** Depois do fast-forward o servidor deu 500 (catálogo de textos antigo em cache) e, mais tarde, o Turbopack quebrou com o cache corrompido; o orquestrador apagou `apps/web/.next/dev/cache/turbopack` e religou — 200 nas 5 URLs com o código novo. As capturas vieram de um servidor temporário rodando no worktree (código novo), parado antes do religamento.
 3. **[Regra 2 - qualidade] `BackLink.tsx` novo** (fora de `files_modified`): o "Voltar" de 44 px já existia duplicado; os três "Voltar" da cascata (cartões, insights, lista) usam um componente só.
 4. **[Regra 1 - bug visual] Commit `cc9026da`:** no celular, "Membros" cabia numa linha e os outros rótulos quebravam em duas, então 186 ficava uma linha acima de 104/22/1.650. A coluna agora empurra o valor para baixo; visto na captura 01 e corrigido antes de fechar.
 5. **Teste unitário sem `ownerBandList`:** o comportamento pedia "o primeiro listado de ownerBandList"; usei `ownerBandRoster` + `ownerBandIncludes` (qualquer membro da faixa serve) para que a varredura de privacidade liste só `BandMembers.tsx`, como a tarefa pede.
@@ -155,9 +155,9 @@ Desvios do plano:
 
 Nenhum novo. Receita, Posts vistos e Tempo médio diário são valores de exemplo marcados com a pílula, como decidido.
 
-**⚠️ NÃO FEITO**
-- Revisões `critic` e `flow-critic` dos 7 commits — este executor não consegue abrir subagentes; falta rodar as duas antes de dar a feature por pronta.
-- Levar os 7 commits do branch `worktree-agent-af0fa7bc274728be6` para `feat/painel-preview` (fast-forward a partir de 271dd5d3) — o harness bloqueou git no checkout principal; até lá o servidor religado mostra o código antigo.
-- STATE.md não atualizado — por instrução do orquestrador.
+## Revisões
+
+- **critic: APROVADO.** Um achado baixo: este SUMMARY ainda dizia que os commits estavam fora da branch — corrigido acima. URLs forjadas em todos os níveis caem um nível acima (8 testadas no :3000, todas 200), listas = KPI, privacidade e trava de produção conferidas.
+- **flow-critic: APROVADO.** Pediu conferir no navegador os números dos cartões a 360 px. Medido: a Receita do cartão de evento quebrava no meio da palavra ("R$ 5,5 m / il"). Corrigido no commit de fix desta tarefa (`BandScopeCards.tsx`: o valor só quebra em espaço, `[overflow-wrap:normal]`, e as colunas do evento usam `px-2`). Medido de novo: valores em uma linha (28 px de altura) a 360/390/430 e sem rolagem lateral; cartão de comunidade sem quebra.
 
 ## Self-Check: PASSED
