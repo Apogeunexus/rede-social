@@ -458,7 +458,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
   { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 6 },
   // Taxa, Visualizações and Alcance, the best posts' line and the four bands' daily-time line.
   { slug: 'conteudo', tab: 'Conteúdo', heading: 'Resumo do mês', pills: 8 },
-  { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 3 },
+  // The three of Lista de espera and the receita line of Próximos eventos (quick 261013-p31).
+  { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 4 },
   { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
   { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
 ];
@@ -2318,6 +2319,30 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await expect(encontro).toContainText('8');
   await expect(upcoming.filter({ hasText: 'Imersão presencial' })).toContainText('Lotado');
   await expect(upcoming.filter({ hasText: 'Live de dúvidas' })).toContainText('Sem limite');
+  // Each next event is the bands' event card (quick 261013-p31 D-02), with nowhere to go.
+  expect((await upcoming.locator('.text-xl').allTextContents()).map((text) => text.trim())).toEqual(
+    ['Encontro mensal', 'Live de dúvidas', 'Imersão presencial'],
+  );
+  for (let i = 0; i < 3; i++) {
+    const cover = upcoming.nth(i).locator('[data-testid="event-cover-fallback"]');
+    expect(Math.abs((await boxRatio(cover)) - 16 / 10), String(i)).toBeLessThan(0.02);
+  }
+  await expect(cardCell(encontro, 'Inscritos')).toHaveText('92');
+  await expect(cardCell(encontro, 'Vagas')).toHaveText('8');
+  await expect(cardCell(encontro, 'Receita')).toHaveText(/^R\$\s?5,5\s?mil$/);
+  await expect(encontro.getByText('12/10, 19h', { exact: true })).toBeVisible();
+  await expect(encontro.getByText('Presencial', { exact: true })).toBeVisible();
+  await expect(cardCell(upcoming.filter({ hasText: 'Imersão presencial' }), 'Vagas')).toHaveText(
+    'Lotado',
+  );
+  await expect(cardCell(upcoming.filter({ hasText: 'Live de dúvidas' }), 'Vagas')).toHaveText(
+    'Sem limite',
+  );
+  const upcomingSection = sectionTitled(area, 'Próximos eventos');
+  await expect(upcomingSection.getByRole('link')).toHaveCount(0);
+  await expect(upcomingSection.locator('table')).toHaveCount(0);
+  await expect(upcomingSection.getByText('exemplo', { exact: true })).toHaveCount(1);
+  await expect(upcomingSection.getByText('Receita: valores de exemplo')).toBeVisible();
 
   const waitlist = sectionTitled(area, 'Lista de espera');
   await expect(waitlist.getByText('exemplo', { exact: true })).toHaveCount(3);

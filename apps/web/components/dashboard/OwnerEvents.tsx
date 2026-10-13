@@ -8,11 +8,11 @@ import {
   KpiCard,
   KpiGrid,
   percentOf,
-  ResponsiveTable,
   sumOf,
   topBy,
 } from '@rede-social/module-dashboard/ui';
 import { getTranslations } from 'next-intl/server';
+import { EventCard, eventRevenue, RevenueExampleNote } from './BandScopeCards';
 import { ExamplePill } from './ExamplePill';
 import { bandLabel, exampleBadge, formatCount, formatDayMonth, formatPercent } from './format';
 import { PanelSection } from './PanelSection';
@@ -20,7 +20,9 @@ import { PanelSection } from './PanelSection';
 const FORMATS: readonly EventFormat[] = ['in_person', 'online'];
 
 /**
- * Level 4, "Eventos": the next events with their seats left, the waiting lists of the full events
+ * Level 4, "Eventos": the next events as the bands' event cards (quick 261013-p31) with their seats
+ * left and example receita, unlinked because no single place lists who registered for one event
+ * (its RSVPs spread over the bands), then the waiting lists of the full events
  * (one example block: no table records a waiting list yet, D-04), then closed: attendance per past
  * event (check-ins over RSVPs, with the walk-ins), in person against online, and who comes by
  * engagement band. Counts only: no member is named.
@@ -55,36 +57,38 @@ export async function OwnerEvents() {
   return (
     <>
       <PanelSection title={t('tenantOwner.upcoming.title')}>
-        <ResponsiveTable
-          caption={t('tenantOwner.upcoming.title')}
-          columns={[
-            { key: 'event', header: t('tenantOwner.upcoming.columns.event') },
-            { key: 'when', header: t('tenantOwner.upcoming.columns.when') },
-            {
-              key: 'confirmed',
-              header: t('tenantOwner.upcoming.columns.confirmed'),
-              numeric: true,
-            },
-            { key: 'left', header: t('tenantOwner.upcoming.columns.left'), numeric: true },
-          ]}
-          rows={upcoming.map((row) => ({
-            id: row.id,
-            cells: {
-              event: row.name,
-              when: t('tenantOwner.upcoming.when', {
-                date: formatDayMonth(row.date),
-                hour: row.startsAtHour,
-              }),
-              confirmed: formatCount(row.confirmed),
-              left:
-                row.capacity === null
-                  ? t('tenantOwner.upcoming.unlimited')
-                  : row.capacity - row.confirmed <= 0
-                    ? t('tenantOwner.upcoming.full')
-                    : formatCount(row.capacity - row.confirmed),
-            },
-          }))}
-        />
+        <RevenueExampleNote t={t} />
+        <ul className="flex flex-col gap-3">
+          {upcoming.map((row) => (
+            <li key={row.id} className="min-w-0">
+              <EventCard
+                t={t}
+                id={row.id}
+                href={null}
+                detail={t('tenantOwner.upcoming.when', {
+                  date: formatDayMonth(row.date),
+                  hour: row.startsAtHour,
+                })}
+                cells={[
+                  {
+                    label: t('tenantOwner.upcoming.columns.confirmed'),
+                    value: formatCount(row.confirmed),
+                  },
+                  {
+                    label: t('tenantOwner.upcoming.columns.left'),
+                    value:
+                      row.capacity === null
+                        ? t('tenantOwner.upcoming.unlimited')
+                        : row.capacity - row.confirmed <= 0
+                          ? t('tenantOwner.upcoming.full')
+                          : formatCount(row.capacity - row.confirmed),
+                  },
+                  { label: t('tenantOwner.scopeCards.event.revenue'), value: eventRevenue(row) },
+                ]}
+              />
+            </li>
+          ))}
+        </ul>
       </PanelSection>
 
       <PanelSection title={t('tenantOwner.waitlist.title')}>

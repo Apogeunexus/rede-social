@@ -7,7 +7,7 @@ import {
 } from '@rede-social/module-dashboard/fixtures';
 import { bandTotal } from '@rede-social/module-dashboard/ui';
 import { EventCover } from '@rede-social/module-events/ui';
-import { Card, StatusPill } from '@rede-social/ui';
+import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { OWNER_COMMUNITIES, OWNER_EVENTS, ownerMembersHref } from '@/lib/owner-band-scope';
@@ -128,18 +128,44 @@ export function CommunityScopeCard({ t, id, band, href }: ScopeCardProps) {
   );
 }
 
+interface CardCell {
+  label: string;
+  value: string;
+}
+
+/** An event's example receita: RSVPs × the example ticket price, the one formula of every card. */
+export function eventRevenue(event: { confirmed: number; ticketCents: { value: number } }) {
+  return formatBrlCompact(event.confirmed * event.ticketCents.value);
+}
+
 /**
  * An event as the user drew it (quick 261012-tru D-04): the full-width cover at its original 16:10
  * (the events module's own `hero` box, `--brand-gradient` fallback), the name, a Presencial/Online
- * pill, a thin line, three columns split by thin lines (date, duration, revenue = RSVPs × the example
- * ticket price; the list says once that it is an example) and how many of the band registered.
+ * pill with an optional gray line, a thin line, three columns split by thin lines, then the host's
+ * footer. The bands' cards and the Eventos area's next events (quick 261013-p31) share it; only a
+ * linked card reacts to hover, so a card with nowhere to go promises no tap.
  */
-export function EventScopeCard({ t, id, band, href }: ScopeCardProps) {
+export function EventCard({
+  t,
+  id,
+  href,
+  detail,
+  cells,
+  children,
+}: {
+  t: DashboardT;
+  id: string;
+  href: string | null;
+  detail?: string;
+  cells: readonly [CardCell, CardCell, CardCell];
+  children?: ReactNode;
+}) {
   const event = ownerEvent(id);
-  const key = 'tenantOwner.scopeCards.event';
   return (
     <Linked href={href}>
-      <Card className="flex flex-col transition-colors hover:bg-card-hover">
+      <Card
+        className={cn('flex flex-col', href !== null && 'transition-colors hover:bg-card-hover')}
+      >
         <EventCover
           geometry="hero"
           coverAssetId={null}
@@ -149,35 +175,53 @@ export function EventScopeCard({ t, id, band, href }: ScopeCardProps) {
         <div className="flex flex-col gap-3 p-4 [overflow-wrap:anywhere]">
           <div className="flex flex-col items-start gap-2">
             <span className="text-xl font-bold leading-tight text-text">{event.name}</span>
-            <StatusPill tone="brand" className="w-fit">
-              {t(`tenantOwner.formatsCompared.${event.format}`)}
-            </StatusPill>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusPill tone="brand" className="w-fit">
+                {t(`tenantOwner.formatsCompared.${event.format}`)}
+              </StatusPill>
+              {detail === undefined ? null : (
+                <span className="text-sm text-text-secondary">{detail}</span>
+              )}
+            </div>
           </div>
           <dl className="grid grid-cols-3 divide-x divide-border border-t border-border pt-3">
-            <Cell
-              label={t(`${key}.date`)}
-              value={formatDayMonth(event.date)}
-              className="px-2 first:pl-0 last:pr-0"
-            />
-            <Cell
-              label={t(`${key}.duration`)}
-              value={formatDuration(t, event.durationMinutes)}
-              className="px-2 first:pl-0 last:pr-0"
-            />
-            <Cell
-              label={t(`${key}.revenue`)}
-              value={formatBrlCompact(event.confirmed * event.ticketCents.value)}
-              className="px-2 first:pl-0 last:pr-0"
-            />
+            {cells.map((cell) => (
+              <Cell
+                key={cell.label}
+                label={cell.label}
+                value={cell.value}
+                className="px-2 first:pl-0 last:pr-0"
+              />
+            ))}
           </dl>
-          <InBand
-            t={t}
-            count={ownerScopeBands({ kind: 'event', id }).counts[band]}
-            linked={href !== null}
-          />
+          {children}
         </div>
       </Card>
     </Linked>
+  );
+}
+
+/** An event in an opened band: date, duration, receita, and how many of the band registered. */
+export function EventScopeCard({ t, id, band, href }: ScopeCardProps) {
+  const event = ownerEvent(id);
+  const key = 'tenantOwner.scopeCards.event';
+  return (
+    <EventCard
+      t={t}
+      id={id}
+      href={href}
+      cells={[
+        { label: t(`${key}.date`), value: formatDayMonth(event.date) },
+        { label: t(`${key}.duration`), value: formatDuration(t, event.durationMinutes) },
+        { label: t(`${key}.revenue`), value: eventRevenue(event) },
+      ]}
+    >
+      <InBand
+        t={t}
+        count={ownerScopeBands({ kind: 'event', id }).counts[band]}
+        linked={href !== null}
+      />
+    </EventCard>
   );
 }
 

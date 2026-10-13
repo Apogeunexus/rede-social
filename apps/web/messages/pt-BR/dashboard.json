@@ -394,8 +394,6 @@
       "upcoming": {
         "title": "Próximos eventos",
         "columns": {
-          "event": "Evento",
-          "when": "Quando",
           "confirmed": "Inscritos",
           "left": "Vagas"
         },
