@@ -48,6 +48,31 @@ describe('BarList', () => {
     expect(first).toHaveClass('bg-brand');
     expect(second).not.toHaveClass('bg-brand');
   });
+
+  it("renders a leading node before each row's label, keeping the bars to scale", () => {
+    const led = rows.map((row) => ({
+      ...row,
+      leading: <span data-testid={`lead-${row.id}`} />,
+      rate: `rate-${row.id}`,
+    }));
+    const { container } = render(<BarList rows={led} />);
+    const items = [...container.querySelectorAll('li')];
+    expect(items).toHaveLength(2);
+    expect(items[0]?.firstElementChild).toBe(screen.getByTestId('lead-a'));
+    expect(items[1]?.firstElementChild).toBe(screen.getByTestId('lead-b'));
+    expect(fillWidths(container)).toEqual(['100%', `${barPercent(410, 5230)}%`]);
+    expect(screen.getByText('shown-a')).toBeInTheDocument();
+    expect(screen.getByText('rate-a')).toBeInTheDocument();
+  });
+
+  it("keeps today's grid without leading", () => {
+    const grid = 'grid-cols-[minmax(0,2fr)_minmax(0,3fr)_auto]';
+    const plain = render(<BarList rows={rows} />);
+    expect(plain.container.querySelector('ul')).toHaveClass(grid);
+    cleanup();
+    const led = render(<BarList rows={rows.map((row) => ({ ...row, leading: <span /> }))} />);
+    expect(led.container.querySelector('ul')).not.toHaveClass(grid);
+  });
 });
 
 describe('LineChart', () => {

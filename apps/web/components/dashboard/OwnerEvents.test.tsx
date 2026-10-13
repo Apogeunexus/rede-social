@@ -103,6 +103,76 @@ describe('D-01/D-02 (quick 261013-p31): Próximos eventos são cartões de event
   });
 });
 
+/** A collapsible's `<details>`, by its summary's exact bold title (closed details stay in the DOM). */
+function details(root: Element, title: string): Element {
+  const found = [...root.querySelectorAll('details')].find(
+    (el) => el.querySelector('summary span.font-bold')?.textContent?.trim() === title,
+  );
+  if (!found) throw new Error(`no details ${title}`);
+  return found;
+}
+
+/** Each bar row must carry exactly one decorative 16:10 cover thumbnail; returns the rows. */
+function thumbedRows(list: Element, count: number): HTMLLIElement[] {
+  const thumbs = [...list.querySelectorAll('[data-event-thumb]')];
+  expect(thumbs).toHaveLength(count);
+  for (const thumb of thumbs) {
+    expect(thumb.getAttribute('aria-hidden')).toBe('true');
+    for (const name of ['aspect-[16/10]', 'h-14', 'rounded-lg']) {
+      expect(thumb.classList.contains(name), name).toBe(true);
+    }
+    expect(
+      thumb.querySelectorAll('[data-testid="event-cover-fallback"][data-geometry="hero"]'),
+    ).toHaveLength(1);
+  }
+  const items = [...list.querySelectorAll('li')];
+  expect(items).toHaveLength(count);
+  for (const item of items) expect(item.querySelectorAll('[data-event-thumb]')).toHaveLength(1);
+  return items;
+}
+
+describe('D-01/D-03 (quick 261013-p31): miniatura nas listas de comparação', () => {
+  it('puts a cover thumbnail on each Lista de espera bar, most waited first', async () => {
+    const items = thumbedRows(section(await renderArea(), 'Lista de espera'), 3);
+    const expected: [string, string, string][] = [
+      ['Encontro set.', '38 na espera', '100 vagas'],
+      ['Imersão presencial', '17 na espera', '40 vagas'],
+      ['Workshop', '12 na espera', '50 vagas'],
+    ];
+    for (const [i, [name, waiting, capacity]] of expected.entries()) {
+      const text = items[i]?.textContent ?? '';
+      expect(text, String(i)).toContain(name);
+      expect(text, String(i)).toContain(waiting);
+      expect(text, String(i)).toContain(capacity);
+    }
+  });
+
+  it('puts a cover thumbnail on each Comparecimento por evento bar', async () => {
+    const items = thumbedRows(details(await renderArea(), 'Comparecimento por evento'), 4);
+    const expected: [string, string][] = [
+      ['Encontro set.', '82%'],
+      ['Live de dúvidas', '58%'],
+      ['Workshop', '64%'],
+      ['Aula aberta', '49%'],
+    ];
+    for (const [i, [name, percent]] of expected.entries()) {
+      const text = items[i]?.textContent ?? '';
+      expect(text, String(i)).toContain(name);
+      expect(text, String(i)).toContain(percent);
+    }
+    expect(items[0]?.textContent).toContain('82 de 100');
+  });
+
+  it('leaves the lists that name no event without thumbnails', async () => {
+    const container = await renderArea();
+    for (const title of ['Presencial × online', 'Quem vai aos eventos']) {
+      expect(details(container, title).querySelectorAll('[data-event-thumb]'), title).toHaveLength(
+        0,
+      );
+    }
+  });
+});
+
 describe('D-04 (quick 261013-p31): the area keeps its numbers', () => {
   it('has four "exemplo" pills and the same summaries', async () => {
     const container = await renderArea();
