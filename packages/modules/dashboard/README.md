@@ -220,13 +220,23 @@ posts seen. Each list's length is its KPI, and the builder throws otherwise. "Po
 counts the distinct posts of that list (every liked one plus one per active day) and stays an
 example (`needs_post_views`); `tests/owner-member-lists.test.ts` proves all of it for the 72 members.
 
+On screen, Dias ativos, Curtidas, Comentários, Ações fortes and Posts vistos are links ("Ver lista")
+to `&membro=om-NN&lista=<slug>#lista`, the slug one of `dias-ativos`, `curtidas`, `comentarios`,
+`acoes-fortes` and `posts-vistos` (same pattern as level 7's lists). The list screen has "Voltar" to
+that number (`#insight-<slug>`), the title, the member and the window, the count with the order of
+the rows (and the "exemplo" pill on Posts vistos only), then the rows, or one sentence when there
+are none. `lista` is read only with a valid member: anything else shows the insights (or the level
+above). Tempo médio diário stays a plain card.
+
 **Privacy (261012-pkd D-03, 261012-qer B-1/B-3, user decisions).** Until 261012-pkd, the level-4
 panel showed only counts. The band lists show member names and their engagement level to the
 client's team, and the insights screen shows one member's individual behavior: 30-day numbers,
-events, purchases and support counts, never message text. Before real data is wired, the app's
-privacy notice must tell members that the client's management sees each member's individual
-behavior. Platform levels 1–3 keep aggregates only. Only `OwnerMemberDetail.tsx` reads
-`ownerMemberInsights`, and only `BandMembers.tsx` reads `ownerBandList`.
+events, purchases and support counts, never message text. Since 261012-tru the lists behind the
+numbers also show which posts a member liked, commented on and viewed (never a comment's text).
+Before real data is wired, the app's privacy notice must tell members that the client's management
+sees each member's individual behavior, including those posts. Platform levels 1–3 keep aggregates
+only. Only `OwnerMemberDetail.tsx` and `OwnerMemberList.tsx` read `ownerMemberInsights`, and only
+`BandMembers.tsx` reads `ownerBandList`.
 
 #### Para quando os dados reais forem ligados
 

@@ -8,8 +8,15 @@ import {
 } from '@rede-social/module-dashboard/fixtures';
 import { ActionCard, BarList, KpiCard, KpiGrid, LineChart } from '@rede-social/module-dashboard/ui';
 import { Card, StatusPill, type StatusTone } from '@rede-social/ui';
-import { Lightbulb } from 'lucide-react';
-import { type OwnerMembersView, ownerListScope, ownerMembersHref } from '@/lib/owner-band-scope';
+import { ChevronRight, Lightbulb } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  type OwnerMemberListSlug,
+  type OwnerMembersView,
+  ownerInsightAnchor,
+  ownerListScope,
+  ownerMembersHref,
+} from '@/lib/owner-band-scope';
 import { BackLink } from './BackLink';
 import { ExamplePill } from './ExamplePill';
 import {
@@ -121,30 +128,88 @@ function Header({
   );
 }
 
-function Last30({ t, insights }: { t: DashboardT; insights: OwnerMemberInsights }) {
+/**
+ * An insight card that opens the list behind its number (quick 261012-tru D-07, the level-7
+ * pattern): the whole card is a plain link and carries the id the list's "Voltar" returns to.
+ */
+function ListLink({
+  view,
+  slug,
+  children,
+}: {
+  view: OwnerMembersView;
+  slug: OwnerMemberListSlug;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={ownerMembersHref({ ...view, list: slug })}
+      id={ownerInsightAnchor(slug)}
+      className="grid scroll-mt-20 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+    >
+      {children}
+    </a>
+  );
+}
+
+function Last30({
+  t,
+  insights,
+  view,
+}: {
+  t: DashboardT;
+  insights: OwnerMemberInsights;
+  view: OwnerMembersView;
+}) {
   const { last30 } = insights;
   const key = 'tenantOwner.memberDetail.last30';
+  const seeList = (
+    <span className="flex items-center gap-1 text-xs font-bold text-brand">
+      {t('member.lists.seeList')}
+      <ChevronRight aria-hidden size={14} />
+    </span>
+  );
   return (
     <PanelSection as="h4" title={t(`${key}.title`)}>
       <KpiGrid className="grid-cols-2">
-        <KpiCard label={t(`${key}.activeDays`)} value={formatCount(last30.activeDays)} />
-        <KpiCard label={t(`${key}.likes`)} value={formatCount(last30.likes)} />
-        <KpiCard label={t(`${key}.comments`)} value={formatCount(last30.comments)} />
-        <KpiCard
-          label={t(`${key}.strongActions`)}
-          value={formatCount(last30.strongActions)}
-          note={t(`${key}.strongNote`)}
-        />
+        <ListLink view={view} slug="dias-ativos">
+          <KpiCard
+            label={t(`${key}.activeDays`)}
+            value={formatCount(last30.activeDays)}
+            footer={seeList}
+          />
+        </ListLink>
+        <ListLink view={view} slug="curtidas">
+          <KpiCard label={t(`${key}.likes`)} value={formatCount(last30.likes)} footer={seeList} />
+        </ListLink>
+        <ListLink view={view} slug="comentarios">
+          <KpiCard
+            label={t(`${key}.comments`)}
+            value={formatCount(last30.comments)}
+            footer={seeList}
+          />
+        </ListLink>
+        <ListLink view={view} slug="acoes-fortes">
+          <KpiCard
+            label={t(`${key}.strongActions`)}
+            value={formatCount(last30.strongActions)}
+            note={t(`${key}.strongNote`)}
+            footer={seeList}
+          />
+        </ListLink>
         <KpiCard
           label={t(`${key}.dailyTime`)}
           value={formatHoursMinutes(t, last30.dailyMinutes.value)}
           badge={exampleBadge(t, last30.dailyMinutes)}
         />
-        <KpiCard
-          label={t(`${key}.postsSeen`)}
-          value={formatCount(last30.postsSeen.value)}
-          badge={exampleBadge(t, last30.postsSeen)}
-        />
+        <ListLink view={view} slug="posts-vistos">
+          <KpiCard
+            label={t(`${key}.postsSeen`)}
+            value={formatCount(last30.postsSeen.value)}
+            badge={exampleBadge(t, last30.postsSeen)}
+            footer={seeList}
+          />
+        </ListLink>
       </KpiGrid>
     </PanelSection>
   );
@@ -329,11 +394,11 @@ export function OwnerMemberDetail({ t, view }: { t: DashboardT; view: OwnerMembe
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <BackLink
-        href={ownerMembersHref({ ...view, memberId: null })}
+        href={ownerMembersHref({ ...view, memberId: null, list: null })}
         label={t('tenantOwner.memberDetail.back')}
       />
       <Header t={t} insights={insights} scope={scope} band={view.band} />
-      <Last30 t={t} insights={insights} />
+      <Last30 t={t} insights={insights} view={view} />
       <Evolution t={t} insights={insights} />
       <WhereInteracts t={t} insights={insights} />
       <Events t={t} insights={insights} />

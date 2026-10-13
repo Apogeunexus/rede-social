@@ -205,7 +205,9 @@ export function ScopeItemCards({
         {ids.map((id) => {
           const count = ownerScopeBands({ kind, id }).counts[band];
           const href =
-            count > 0 ? ownerMembersHref({ kind, band, itemId: id, memberId: null }) : null;
+            count > 0
+              ? ownerMembersHref({ kind, band, itemId: id, memberId: null, list: null })
+              : null;
           return (
             <li key={id} className="min-w-0">
               <Item t={t} id={id} band={band} href={href} />

@@ -47,17 +47,38 @@ export const OWNER_BAND_SLUGS: Readonly<Record<EngagementBand, string>> = {
 
 const OWNER_MEMBER_IDS: readonly string[] = ownerBandRoster.map((row) => row.id);
 
+/** The `?lista=` slug of each list behind a member's insight numbers (quick 261012-tru D-07). */
+export const OWNER_MEMBER_LISTS = [
+  'dias-ativos',
+  'curtidas',
+  'comentarios',
+  'acoes-fortes',
+  'posts-vistos',
+] as const;
+
+export type OwnerMemberListSlug = (typeof OWNER_MEMBER_LISTS)[number];
+
+/** The id of a member list's wrapper: a list link lands on it. */
+export const OWNER_MEMBER_LIST_ANCHOR = 'lista';
+
+/** The id of the insight card a list's "Voltar" returns to. */
+export function ownerInsightAnchor(slug: OwnerMemberListSlug): string {
+  return `insight-${slug}`;
+}
+
 /**
- * Where the Membros area stands in the cascade (quick 261012-tru D-05, D-06): the tab (`kind`), the
+ * Where the Membros area stands in the cascade (quick 261012-tru D-05..D-07): the tab (`kind`), the
  * open band (null = all closed), the community or event opened inside that band (Por comunidade and
- * Por evento only; null = the band lists the cards) and the member whose insights replace the area
- * (null = the area itself). Each level is only ever set with the levels above it.
+ * Por evento only; null = the band lists the cards), the member whose insights replace the area
+ * (null = the area itself) and the list behind one of their numbers (null = the insights). Each
+ * level is only ever set with the levels above it.
  */
 export interface OwnerMembersView {
   kind: OwnerBandScope['kind'];
   band: EngagementBand | null;
   itemId: string | null;
   memberId: string | null;
+  list: OwnerMemberListSlug | null;
 }
 
 const RECORTES = ['membro', 'comunidade', 'evento'] as const;
@@ -121,6 +142,7 @@ export function ownerListScope(
  *    band; else the band lists the cards.
  * 4. `membro` is a roster id that must sit in the band of the opened list (`ownerBandIncludes`);
  *    else the list shows with its band open.
+ * 5. `lista` is one of OWNER_MEMBER_LISTS, only with a member; else the insights (or the level above).
  * Only allow-listed constants ever reach markup or URLs.
  */
 export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
@@ -138,7 +160,8 @@ export function parseOwnerMembersView(params: SearchParams): OwnerMembersView {
   const listScope = ownerListScope({ kind, itemId });
   const id = pick(params.membro, OWNER_MEMBER_IDS);
   const memberId = id && band && listScope && ownerBandIncludes(listScope, band, id) ? id : null;
-  return { kind, band, itemId, memberId };
+  const list = memberId ? (pick(params.lista, OWNER_MEMBER_LISTS) ?? null) : null;
+  return { kind, band, itemId, memberId, list };
 }
 
 /** A community's `?comunidade=` slug; an id the fixture does not have is a bug. */
@@ -149,8 +172,9 @@ function communitySlug(id: string): string {
 }
 
 /**
- * The link to a cascade view: the Membros area, then `recorte`, the item, `faixa` and `membro` in
- * that order. Landing on the bands (`#faixas`) until a member opens, whose insights start the area.
+ * The link to a cascade view: the Membros area, then `recorte`, the item, `faixa`, `membro` and
+ * `lista` in that order. Landing on the bands (`#faixas`) until a member opens, whose insights start
+ * the area; a list lands on itself (`#lista`).
  */
 export function ownerMembersHref(view: OwnerMembersView): string {
   let query = '';
@@ -163,6 +187,8 @@ export function ownerMembersHref(view: OwnerMembersView): string {
         : `&evento=${view.itemId}`;
   }
   if (view.band) query += `&faixa=${OWNER_BAND_SLUGS[view.band]}`;
-  if (view.memberId !== null) return `${ownerAreaHref('membros')}${query}&membro=${view.memberId}`;
-  return `${ownerAreaHref('membros')}${query}#${OWNER_BANDS_ANCHOR}`;
+  if (view.memberId === null) return `${ownerAreaHref('membros')}${query}#${OWNER_BANDS_ANCHOR}`;
+  query += `&membro=${view.memberId}`;
+  if (view.list === null) return `${ownerAreaHref('membros')}${query}`;
+  return `${ownerAreaHref('membros')}${query}&lista=${view.list}#${OWNER_MEMBER_LIST_ANCHOR}`;
 }

@@ -206,7 +206,7 @@ function MemberList({
             <MemberCard
               t={t}
               member={member}
-              href={ownerMembersHref({ ...view, band, memberId: member.id })}
+              href={ownerMembersHref({ ...view, band, memberId: member.id, list: null })}
             />
           </li>
         ))}
@@ -252,7 +252,7 @@ function OpenedItem({
   return (
     <>
       <BackLink
-        href={ownerMembersHref({ ...view, band, itemId: null, memberId: null })}
+        href={ownerMembersHref({ ...view, band, itemId: null, memberId: null, list: null })}
         label={t(
           kind === 'community'
             ? 'tenantOwner.scopeCards.backCommunities'

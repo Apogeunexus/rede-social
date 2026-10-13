@@ -570,6 +570,42 @@
           "revenueNote": "Receita: valores de exemplo"
         }
       },
+      "memberLists": {
+        "period": "{name} · últimos 30 dias",
+        "activeDays": {
+          "title": "Dias ativos",
+          "count": "{count, plural, one {# dia ativo} other {# dias ativos}} · mais recentes primeiro",
+          "actions": "{count, plural, one {# ação} other {# ações}}",
+          "empty": "Nenhum dia ativo nos últimos 30 dias."
+        },
+        "likes": {
+          "title": "Curtidas",
+          "count": "{count, plural, one {# curtida} other {# curtidas}} · mais recentes primeiro",
+          "line": "{community} · curtido {when}",
+          "empty": "Nenhuma curtida nos últimos 30 dias."
+        },
+        "comments": {
+          "title": "Comentários",
+          "count": "{count, plural, one {# comentário} other {# comentários}} · mais recentes primeiro",
+          "line": "{community} · comentado {when}",
+          "empty": "Nenhum comentário nos últimos 30 dias."
+        },
+        "strongActions": {
+          "title": "Ações fortes",
+          "count": "{count, plural, one {# ação forte} other {# ações fortes}} · mais recentes primeiro",
+          "comment": "Comentário · {community} · {when}",
+          "checkIn": "Presença · {when}",
+          "order": "Compra · {value} · {when}",
+          "empty": "Nenhuma ação forte nos últimos 30 dias."
+        },
+        "postsSeen": {
+          "title": "Posts vistos",
+          "count": "{posts, plural, one {# post} other {# posts}} · {views, plural, one {# visualização} other {# visualizações}} · mais vistos primeiro",
+          "line": "{community} · última vez {when}",
+          "times": "visto {count}× · {time}",
+          "empty": "Nenhum post visto nos últimos 30 dias."
+        }
+      },
       "bandMembers": {
         "summary": "{count} · {percent}",
         "underOnePercent": "menos de 1%",

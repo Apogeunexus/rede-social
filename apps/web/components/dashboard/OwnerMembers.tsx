@@ -28,6 +28,7 @@ import {
   formatSignedCount,
 } from './format';
 import { OwnerMemberDetail } from './OwnerMemberDetail';
+import { OwnerMemberList } from './OwnerMemberList';
 import { PanelSection, PreviewAction } from './PanelSection';
 
 const SCOPE_TABS = [
@@ -69,12 +70,19 @@ function recoverReach(view: OwnerMembersView): { atRisk: number; withPush: numbe
  * member counted once (D-02); a band opens its members (Por membro) or the community or event cards
  * (the others), a card opens its members in the band (D-05), and a member card opens that member's
  * insights in place of the area (D-06). Who moved stays whole-base; the win-back card follows the
- * opened community or event (D-08). Those lists and insights are the only places this panel names a
- * member, to the client's own team (261012-pkd D-03); every other block is counts only.
+ * opened community or event (D-08). Each insight number opens the list behind it (D-07). Those
+ * lists and insights are the only places this panel names a member, to the client's own team
+ * (261012-pkd D-03); every other block is counts only.
  */
 export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
   const t = await getTranslations('dashboard');
-  if (members.memberId) return <OwnerMemberDetail t={t} view={members} />;
+  if (members.memberId) {
+    return members.list ? (
+      <OwnerMemberList t={t} view={members} />
+    ) : (
+      <OwnerMemberDetail t={t} view={members} />
+    );
+  }
   const { kpis, growth, cohorts, movement, engagement } = tenantOwnerPanel;
   const note = TAB_NOTES[members.kind];
   const recover = recoverReach(members);
@@ -134,6 +142,7 @@ export async function OwnerMembers({ members }: { members: OwnerMembersView }) {
                     band: null,
                     itemId: null,
                     memberId: null,
+                    list: null,
                   })}
                   active={tab.kind === members.kind}
                   className="w-full justify-center text-center"

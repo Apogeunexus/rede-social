@@ -1417,6 +1417,154 @@ test("dono-do-cliente membros: a member's insights at 1440x900, inside the phone
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
 });
 
+/** The five insight numbers that open their list (quick 261012-tru D-07). */
+const OWNER_LIST_CASES: { slug: string; card: string; title: string; order: string }[] = [
+  {
+    slug: 'dias-ativos',
+    card: 'Dias ativos',
+    title: 'Dias ativos',
+    order: 'mais recentes primeiro',
+  },
+  { slug: 'curtidas', card: 'Curtidas', title: 'Curtidas', order: 'mais recentes primeiro' },
+  {
+    slug: 'comentarios',
+    card: 'Comentários',
+    title: 'Comentários',
+    order: 'mais recentes primeiro',
+  },
+  {
+    slug: 'acoes-fortes',
+    card: 'Ações fortes',
+    title: 'Ações fortes',
+    order: 'mais recentes primeiro',
+  },
+  {
+    slug: 'posts-vistos',
+    card: 'Posts vistos',
+    title: 'Posts vistos',
+    order: 'mais vistos primeiro',
+  },
+];
+
+test("dono-do-cliente membros: the insights' numbers open their lists", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const area = ownerArea(page);
+  for (const list of OWNER_LIST_CASES) {
+    await page.goto(SUPERFAN_DETAIL);
+    const kpi = area.locator(`#insight-${list.slug}`);
+    await expect(kpi, list.slug).toContainText('Ver lista');
+    const value = Number((await kpi.locator('span.text-2xl').innerText()).trim().replace('.', ''));
+    expect(value, list.slug).toBeGreaterThan(0);
+    await kpi.click();
+    await expect(page).toHaveURL(
+      new RegExp(`\\?area=membros&faixa=superfas&membro=om-13&lista=${list.slug}#lista$`),
+    );
+    const title = area.getByRole('heading', { level: 3, name: list.title, exact: true });
+    await expect(title).toBeVisible();
+    await expect(title).toBeInViewport();
+    await expect(area.getByText('Fernanda Paiva · últimos 30 dias', { exact: true })).toBeVisible();
+    const count = area.getByText(new RegExp(`^${value} .* · ${list.order}$`));
+    await expect(count, list.slug).toBeVisible();
+    await expect(sectionTitled(area, list.title).getByRole('listitem'), list.slug).toHaveCount(
+      value,
+    );
+    await expect(area.getByText('exemplo', { exact: true }), list.slug).toHaveCount(
+      list.slug === 'posts-vistos' ? 1 : 0,
+    );
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toHaveCount(0);
+
+    const back = area.getByRole('link', { name: 'Voltar', exact: true });
+    expect(await back.getAttribute('href'), list.slug).toMatch(
+      new RegExp(`\\?area=membros&faixa=superfas&membro=om-13#insight-${list.slug}$`),
+    );
+    await back.click();
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    await expect(area.locator(`#insight-${list.slug}`), list.slug).toBeInViewport();
+  }
+  // The daily time is not a list: a plain card with its pill.
+  await expect(kpiCard(area, 'Tempo médio diário').locator('xpath=ancestor::a')).toHaveCount(0);
+});
+
+test('dono-do-cliente membros: a list keeps the community it was opened from', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(DEMOTED_DETAIL);
+  const area = ownerArea(page);
+  await area.locator('#insight-curtidas').click();
+  await expect(page).toHaveURL(
+    /\?area=membros&recorte=comunidade&comunidade=eventos&faixa=ocasionais&membro=om-28&lista=curtidas#lista$/,
+  );
+  await expect(
+    area.getByRole('heading', { level: 3, name: 'Curtidas', exact: true }),
+  ).toBeVisible();
+  await area.getByRole('link', { name: 'Voltar', exact: true }).click();
+  await expect(page).toHaveURL(
+    /\?area=membros&recorte=comunidade&comunidade=eventos&faixa=ocasionais&membro=om-28#insight-curtidas$/,
+  );
+  await expect(area.getByText('Ocasional em Eventos', { exact: true })).toBeVisible();
+});
+
+test('dono-do-cliente membros: an empty list says so', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${MEMBERS_AREA}&faixa=em-risco&membro=om-49`);
+  const area = ownerArea(page);
+  await expect(area.locator('#insight-curtidas').locator('span.text-2xl')).toHaveText('0');
+  await area.locator('#insight-curtidas').click();
+  await expect(page).toHaveURL(/&faixa=em-risco&membro=om-49&lista=curtidas#lista$/);
+  await expect(
+    area.getByText('Nenhuma curtida nos últimos 30 dias.', { exact: true }),
+  ).toBeVisible();
+  await expect(area.getByRole('listitem')).toHaveCount(0);
+});
+
+test('dono-do-cliente membros: a forged lista falls one level up', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const area = ownerArea(page);
+  for (const lista of ['xyz', 'CURTIDAS', 'curtidas&lista=curtidas']) {
+    await page.goto(`${SUPERFAN_DETAIL}&lista=${lista}`);
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' }), lista).toBeVisible();
+    await expect(area.locator('#lista'), lista).toHaveCount(0);
+  }
+  await page.goto(`${MEMBERS_AREA}&lista=curtidas`);
+  await expect(area.getByRole('heading', { name: 'Faixas de engajamento' })).toBeVisible();
+  await expect(area.locator('#lista')).toHaveCount(0);
+  await page.goto(`${MEMBERS_AREA}&faixa=novos&membro=om-13&lista=curtidas`);
+  await expect(area.getByRole('heading', { name: 'Faixas de engajamento' })).toBeVisible();
+  await expect(bandDetails(faixas(page), 'Novos')).toHaveAttribute('open');
+  await expect(area.locator('#lista')).toHaveCount(0);
+});
+
+const OWNER_LIST_VIEWPORT_SLUGS = ['curtidas', 'acoes-fortes', 'posts-vistos'];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente membros: a member's lists at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const slug of OWNER_LIST_VIEWPORT_SLUGS) {
+      await page.goto(`${SUPERFAN_DETAIL}&lista=${slug}#lista`);
+      await expect(ownerArea(page).locator('#lista'), slug).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, slug).toBeLessThanOrEqual(overflow.clientWidth);
+    }
+  });
+}
+
+test("dono-do-cliente membros: a member's lists at 1440x900, inside the phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const slug of OWNER_LIST_VIEWPORT_SLUGS) {
+    await page.goto(`${SUPERFAN_DETAIL}&lista=${slug}#lista`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    await expect(ownerArea(page).locator('#lista'), slug).toBeVisible();
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, slug).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, slug).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, slug).toBeLessThanOrEqual(overflow.clientHeight + 1);
+  }
+});
+
 /** A closed collapsible of the open area, by its title. */
 function areaDetails(page: Page, title: string) {
   return ownerArea(page)
