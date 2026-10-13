@@ -1,3 +1,4 @@
+import { buildOwnerMemberLists, type OwnerMemberLists } from './owner-member-lists';
 import {
   daysBefore,
   daysSince,
@@ -22,6 +23,11 @@ import type { PostType } from './tenant-panels';
  * each event stay within its check-ins, the 30-day VIP purchases within the store's VIP orders and the
  * support conversations within the 8 weeks' total (`tests/owner-member-insights.test.ts`).
  *
+ * The lists behind the numbers (quick 261012-tru D-07, `owner-member-lists.ts`) are built from the
+ * same active days, attended events and VIP order, and `build` throws when a list's length differs
+ * from its 30-day count. "Posts vistos" is the number of distinct posts in the seen list (still an
+ * example: no post views are recorded yet).
+ *
  * Visible to the client's management only: with real data the privacy notice must say that the
  * management sees each member's individual behavior. Support is counts and dates, never message text.
  */
@@ -43,9 +49,11 @@ export interface OwnerMemberInsights {
     strongActions: number;
     /** Example: no usage sessions are recorded yet. */
     dailyMinutes: ReportValue<number>;
-    /** Example: no post views are recorded yet. */
+    /** Distinct posts seen: the length of `lists.postsSeen` (example: no post views are recorded yet). */
     postsSeen: ReportValue<number>;
   };
+  /** The items behind the 30-day numbers, each list as long as its count (D-07). */
+  lists: OwnerMemberLists;
   /** Active days per week, the last 12 weeks, oldest first. */
   weeklyActiveDays: number[];
   /** The band 60 days ago, 30 days ago (`YYYY-MM` of that day) and today; null = not a member yet. */
@@ -235,6 +243,33 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
   const orders = purchaseDay !== null && purchaseDay < 30 ? 1 : 0;
   const comments = COMMENTS[band](j);
   const likes = activeDays === 0 ? 0 : activeDays + EXTRA_LIKES[band](j);
+  const lists = buildOwnerMemberLists({
+    row,
+    j,
+    activeDays: [...days].filter((day) => day <= 29),
+    likes,
+    comments,
+    attended: pastByRecency
+      .filter((event) => attended.has(event.id))
+      .map((event) => ({ eventId: event.id, daysAgo: event.daysAgo })),
+    order:
+      purchaseDay !== null && purchaseDay < 30
+        ? { productId: VIP_PRODUCT, cents: vipUnitCents(), daysAgo: purchaseDay }
+        : null,
+  });
+  const lengths: [string, number, number][] = [
+    ['active days', lists.activeDays.length, activeDays],
+    ['likes', lists.likes.length, likes],
+    ['comments', lists.comments.length, comments],
+    ['strong actions', lists.strongActions.length, comments + checkIns + orders],
+  ];
+  for (const [name, length, count] of lengths) {
+    if (length !== count) {
+      throw new Error(
+        `the ${name} list of ${row.id} (${length}) disagrees with its count (${count})`,
+      );
+    }
+  }
 
   const lifetime = LIFETIME_ACTIONS[band](j);
   const others = byCommunity.filter(
@@ -295,8 +330,13 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
       orders,
       strongActions: comments + checkIns + orders,
       dailyMinutes: row.dailyMinutes,
-      postsSeen: { example: true, reason: 'needs_post_views', value: 6 * activeDays + likes },
+      postsSeen: {
+        example: true,
+        reason: 'needs_post_views',
+        value: lists.postsSeen.value.length,
+      },
     },
+    lists,
     weeklyActiveDays: Array.from({ length: 12 }, (_, i) => {
       const weeksBack = 11 - i;
       return countIn(days, 7 * weeksBack, 7 * weeksBack + 6);

@@ -14,6 +14,7 @@ export {
   type WatchedVideo,
 } from './member-lists';
 export { type OwnerMemberInsights, ownerMemberInsights } from './owner-member-insights';
+export type { OwnerMemberLists } from './owner-member-lists';
 export {
   OWNER_BAND_LIST_LIMIT,
   type OwnerBandList,
@@ -24,6 +25,7 @@ export {
   ownerBandRoster,
   ownerScopeBands,
 } from './owner-members';
+export type { OwnerPost } from './owner-posts';
 export {
   type ActivationStep,
   type ClientPlan,

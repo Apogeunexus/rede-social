@@ -208,6 +208,18 @@ within the 21 VIP orders and the support conversations within the 8 weeks' 127.
 `tests/owner-member-insights.test.ts` proves all of it over the 72 members, and that the support
 object has no field for message text.
 
+The items behind the 30-day numbers (261012-tru D-07) come from two more pure fixtures.
+`fixtures/owner-posts.ts` holds the client's 61 posts of the last 30 days, matching Conteúdo per
+community (22 / 25 / 8 / 6) and per format (18 / 15 / 20 / 8), with the four top posts among them;
+their dates do not model the weekday and time-slot split (no list shows a weekday).
+`fixtures/owner-member-lists.ts` builds, from the same active days, attended events and VIP order,
+the member's active days (with their actions), likes (distinct posts the member can reach, published
+before the like, the newest at the roster's last activity), comments (one a day on the most recent
+active days, on a post liked that day), strong actions (comments, check-ins, the 30-day order) and
+posts seen. Each list's length is its KPI, and the builder throws otherwise. "Posts vistos" now
+counts the distinct posts of that list (every liked one plus one per active day) and stays an
+example (`needs_post_views`); `tests/owner-member-lists.test.ts` proves all of it for the 72 members.
+
 **Privacy (261012-pkd D-03, 261012-qer B-1/B-3, user decisions).** Until 261012-pkd, the level-4
 panel showed only counts. The band lists show member names and their engagement level to the
 client's team, and the insights screen shows one member's individual behavior: 30-day numbers,
