@@ -17,8 +17,8 @@ import {
 } from '../fixtures';
 import { buildOwnerContentPeople } from '../fixtures/owner-content';
 import { daysSince, ownerBandRoster } from '../fixtures/owner-members';
-import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import { ownerPostTable } from '../fixtures/owner-posts';
+import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 
 /**
  * Quick 261013-h51 D-05, D-08: the Conteúdo area's items (the 61 feed posts and the 16 stories),

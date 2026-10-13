@@ -20,24 +20,8 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { previewLevelPath } from '@/lib/dashboard-preview';
 import { formatCount, formatDecimal, formatPercent, kpiDelta } from './format';
+import { LegendStroke } from './LegendStroke';
 import { PanelSection } from './PanelSection';
-
-/** A legend swatch that repeats the line's own stroke, so the series differ by pattern, not colour. */
-function LegendStroke({ dashed }: { dashed: boolean }) {
-  return (
-    <svg aria-hidden width={24} height={8} className={dashed ? 'text-text-tertiary' : 'text-brand'}>
-      <line
-        x1={0}
-        x2={24}
-        y1={4}
-        y2={4}
-        stroke="currentColor"
-        strokeWidth={dashed ? 2 : 2.5}
-        {...(dashed ? { strokeDasharray: '5 5' } : {})}
-      />
-    </svg>
-  );
-}
 
 /**
  * Level 4, "Visão geral": one number from each area (members, engaged, interactions per post, event

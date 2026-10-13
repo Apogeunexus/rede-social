@@ -4,11 +4,12 @@ import { getTranslations } from 'next-intl/server';
 import {
   type ContentTab,
   contentBackHref,
+  contentTabView,
   type OwnerContentView,
   ownerContentHref,
 } from '@/lib/owner-content-view';
 import type { DashboardT } from './format';
-import { OwnerContentOverview } from './OwnerContentOverview';
+import { ContentNumberList, OwnerContentOverview } from './OwnerContentOverview';
 import { OwnerContentPeople } from './OwnerContentPeople';
 import { ContentPostList } from './OwnerContentPostCard';
 import { OwnerContentPostDetail } from './OwnerContentPostDetail';
@@ -33,14 +34,7 @@ function ContentTabs({ t, view }: { t: DashboardT; view: OwnerContentView }) {
         {TABS.map((row) => (
           <li key={row.tab} className="min-w-0">
             <Chip
-              href={ownerContentHref({
-                tab: row.tab,
-                kind: null,
-                postId: null,
-                who: null,
-                memberId: null,
-                list: null,
-              })}
+              href={ownerContentHref(contentTabView(row.tab))}
               active={row.tab === view.tab}
               className="w-full justify-center text-center"
             >
@@ -71,8 +65,9 @@ function PostsTab({ t, view }: { t: DashboardT; view: OwnerContentView }) {
 }
 
 /**
- * The member opened from a publication's people (P1): their insights, or the list behind one of
- * their numbers, with the same components as Membros. Their band is today's whole-base band.
+ * The member opened from a Conteúdo list (P1) — a publication's people, the interactors or a band of
+ * "Quem interage": their insights, or the list behind one of their numbers, with the same components
+ * as Membros. Their band is today's whole-base band.
  */
 function ContentMember({
   t,
@@ -84,7 +79,7 @@ function ContentMember({
   memberId: string;
 }) {
   const back = contentBackHref(view);
-  if (!view.postId || !view.who || back === null) throw new Error('a member with no list');
+  if (back === null) throw new Error('a member with no way back');
   if (view.list) {
     return <OwnerMemberList t={t} memberId={memberId} list={view.list} backHref={back} />;
   }
@@ -105,8 +100,9 @@ function ContentMember({
 /**
  * Level 4, "Conteúdo" (quick 261013-h51): one cascade of plain links, as Membros (D-01). The tab
  * screens — Visão geral, Por tipo (an opened type included) and Publicações — carry the one row of
- * three tabs; every deeper step (a publication, who did one of its numbers, a member's insights, the
- * list behind one of them) replaces the area under its "Voltar" (PD-3). The period is the panel's
+ * three tabs (an opened band of "Quem interage" included); every deeper step (an overview number's
+ * list, a publication, who did one of its numbers, a member's insights, the list behind one of them)
+ * replaces the area under its "Voltar" (PD-3). The period is the panel's
  * fixed 30 days against the 30 before: there is no period selector.
  */
 export async function OwnerContent({ content: view }: { content: OwnerContentView }) {
@@ -114,12 +110,13 @@ export async function OwnerContent({ content: view }: { content: OwnerContentVie
   if (view.memberId) return <ContentMember t={t} view={view} memberId={view.memberId} />;
   if (view.who) return <OwnerContentPeople t={t} view={view} />;
   if (view.postId) return <OwnerContentPostDetail t={t} view={view} />;
+  if (view.number) return <ContentNumberList t={t} view={view} />;
   return (
     <>
       <ContentTabs t={t} view={view} />
       {view.tab === 'types' ? <OwnerContentTypes t={t} view={view} /> : null}
       {view.tab === 'posts' ? <PostsTab t={t} view={view} /> : null}
-      {view.tab === 'overview' ? <OwnerContentOverview /> : null}
+      {view.tab === 'overview' ? <OwnerContentOverview t={t} view={view} /> : null}
     </>
   );
 }

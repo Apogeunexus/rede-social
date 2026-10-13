@@ -9,8 +9,8 @@ import {
 } from './owner-members';
 import { type OwnerPostMedia, ownerPostTable } from './owner-posts';
 import type { RelativeMoment } from './platform-panels';
-import type { EngagementBand, ExampleValue, NotMeasuredReason, ReportValue } from './shared';
-import { tenantOwnerPanel } from './tenant-owner';
+import type { Delta, EngagementBand, ExampleValue, NotMeasuredReason, ReportValue } from './shared';
+import { tenantOwnerPanel, type Weekday } from './tenant-owner';
 
 /**
  * The level-4 Conteúdo area (quick 261013-h51): every publication of the last 30 days as one content
@@ -77,6 +77,17 @@ export interface ContentItem {
   media: OwnerPostMedia | null;
   durationSeconds: number | null;
   cards: number | null;
+  /** Comments (or story replies) and the team's answers (measured: the staff replies). */
+  commentMeta: ContentCommentMeta;
+}
+
+export interface ContentCommentMeta {
+  /** Comments the client's team answered. */
+  answered: number;
+  /** Hours the oldest unanswered comment has waited; null when every comment is answered. */
+  oldestUnansweredHours: number | null;
+  /** Median minutes to the team's first reply; null when nothing was answered. */
+  firstReplyMedianMinutes: number | null;
 }
 
 /** One person behind a number: the member card's fields, the whole-base band and when they did it. */
@@ -188,12 +199,37 @@ const STORY_ROWS: readonly (readonly [number, string, number, number, number, nu
 
 const STORY_MEDIA: OwnerPostMedia = { width: 1080, height: 1920 };
 
+/**
+ * `[unanswered, oldest unanswered in hours]` of the items whose comments the team left without an
+ * answer; every other item's comments are all answered. Over 24 h is "Precisa de atenção"; an item
+ * younger than 2 days only ever waits under 24 h.
+ */
+const UNANSWERED: Readonly<Record<string, readonly [number, number]>> = {
+  'op-02': [1, 3],
+  'op-03': [2, 18],
+  'op-04': [1, 9],
+  'op-08': [3, 60],
+  'op-12': [4, 110],
+  'op-19': [9, 192],
+  'op-24': [2, 250],
+};
+
+function commentMeta(id: string, comments: number, index: number): ContentCommentMeta {
+  const [unanswered, oldest] = UNANSWERED[id] ?? [0, null];
+  const answered = comments - unanswered;
+  return {
+    answered,
+    oldestUnansweredHours: unanswered > 0 ? oldest : null,
+    firstReplyMedianMinutes: answered > 0 ? 20 + ((index * 17) % 100) : null,
+  };
+}
+
 function postKind(post: (typeof ownerPostTable)[number]): ContentKind {
   if (post.type === 'gallery') return post.cards === 1 ? 'photo' : 'carousel';
   return post.type;
 }
 
-const postItems: ContentItem[] = ownerPostTable.map((post) => {
+const postItems: ContentItem[] = ownerPostTable.map((post, index) => {
   const row = POST_EXAMPLES[post.id];
   if (!row) throw new Error(`no example values for ${post.id}`);
   const [reach, views, saves, shares] = row;
@@ -212,6 +248,7 @@ const postItems: ContentItem[] = ownerPostTable.map((post) => {
     media: post.media,
     durationSeconds: post.durationSeconds,
     cards: post.cards,
+    commentMeta: commentMeta(post.id, post.comments, index),
   };
 });
 
@@ -231,6 +268,7 @@ const storyItems: ContentItem[] = STORY_ROWS.map(
     media: STORY_MEDIA,
     durationSeconds: null,
     cards: null,
+    commentMeta: commentMeta(`os-${String(i + 1).padStart(2, '0')}`, comments, 61 + i),
   }),
 );
 
@@ -379,4 +417,190 @@ export function ownerContentPeople(itemId: string, who: ContentWho): ContentPeop
 export function ownerContentIncludes(itemId: string, who: ContentWho, memberId: string): boolean {
   const people = peopleOf(ownerContentItem(itemId), who);
   return people?.some((person) => person.id === memberId) ?? false;
+}
+
+function up(amount: number, kind: Delta['kind']): Delta {
+  return { amount, kind, direction: 'up', good: true, basis: 'previous_30_days' };
+}
+
+const SLOTS = [
+  [7, 10],
+  [12, 14],
+  [18, 20],
+  [20, 22],
+] as const;
+
+/** Posts and likes + comments per weekday, one pair per slot of SLOTS. */
+const HEATMAP_ROWS: readonly (readonly [Weekday, readonly (readonly [number, number])[]])[] = [
+  [
+    'mon',
+    [
+      [2, 85],
+      [2, 99],
+      [2, 126],
+      [3, 210],
+    ],
+  ],
+  [
+    'tue',
+    [
+      [2, 89],
+      [2, 104],
+      [3, 197],
+      [3, 220],
+    ],
+  ],
+  [
+    'wed',
+    [
+      [2, 92],
+      [2, 107],
+      [2, 136],
+      [3, 225],
+    ],
+  ],
+  [
+    'thu',
+    [
+      [1, 62],
+      [2, 144],
+      [3, 273],
+      [4, 401],
+    ],
+  ],
+  [
+    'fri',
+    [
+      [2, 99],
+      [2, 115],
+      [2, 146],
+      [2, 160],
+    ],
+  ],
+  [
+    'sat',
+    [
+      [2, 94],
+      [2, 110],
+      [2, 139],
+      [1, 77],
+    ],
+  ],
+  [
+    'sun',
+    [
+      [1, 39],
+      [2, 91],
+      [3, 173],
+      [2, 127],
+    ],
+  ],
+];
+
+export interface ContentHeatCell {
+  weekday: Weekday;
+  fromHour: number;
+  toHour: number;
+  posts: number;
+  interactions: number;
+}
+
+/**
+ * The Visão geral aggregates (D-02): the change of each of the six numbers against the 30 days
+ * before; who interacted with the content per band (today's band, PD-5: em risco and inativos are 0
+ * by definition, no action in 30 days); likes + comments per post per week, the last 12 weeks and the
+ * 12 before; and the 28 cells of weekday × time slot (posts and likes + comments) whose rows add up
+ * to `publishing.byWeekday` and columns to `publishing.bySlot` (the post dates do not model it, PD-4).
+ */
+export const ownerContent = {
+  deltas: {
+    posts: up(5, 'count'),
+    interactions: up(9, 'percent'),
+    rate: up(1, 'points'),
+    interactors: up(4, 'percent'),
+    views: up(6, 'percent'),
+    reach: up(6, 'percent'),
+  },
+  interactorsByBand: {
+    new: 41,
+    superfan: 62,
+    engaged: 189,
+    occasional: 136,
+    at_risk: 0,
+    inactive: 0,
+  } satisfies Record<EngagementBand, number>,
+  weeklyPerPost: {
+    current: [52, 55, 54, 57, 58, 56, 60, 61, 63, 66, 64, 68],
+    previous: [48, 50, 49, 51, 53, 52, 54, 55, 58, 60, 59, 62],
+  },
+  heatmap: HEATMAP_ROWS.flatMap(([weekday, cells]) =>
+    cells.map(([posts, interactions], k): ContentHeatCell => {
+      const slot = SLOTS[k];
+      if (!slot) throw new Error(`no slot ${k}`);
+      return { weekday, fromHour: slot[0], toHour: slot[1], posts, interactions };
+    }),
+  ),
+};
+
+/** One interaction of the roster sample: who, liked or commented, which post and when. */
+export interface ContentInteraction {
+  person: ContentPerson;
+  action: 'like' | 'comment';
+  itemId: string;
+  when: RelativeMoment;
+}
+
+function buildInteractions(): ContentInteraction[] {
+  const rows: ContentInteraction[] = [];
+  for (const item of postItems) {
+    const entry = PEOPLE.get(item.id);
+    if (!entry) throw new Error(`no people for ${item.id}`);
+    for (const person of entry.likes) {
+      rows.push({ person, action: 'like', itemId: item.id, when: person.when });
+    }
+    for (const person of entry.comments) {
+      rows.push({ person, action: 'comment', itemId: item.id, when: person.when });
+    }
+  }
+  return rows.sort((a, b) => byRecency(a.person, b.person));
+}
+
+const INTERACTIONS = buildInteractions();
+
+/** Each interactor once, with their most recent like or comment. */
+const INTERACTORS: readonly ContentPerson[] = [
+  ...new Map([...INTERACTIONS].reverse().map((row) => [row.person.id, row.person])).values(),
+].sort(byRecency);
+
+/**
+ * Who interacted with the content in the 30 days (PD-5): the roster members with a like or comment,
+ * most recent first, of one band (or all), and how many the band (or the base) holds.
+ */
+export function ownerContentInteractors(band: EngagementBand | null): ContentPeople {
+  const { interactorsByBand } = ownerContent;
+  const people = INTERACTORS.filter((person) => band === null || person.band === band);
+  const total =
+    band === null
+      ? Object.values(interactorsByBand).reduce((sum, count) => sum + count, 0)
+      : interactorsByBand[band];
+  return { people, total, example: false };
+}
+
+/** Whether the member interacted (in that band): the parser's membership check, no names read. */
+export function ownerContentInteractorIncludes(
+  band: EngagementBand | null,
+  memberId: string,
+): boolean {
+  return INTERACTORS.some(
+    (person) => person.id === memberId && (band === null || person.band === band),
+  );
+}
+
+/** The roster's likes and comments on the 61 posts, most recent first, and the base's total (PD-7). */
+export function ownerContentInteractions(): {
+  rows: readonly ContentInteraction[];
+  total: number;
+} {
+  const total = postItems.reduce((sum, item) => sum + item.likes + item.comments, 0);
+  return { rows: INTERACTIONS, total };
 }

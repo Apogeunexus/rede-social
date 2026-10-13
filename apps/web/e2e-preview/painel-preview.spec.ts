@@ -456,7 +456,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
   },
   // One per band list (the example daily time, quick 261012-ri4 R-2): the six bands all have members.
   { slug: 'membros', tab: 'Membros', heading: 'Crescimento', pills: 6 },
-  { slug: 'conteudo', tab: 'Conteúdo', heading: 'Posts que mais renderam', pills: 4 },
+  // Taxa, Visualizações and Alcance, the best posts' line and the four bands' daily-time line.
+  { slug: 'conteudo', tab: 'Conteúdo', heading: 'Resumo do mês', pills: 8 },
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 3 },
   { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
   { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
@@ -1572,52 +1573,6 @@ function areaDetails(page: Page, title: string) {
     .filter({ has: page.locator('summary', { hasText: title }) });
 }
 
-test('dono-do-cliente ?area=conteudo', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/painel-preview/dono-do-cliente?area=conteudo');
-  const area = ownerArea(page);
-
-  const topPosts = sectionTitled(area, 'Posts que mais renderam');
-  const posts = topPosts.getByRole('listitem');
-  await expect(posts).toHaveCount(4);
-  for (let i = 0; i < 4; i += 1) {
-    await expect(posts.nth(i).getByText('exemplo', { exact: true })).toHaveCount(0);
-  }
-  await expect(topPosts.getByText('exemplo', { exact: true })).toHaveCount(1);
-  await expect(
-    topPosts.getByText(
-      'Curtidas e comentários são medidos; salvamentos e compartilhamentos são valores de exemplo.',
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(posts.first()).toContainText('96 curtidas · 31 comentários');
-  await expect(posts.first()).toContainText('18 salvamentos · 7 compartilhamentos');
-
-  for (const label of [
-    'Alcance por post',
-    '% assistido (vídeos e reels)',
-    'Conclusão (vídeos e reels)',
-  ]) {
-    await expect(kpiCard(area, label).getByText('exemplo', { exact: true })).toHaveCount(1);
-  }
-  await expect(
-    kpiCard(area, 'Visualizações por story').getByText('exemplo', { exact: true }),
-  ).toHaveCount(0);
-
-  const summaries: [string, string][] = [
-    ['Interações por post, por formato', 'Vídeo rende mais: 96 por post'],
-    ['Interações por post, por comunidade', 'VIP rende mais: 75 por post'],
-    ['Melhor dia e horário para publicar', 'Quinta, 20h–22h'],
-    ['Onde os membros interagem', 'Curtidas: 3.100'],
-  ];
-  for (const [title, summary] of summaries) {
-    const details = areaDetails(page, title);
-    await expect(details).toHaveCount(1);
-    await expect(details).not.toHaveAttribute('open');
-    await expect(details.locator('summary')).toContainText(summary);
-  }
-});
-
 /* ---------------------------------------------------- Conteúdo in three tabs (quick 261013-h51) */
 
 const CONTENT_AREA = '/painel-preview/dono-do-cliente?area=conteudo';
@@ -1839,6 +1794,308 @@ test.describe('dono-do-cliente conteudo', () => {
     await expect(postCards(ownerArea(page))).toHaveCount(10);
     await expect(ownerArea(page).locator('[data-testid="content-cover"]')).toHaveCount(0);
   });
+});
+
+/** The six overview numbers (D-02): slug, label, value, delta text and the list's count line. */
+const CONTENT_NUMBERS: {
+  slug: string;
+  label: string;
+  value: string;
+  delta: string;
+  count: RegExp;
+}[] = [
+  {
+    slug: 'publicacoes',
+    label: 'Publicações',
+    value: '61',
+    delta: '5 vs. 30 dias antes',
+    count: /^61 publicações · mais recentes primeiro$/,
+  },
+  {
+    slug: 'interacoes',
+    label: 'Interações',
+    value: '3.940',
+    delta: '9% vs. 30 dias antes',
+    count: /^3\.940 interações · mais recentes primeiro$/,
+  },
+  {
+    slug: 'taxa',
+    label: 'Taxa de engajamento',
+    value: '10,6%',
+    delta: '1 p.p. vs. 30 dias antes',
+    count: /^Taxa de engajamento de 10,6% · maior taxa primeiro$/,
+  },
+  {
+    slug: 'membros',
+    label: 'Membros que interagiram',
+    value: '428',
+    delta: '4% vs. 30 dias antes',
+    count: /^428 membros · mais recentes primeiro$/,
+  },
+  {
+    slug: 'visualizacoes',
+    label: 'Visualizações',
+    value: '62.963',
+    delta: '6% vs. 30 dias antes',
+    count: /^62\.963 visualizações · mais vistas primeiro$/,
+  },
+  {
+    slug: 'alcance',
+    label: 'Alcance por publicação',
+    value: '612',
+    delta: '6% vs. 30 dias antes',
+    count: /^612 membros alcançados por publicação, em média · maior alcance primeiro$/,
+  },
+];
+
+const CONTENT_BANDS: [string, string][] = [
+  ['Novos', '41 · 43% da faixa'],
+  ['Superfãs', '62 · 100% da faixa'],
+  ['Engajados', '189 · 92% da faixa'],
+  ['Ocasionais', '136 · 91% da faixa'],
+  ['Em risco', '0 · 0% da faixa'],
+  ['Inativos', '0 · 0% da faixa'],
+];
+
+function interactsSection(page: Page) {
+  return sectionTitled(ownerArea(page), 'Quem interage, por faixa');
+}
+
+test.describe('dono-do-cliente conteudo: Visão geral', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('the seven blocks in order, no Canais', async ({ page }) => {
+    await page.goto(CONTENT_AREA);
+    const area = ownerArea(page);
+    const titles = [
+      'Resumo do mês',
+      'Precisa de atenção',
+      'Tendência de 12 semanas',
+      'Melhores publicações',
+      'Melhor dia e horário',
+      'Quem interage, por faixa',
+      'Próximos passos',
+    ];
+    expect(await area.getByRole('heading', { level: 3 }).allTextContents()).toEqual(titles);
+    await expect(area.getByText('Onde os membros interagem')).toHaveCount(0);
+
+    for (const number of CONTENT_NUMBERS) {
+      const kpi = area.locator(`#numero-${number.slug}`);
+      await expect(kpi.locator('span').first(), number.slug).toHaveText(number.label);
+      await expect(kpi.locator('span.text-2xl'), number.slug).toHaveText(number.value);
+      await expect(kpi, number.slug).toContainText(number.delta);
+      await expect(kpi, number.slug).toContainText('Ver lista');
+    }
+    for (const slug of ['taxa', 'visualizacoes', 'alcance']) {
+      await expect(
+        area.locator(`#numero-${slug}`).getByText('exemplo', { exact: true }),
+      ).toHaveCount(1);
+    }
+    for (const slug of ['publicacoes', 'interacoes', 'membros']) {
+      await expect(
+        area.locator(`#numero-${slug}`).getByText('exemplo', { exact: true }),
+      ).toHaveCount(0);
+    }
+
+    const attention = sectionTitled(area, 'Precisa de atenção').getByRole('link');
+    await expect(attention).toHaveCount(4);
+    await expect(attention.first()).toContainText(
+      '2 comentários sem resposta · o mais antigo há 10 dias',
+    );
+    await expect(attention.nth(1)).toContainText(
+      '9 comentários sem resposta · o mais antigo há 8 dias',
+    );
+    await expect(attention.nth(1)).toContainText('Um lembrete gentil: constância não é perfeição');
+
+    const trend = sectionTitled(area, 'Tendência de 12 semanas');
+    await expect(trend.getByRole('img')).toHaveCount(1);
+    await expect(trend.locator('[data-series="previous"]')).toHaveCount(1);
+
+    const best = sectionTitled(area, 'Melhores publicações');
+    await expect(postCards(best)).toHaveCount(3);
+    await expect(best.getByText('exemplo', { exact: true })).toHaveCount(1);
+    await expect(best.getByRole('link', { name: 'Ver todas as publicações' })).toHaveAttribute(
+      'href',
+      /\?area=conteudo&vista=publicacoes$/,
+    );
+
+    const heat = sectionTitled(area, 'Melhor dia e horário');
+    await expect(heat.locator('[data-heat-cell]')).toHaveCount(28);
+    await expect(heat.locator('[data-solid]')).toHaveCount(1);
+    const thu = heat.locator('[data-heat-cell="thu-20"]');
+    await expect(thu).toHaveAttribute('data-solid', '');
+    await expect(thu.locator('[aria-hidden]')).toHaveText('100');
+    await expect(thu).toContainText('Quinta, 20h–22h: 100 por publicação (4 publicações)');
+    await expect(heat.locator('[data-heat-cell="sun-7"] [aria-hidden]')).toHaveText('39');
+    await expect(heat).toContainText('Melhor: quinta, 20h–22h, com 100 interações por publicação.');
+
+    for (const [label, summary] of CONTENT_BANDS) {
+      const details = bandDetails(interactsSection(page), label);
+      await expect(details, label).toHaveCount(1);
+      await expect(details, label).not.toHaveAttribute('open');
+      await expect(details.locator('summary'), label).toContainText(summary);
+    }
+    await bandDetails(interactsSection(page), 'Em risco').locator('summary').click();
+    await expect(
+      bandDetails(interactsSection(page), 'Em risco').getByText(
+        'Ninguém desta faixa interagiu com o conteúdo nos últimos 30 dias: é o que define a faixa.',
+      ),
+    ).toBeVisible();
+
+    const next = sectionTitled(area, 'Próximos passos');
+    await expect(next.getByRole('button')).toHaveCount(3);
+    for (const button of await next.getByRole('button').all()) await expect(button).toBeDisabled();
+    await expect(next).toContainText(
+      '18 comentários sem resposta há mais de 24 h, em 4 publicações.',
+    );
+  });
+
+  test('each number opens its list, whose count repeats it, and Voltar returns', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    for (const number of CONTENT_NUMBERS) {
+      await page.goto(CONTENT_AREA);
+      await area.locator(`#numero-${number.slug}`).click();
+      await expect(page, number.slug).toHaveURL(
+        new RegExp(`\\?area=conteudo&numero=${number.slug}$`),
+      );
+      await expect(contentTabs(page), number.slug).toHaveCount(0);
+      await expect(
+        area.getByRole('heading', { level: 3, name: number.label, exact: true }),
+        number.slug,
+      ).toBeVisible();
+      await expect(area.getByText(number.count), number.slug).toBeVisible();
+      if (['taxa', 'visualizacoes', 'alcance', 'publicacoes'].includes(number.slug)) {
+        await expect(postCards(area), number.slug).toHaveCount(10);
+        await expect(area.getByText('Membro desde:'), number.slug).toHaveCount(0);
+        await expect(area.getByText('exemplo', { exact: true }), number.slug).toHaveCount(1);
+      }
+      if (number.slug === 'membros') {
+        await expect(area.getByRole('listitem').first()).toContainText('Faixa:');
+        await expect(area.getByText('e mais 418 membros', { exact: true })).toBeVisible();
+      }
+      if (number.slug === 'interacoes') {
+        await expect(area.getByRole('listitem')).toHaveCount(10);
+        await expect(area.getByText('e mais 3.930 interações', { exact: true })).toBeVisible();
+      }
+      expect(await backLink(page).getAttribute('href'), number.slug).toMatch(
+        new RegExp(`\\?area=conteudo#numero-${number.slug}$`),
+      );
+      await backLink(page).click();
+      await expect(area.locator(`#numero-${number.slug}`), number.slug).toBeInViewport();
+    }
+  });
+
+  test('an interaction opens its publication; a views card never opens people', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&numero=interacoes`);
+    const row = area.getByRole('listitem').first().getByRole('link');
+    const href = (await row.getAttribute('href')) ?? '';
+    expect(href).toMatch(/\?area=conteudo&numero=interacoes&post=op-\d\d$/);
+    await row.click();
+    await expect(area.locator('#quem-curtidas')).toBeVisible();
+    expect(await backLink(page).getAttribute('href')).toMatch(
+      /\?area=conteudo&numero=interacoes#post-op-\d\d$/,
+    );
+
+    await page.goto(`${CONTENT_AREA}&numero=visualizacoes`);
+    const first = postCards(area).first().getByRole('link');
+    expect(await first.getAttribute('href')).toMatch(/&numero=visualizacoes&post=op-\d\d$/);
+  });
+
+  test('a band opens its members, a member the insights, Voltar reopens the band', async ({
+    page,
+  }) => {
+    await page.goto(CONTENT_AREA);
+    const engaged = bandDetails(interactsSection(page), 'Engajados');
+    await engaged.locator('summary').click();
+    await expect(engaged.getByRole('listitem')).toHaveCount(10);
+    await expect(engaged.getByText('e mais 179 membros', { exact: true })).toBeVisible();
+    const card = engaged.getByRole('listitem').first().getByRole('link');
+    const name = (await card.locator('.text-lg').innerText()).trim();
+    await card.click();
+    await expect(page).toHaveURL(/\?area=conteudo&faixa=engajados&membro=om-\d\d$/);
+    const area = ownerArea(page);
+    await expect(area.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    const back = await backLink(page).getAttribute('href');
+    expect(back).toMatch(/\?area=conteudo&faixa=engajados#membro-om-\d\d$/);
+    await backLink(page).click();
+    const reopened = bandDetails(interactsSection(page), 'Engajados');
+    await expect(reopened).toHaveAttribute('open');
+    await expect(reopened.getByRole('listitem').first()).toContainText(name);
+    await expect(contentTabs(page)).toHaveCount(1);
+  });
+
+  test('an attention row opens its publication', async ({ page }) => {
+    await page.goto(CONTENT_AREA);
+    const area = ownerArea(page);
+    await area.locator('#post-op-19').click();
+    await expect(page).toHaveURL(/\?area=conteudo&post=op-19$/);
+    await expect(area.getByText('60 interações', { exact: true })).toBeVisible();
+    expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#post-op-19$/);
+  });
+
+  test('a forged overview URL falls one level up', async ({ page }) => {
+    const area = ownerArea(page);
+    for (const query of ['&numero=xyz', '&faixa=em-risco', '&faixa=xyz', '&numero=MEMBROS']) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      await expect(area.locator('#numero-publicacoes'), query).toBeVisible();
+      await expect(backLink(page), query).toHaveCount(0);
+      await expect(interactsSection(page).locator('details[open]'), query).toHaveCount(0);
+    }
+    await page.goto(`${CONTENT_AREA}&numero=membros&post=op-11`);
+    await expect(area.getByText(/^428 membros · mais recentes primeiro$/)).toBeVisible();
+    await page.goto(`${CONTENT_AREA}&faixa=superfas&membro=om-49`);
+    await expect(area.locator('#numero-publicacoes')).toBeVisible();
+    await expect(bandDetails(interactsSection(page), 'Superfãs')).toHaveAttribute('open');
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toHaveCount(0);
+  });
+});
+
+const CONTENT_OVERVIEW_VIEWS = [
+  '',
+  '&faixa=engajados',
+  ...CONTENT_NUMBERS.map((number) => `&numero=${number.slug}`),
+];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente conteudo: the overview and its lists at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const query of CONTENT_OVERVIEW_VIEWS) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      await expect(ownerArea(page), query).toBeVisible();
+      await openAllDetails(page);
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    }
+  });
+}
+
+test('dono-do-cliente conteudo: the overview and its lists at 1440x900, inside the phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const query of CONTENT_OVERVIEW_VIEWS) {
+    await page.goto(`${CONTENT_AREA}${query}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    await openAllDetails(page);
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, query).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, query).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible'), query).toHaveCount(
+      0,
+    );
+  }
 });
 
 test('dono-do-cliente ?area=eventos', async ({ page }) => {

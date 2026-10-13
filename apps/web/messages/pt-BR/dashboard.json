@@ -391,44 +391,6 @@
         "weeklyTitle": "Novos membros por semana",
         "weeklyLabel": "Novos membros por semana: as últimas 12 semanas"
       },
-      "topPosts": {
-        "title": "Posts que mais renderam",
-        "exampleNote": "Curtidas e comentários são medidos; salvamentos e compartilhamentos são valores de exemplo.",
-        "post": "{type} · {community}",
-        "measured": "{likes, plural, one {# curtida} other {# curtidas}} · {comments, plural, one {# comentário} other {# comentários}}",
-        "saved": "{saves, plural, one {# salvamento} other {# salvamentos}} · {shares, plural, one {# compartilhamento} other {# compartilhamentos}}"
-      },
-      "reach": {
-        "title": "Alcance, vídeos e stories",
-        "perPost": "Alcance por post",
-        "perPostNote": "{percent} dos membros, em média",
-        "stories": "Visualizações por story",
-        "storiesNote": "média de {count} stories · {percent} dos membros",
-        "watched": "% assistido (vídeos e reels)",
-        "completion": "Conclusão (vídeos e reels)",
-        "footnote": "Stories mostram só totais, nunca quem viu."
-      },
-      "communities": {
-        "title": "Interações por post, por comunidade",
-        "summary": "{name} rende mais: {perPost} por post"
-      },
-      "bestTime": {
-        "title": "Melhor dia e horário para publicar",
-        "summary": "{day}, {from}h–{to}h",
-        "byDay": "Por dia da semana",
-        "bySlot": "Por horário de publicação",
-        "slot": "{from}h–{to}h",
-        "weekday": {
-          "mon": "Segunda",
-          "tue": "Terça",
-          "wed": "Quarta",
-          "thu": "Quinta",
-          "fri": "Sexta",
-          "sat": "Sábado",
-          "sun": "Domingo"
-        },
-        "footnote": "Curtidas e comentários por post, pelo dia e horário de publicação (horário de Brasília)."
-      },
       "upcoming": {
         "title": "Próximos eventos",
         "columns": {
@@ -526,15 +488,6 @@
         "summary": "taxa de remoção {rate}",
         "rate": "Taxa de remoção",
         "rateNote": "{removed} de {total} comentários em 30 dias"
-      },
-      "channels": {
-        "title": "Onde os membros interagem",
-        "likes": "Curtidas",
-        "comments": "Comentários",
-        "attendance": "Presenças",
-        "orders": "Pedidos",
-        "support": "Suporte",
-        "summary": "{channel}: {count}"
       },
       "movement": {
         "up": "Subiram",
@@ -707,12 +660,6 @@
           }
         }
       },
-      "formats": {
-        "title": "Interações por post, por formato",
-        "summary": "{format} rende mais: {perPost} por post",
-        "posts": "{count, plural, one {# post} other {# posts}}",
-        "footnote": "Curtidas e comentários por post, em {count} posts nos últimos 30 dias."
-      },
       "buyers": {
         "title": "Quem compra",
         "sentence": "{orders} das compras vêm de {members} dos membros (superfãs e engajados).",
@@ -829,6 +776,112 @@
             "saves": "Ninguém salvou esta publicação ainda.",
             "shares": "Ninguém compartilhou esta publicação ainda."
           }
+        },
+        "weekday": {
+          "mon": "Segunda",
+          "tue": "Terça",
+          "wed": "Quarta",
+          "thu": "Quinta",
+          "fri": "Sexta",
+          "sat": "Sábado",
+          "sun": "Domingo"
+        },
+        "weekdayShort": {
+          "mon": "seg",
+          "tue": "ter",
+          "wed": "qua",
+          "thu": "qui",
+          "fri": "sex",
+          "sat": "sáb",
+          "sun": "dom"
+        },
+        "overview": {
+          "kpis": {
+            "title": "Resumo do mês",
+            "posts": "Publicações",
+            "postsNote": "no feed, nos últimos 30 dias",
+            "interactions": "Interações",
+            "interactionsNote": "{likes} curtidas + {comments} comentários",
+            "rate": "Taxa de engajamento",
+            "rateNote": "interações ÷ alcance das publicações",
+            "members": "Membros que interagiram",
+            "membersNote": "{percent} da base",
+            "views": "Visualizações",
+            "viewsNote": "das {count} publicações",
+            "reach": "Alcance por publicação",
+            "reachNote": "{percent} da base, em média"
+          },
+          "attention": {
+            "title": "Precisa de atenção",
+            "row": "{count, plural, one {# comentário sem resposta} other {# comentários sem resposta}} · o mais antigo há {age}",
+            "empty": "Nenhum comentário esperando resposta há mais de 24 h.",
+            "note": "Comentários sem resposta da equipe há mais de 24 horas."
+          },
+          "age": {
+            "hours": "{count} h",
+            "days": "{count, plural, one {# dia} other {# dias}}"
+          },
+          "trend": {
+            "title": "Tendência de 12 semanas",
+            "label": "Interações por publicação, por semana, nas últimas 12 semanas e nas 12 anteriores",
+            "note": "Interações por publicação, por semana",
+            "current": "Últimas 12 semanas",
+            "previous": "12 semanas anteriores"
+          },
+          "best": {
+            "title": "Melhores publicações",
+            "seeAll": "Ver todas as publicações"
+          },
+          "heatmap": {
+            "title": "Melhor dia e horário",
+            "slot": "{from}h–{to}h",
+            "cell": "{day}, {from}h–{to}h: {value} por publicação ({posts, plural, one {# publicação} other {# publicações}})",
+            "best": "Melhor: {day}, {from}h–{to}h, com {value} interações por publicação.",
+            "note": "Curtidas e comentários por publicação, pelo dia e horário em que foi publicada (horário de Brasília)."
+          },
+          "bands": {
+            "title": "Quem interage, por faixa",
+            "summary": "{count} · {percent} da faixa",
+            "none": "Ninguém desta faixa interagiu com o conteúdo nos últimos 30 dias: é o que define a faixa.",
+            "note": "A faixa é a de hoje. A porcentagem é a parte da faixa que curtiu ou comentou nos últimos 30 dias."
+          },
+          "next": {
+            "title": "Próximos passos",
+            "answer": {
+              "title": "Responda quem está esperando",
+              "detail": "{count, plural, one {# comentário} other {# comentários}} sem resposta há mais de 24 h, em {posts, plural, one {# publicação} other {# publicações}}.",
+              "action": "Responder comentários"
+            },
+            "schedule": {
+              "title": "Publique no melhor horário",
+              "detail": "Os {kinds} rendem mais ({perPost} interações por post) e {day}, {from}h–{to}h, é o melhor horário ({best} por publicação).",
+              "action": "Agendar publicação"
+            },
+            "series": {
+              "title": "Transforme a melhor em série",
+              "detail": "“{excerpt}” teve {count} interações, {ratio}× a média dos {kinds}. Faça uma série com o mesmo tema.",
+              "action": "Criar série"
+            }
+          }
+        },
+        "numbers": {
+          "posts": "{count, plural, one {# publicação} other {# publicações}} · mais recentes primeiro",
+          "interactions": "{value} interações · mais recentes primeiro",
+          "rate": "Taxa de engajamento de {value} · maior taxa primeiro",
+          "members": "{value} membros · mais recentes primeiro",
+          "views": "{value} visualizações · mais vistas primeiro",
+          "reach": "{value} membros alcançados por publicação, em média · maior alcance primeiro",
+          "metricRate": "Taxa de engajamento: {value}",
+          "metricViews": "Visualizações: {value}",
+          "metricReach": "Alcance: {value} membros",
+          "exampleNote": "Taxa, visualizações, alcance, salvamentos e compartilhamentos: valores de exemplo"
+        },
+        "interactions": {
+          "like": "curtiu",
+          "comment": "comentou",
+          "line": "{band} · {action} {when}",
+          "more": "e mais {count, plural, one {# interação} other {# interações}}",
+          "seeAll": "Ver todas"
         }
       }
     },

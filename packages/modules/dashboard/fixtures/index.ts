@@ -15,12 +15,18 @@ export {
 } from './member-lists';
 export {
   CONTENT_KIND_ORDER,
+  type ContentCommentMeta,
+  type ContentInteraction,
   type ContentItem,
   type ContentKind,
   type ContentPeople,
   type ContentPerson,
   type ContentWho,
+  ownerContent,
   ownerContentIncludes,
+  ownerContentInteractions,
+  ownerContentInteractorIncludes,
+  ownerContentInteractors,
   ownerContentItem,
   ownerContentItems,
   ownerContentKindMetric,

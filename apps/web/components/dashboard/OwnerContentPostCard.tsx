@@ -162,10 +162,10 @@ export function savesSharesExample(items: readonly ContentItem[]): boolean {
 }
 
 /** The one line saying a list's saves and shares are examples, with its pill. */
-export function SavesSharesNote({ t }: { t: DashboardT }) {
+export function SavesSharesNote({ t, text }: { t: DashboardT; text?: string }) {
   return (
     <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-      {t(`${KEY}.list.exampleNote`)}
+      {text ?? t(`${KEY}.list.exampleNote`)}
       <ExamplePill text={exampleBadge(t, { example: true })} />
     </p>
   );
@@ -181,11 +181,14 @@ export function ContentPostList({
   items,
   hrefOf,
   extraOf,
+  exampleNote,
 }: {
   t: DashboardT;
   items: readonly ContentItem[];
   hrefOf: (item: ContentItem) => string;
   extraOf?: (item: ContentItem) => ReactNode;
+  /** Replaces the saves-and-shares line when the list's own metric is an example too. */
+  exampleNote?: string;
 }) {
   if (items.length === 0) {
     return <p className="text-sm text-text-secondary">{t(`${KEY}.list.empty`)}</p>;
@@ -194,7 +197,9 @@ export function ContentPostList({
   const more = items.length - shown.length;
   return (
     <>
-      {savesSharesExample(shown) ? <SavesSharesNote t={t} /> : null}
+      {savesSharesExample(shown) || exampleNote ? (
+        <SavesSharesNote t={t} text={exampleNote} />
+      ) : null}
       <ul className="flex flex-col gap-3">
         {shown.map((item) => (
           <li key={item.id} className="min-w-0">
