@@ -621,3 +621,40 @@ Corrigir também a base para `previous_30_days` em `tenant-owner.ts:297, 616`.
 - As 4 decisões (A–D) não foram validadas com o dono. Todas seguem como hipóteses rotuladas; basta uma resposta por decisão para fechar.
 - Os valores inventados não foram conferidos por teste, porque a fixture `owner-finance.ts` não existe. Para fechar, é preciso implementar a fixture com a lista única de pedidos e os testes de soma.
 - Não houve prova visual na maquete de 440 px, porque esta é só a especificação, sem código. Depende de implementar e capturar a tela.
+---
+
+## Decisão do usuário (2026-10-14): receita primária e receita secundária
+
+Palavras do usuário:
+- **Receita primária:** realizada na primeira compra, a que dá acesso ao APP.
+- **Receita secundária:** compras feitas depois da primeira, quando a pessoa já está dentro. É uma espécie de upsell.
+- Os produtos da receita primária podem ser variados, e os da secundária também. Em tese, são os mesmos produtos, com composições e ofertas diferentes.
+
+Consequências para a proposta:
+1. **A classificação é por pedido, não por produto.**
+   - O primeiro pedido pago de cada membro é primário. Todos os seguintes são secundários.
+   - Um mesmo produto aparece nos dois lados.
+   - Por isso existe a camada **oferta**: o mesmo produto vendido com composição e preço diferentes. Toda oferta é de entrada ou de upsell.
+2. **Todo membro tem uma compra primária.**
+   - A data dela é a entrada no app (`memberships.joined_at`).
+   - Os "Novos" do mês (96 na fixture) são as compras primárias do mês.
+   - A fixture do Financeiro tem de ser refeita a partir disso: 1.240 membros = 1.240 compras primárias ao longo da vida, e as secundárias só de quem já estava dentro.
+3. **Números novos da Visão geral:**
+   - Receita primária, com quantas entradas e o valor médio de entrada.
+   - Receita secundária, com quantas compras de upsell.
+   - Participação da secundária no total.
+   - % dos membros que já compraram de novo (taxa de upsell).
+   - Tempo médio até a segunda compra.
+   - Receita por membro na vida toda (primária + secundária).
+4. **Aba Produtos:**
+   - Cada produto mostra o que vendeu como entrada e como upsell.
+   - Abaixo, as ofertas dele, cada uma com composição, preço, tipo (entrada/upsell), pedidos e receita.
+   - Toque na oferta → compradores → membro.
+5. **Aba Quem compra:** a escada de compra.
+   - Por qual oferta a pessoa entrou.
+   - O que comprou depois e quanto tempo levou.
+   - Quem entrou e nunca fez upsell, por faixa de engajamento: são os próximos a receber oferta.
+6. **Revisão das decisões anteriores:**
+   - **A** passa a ser: a compra primária dá acesso por prazo (ex.: 1 ano, com renovação) ou para sempre? E existe assinatura mensal?
+   - B, C e D continuam como estavam.
+   - Uma renovação conta como **secundária** (não é a primeira compra), a menos que o usuário decida outra coisa.
