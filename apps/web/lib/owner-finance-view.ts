@@ -1,14 +1,19 @@
 import {
+  type EngagementBand,
   FINANCE_OFFERS,
   type FinanceOfferId,
   type FinancePeopleList,
   financeProductOffers,
+  ownerFinanceBands,
   ownerFinanceIncludes,
+  ownerFinanceNeverAgain,
   ownerFinanceWindow,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
+import { ENGAGEMENT_BAND_ORDER } from '@rede-social/module-dashboard/ui';
 import { ownerAreaHref } from './dashboard-preview';
 import {
+  OWNER_BAND_SLUGS,
   OWNER_MEMBER_LISTS,
   type OwnerMemberListSlug,
   ownerInsightAnchor,
@@ -38,14 +43,19 @@ export type FinanceAttentionList = 'vipFading' | 'expiring';
 
 /**
  * Where the Financeiro area stands in its cascade (D-01): the tab; on Visão geral, the number or the
- * attention row whose list is open; a product (under Produtos, or opened from Visão geral: PD-10),
- * one of its offers; a member of the open list and the list behind one of their insight numbers.
+ * attention row whose list is open; under Quem compra, the open band or the never-again list of a
+ * band; a product (under Produtos, or opened from Visão geral: PD-10), one of its offers; a member
+ * of the open list and the list behind one of their insight numbers.
  * Each level is only ever set with the levels above it.
  */
 export interface OwnerFinanceView {
   tab: FinanceTab;
   number: FinanceNumber | null;
   attention: FinanceAttentionList | null;
+  /** Quem compra: the band whose buyers are open (still a tab screen). */
+  band: EngagementBand | null;
+  /** Quem compra: the band whose members never bought again are listed. */
+  neverBand: EngagementBand | null;
   productId: string | null;
   offerId: FinanceOfferId | null;
   memberId: string | null;
@@ -100,6 +110,23 @@ export function financeNumberAnchor(number: FinanceNumber): string {
   return `numero-${FINANCE_NUMBER_SLUGS[number]}`;
 }
 
+/** The id of a never-again row of Quem compra: Voltar from its list lands on it. */
+export function financeNeverAnchor(band: EngagementBand): string {
+  return `nunca-${OWNER_BAND_SLUGS[band]}`;
+}
+
+/** The bands with buyers in the month (em risco and inativos never have: PD-4). */
+const BUYING_BANDS: readonly EngagementBand[] = (() => {
+  const bands = ownerFinanceBands();
+  return ENGAGEMENT_BAND_ORDER.filter((band) => bands[band].buyers > 0);
+})();
+
+/** The bands with someone who entered and never bought again. */
+const NEVER_BANDS: readonly EngagementBand[] = (() => {
+  const never = ownerFinanceNeverAgain();
+  return ENGAGEMENT_BAND_ORDER.filter((band) => never[band] > 0);
+})();
+
 /** The id of an attention row: Voltar from its list lands on it. */
 export function financeAttentionAnchor(attention: FinanceAttentionList): string {
   return `atencao-${FINANCE_ATTENTION_SLUGS[attention]}`;
@@ -107,10 +134,21 @@ export function financeAttentionAnchor(attention: FinanceAttentionList): string 
 
 /** The people list behind an open number or attention row; null for one that lists no one. */
 export function financePeopleListOf(
-  view: Pick<OwnerFinanceView, 'number' | 'attention'>,
+  view: Pick<OwnerFinanceView, 'number' | 'attention' | 'band' | 'neverBand'>,
 ): FinancePeopleList | null {
   if (view.number) return view.number === 'share' ? null : { kind: view.number };
-  return view.attention ? { kind: view.attention } : null;
+  if (view.attention) return { kind: view.attention };
+  if (view.band) return { kind: 'band', band: view.band };
+  return view.neverBand ? { kind: 'never', band: view.neverBand } : null;
+}
+
+/** The band a query slug names, when it is one of `allowed`. */
+function parseBand(
+  raw: string | string[] | undefined,
+  allowed: readonly EngagementBand[],
+): EngagementBand | null {
+  const band = bySlug(raw, OWNER_BAND_SLUGS);
+  return band && allowed.includes(band) ? band : null;
 }
 
 /** A query value only when it is a single string, exactly one of `allowed`. */
@@ -148,12 +186,15 @@ function parseMember(params: SearchParams, list: FinancePeopleList | null): stri
  * 1. `vista` is `produtos` or `quem-compra`, else Visão geral.
  * 2. On Visão geral, `numero` is one of FINANCE_NUMBER_SLUGS; else `atencao` one of
  *    FINANCE_ATTENTION_SLUGS.
- * 3. `produto` is a store product, under Produtos or on Visão geral with no number nor attention
+ * 3. Under Quem compra, `faixa` is a band with buyers in the month; else `nunca` a band with
+ *    someone who never bought again.
+ * 4. `produto` is a store product, under Produtos or on Visão geral with no number nor attention
  *    (PD-10: the stalled product's row and the VIP line open it).
- * 4. `oferta` is one of the opened product's offers with orders in the last 30 days.
- * 5. `membro` must be in the open list (`ownerFinanceIncludes`): the offer's buyers, or the people
- *    of the number or attention row (the share of add-ons lists products, not people).
- * 6. `lista` is one of OWNER_MEMBER_LISTS, only with a member.
+ * 5. `oferta` is one of the opened product's offers with orders in the last 30 days.
+ * 6. `membro` must be in the open list (`ownerFinanceIncludes`): the offer's buyers, the people of
+ *    the number or attention row (the share of add-ons lists products, not people), the band's
+ *    buyers or its never-again members.
+ * 7. `lista` is one of OWNER_MEMBER_LISTS, only with a member.
  * Only allow-listed constants ever reach markup or URLs.
  */
 export function parseOwnerFinanceView(params: SearchParams): OwnerFinanceView {
@@ -163,6 +204,8 @@ export function parseOwnerFinanceView(params: SearchParams): OwnerFinanceView {
     tab === 'overview' && number === null
       ? (bySlug(params.atencao, FINANCE_ATTENTION_SLUGS) ?? null)
       : null;
+  const band = tab === 'buyers' ? parseBand(params.faixa, BUYING_BANDS) : null;
+  const neverBand = tab === 'buyers' && band === null ? parseBand(params.nunca, NEVER_BANDS) : null;
   const productId =
     tab === 'products' || (tab === 'overview' && number === null && attention === null)
       ? (pick(params.produto, PRODUCT_IDS) ?? null)
@@ -172,15 +215,15 @@ export function parseOwnerFinanceView(params: SearchParams): OwnerFinanceView {
     ? { kind: 'offer', offerId }
     : productId
       ? null
-      : financePeopleListOf({ number, attention });
+      : financePeopleListOf({ number, attention, band, neverBand });
   const memberId = parseMember(params, people);
   const list = memberId ? (pick(params.lista, OWNER_MEMBER_LISTS) ?? null) : null;
-  return { tab, number, attention, productId, offerId, memberId, list };
+  return { tab, number, attention, band, neverBand, productId, offerId, memberId, list };
 }
 
 /**
  * The link to a cascade view: the area, then `vista`, `numero`, `atencao`, `produto`, `oferta`,
- * `membro` and `lista` in that order.
+ * `faixa`, `nunca`, `membro` and `lista` in that order.
  */
 export function ownerFinanceHref(view: OwnerFinanceView): string {
   let query = '';
@@ -189,6 +232,8 @@ export function ownerFinanceHref(view: OwnerFinanceView): string {
   if (view.attention) query += `&atencao=${FINANCE_ATTENTION_SLUGS[view.attention]}`;
   if (view.productId) query += `&produto=${view.productId}`;
   if (view.offerId) query += `&oferta=${view.offerId}`;
+  if (view.band) query += `&faixa=${OWNER_BAND_SLUGS[view.band]}`;
+  if (view.neverBand) query += `&nunca=${OWNER_BAND_SLUGS[view.neverBand]}`;
   if (view.memberId) query += `&membro=${view.memberId}`;
   if (view.list) query += `&lista=${view.list}`;
   return `${ownerAreaHref('financeiro')}${query}`;
@@ -196,8 +241,9 @@ export function ownerFinanceHref(view: OwnerFinanceView): string {
 
 /**
  * "Voltar" one level up (D-01): the parent view's link landing on what was closed (the insight
- * number, the member card, the offer card, the product card or row, the attention row, the overview
- * number). Null on a tab screen.
+ * number, the member card, the offer card, the product card or row, the never-again row, the
+ * attention row, the overview number). Null on a tab screen (an open band is one: its members'
+ * Voltar reopens it).
  */
 export function financeBackHref(view: OwnerFinanceView): string | null {
   if (view.list) {
@@ -211,6 +257,9 @@ export function financeBackHref(view: OwnerFinanceView): string | null {
   }
   if (view.productId) {
     return `${ownerFinanceHref({ ...view, productId: null })}#${financeProductAnchor(view.productId)}`;
+  }
+  if (view.neverBand) {
+    return `${ownerFinanceHref({ ...view, neverBand: null })}#${financeNeverAnchor(view.neverBand)}`;
   }
   if (view.attention) {
     return `${ownerFinanceHref({ ...view, attention: null })}#${financeAttentionAnchor(view.attention)}`;
@@ -227,6 +276,8 @@ export function financeTabView(tab: FinanceTab): OwnerFinanceView {
     tab,
     number: null,
     attention: null,
+    band: null,
+    neverBand: null,
     productId: null,
     offerId: null,
     memberId: null,

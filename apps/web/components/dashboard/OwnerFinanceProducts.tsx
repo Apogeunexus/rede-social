@@ -1,4 +1,4 @@
-import { formatBrlCompact } from '@rede-social/contracts/money';
+import { formatBrl, formatBrlCompact } from '@rede-social/contracts/money';
 import { CommunityCover } from '@rede-social/module-communities/ui';
 import {
   FINANCE_STALLED_DAYS,
@@ -15,8 +15,8 @@ import {
   type OwnerFinanceView,
   ownerFinanceHref,
 } from '@/lib/owner-finance-view';
-import { Cell, Linked } from './BandScopeCards';
-import { changeDelta, type DashboardT, formatCount, kpiDelta } from './format';
+import { Cell, EventCard, eventRevenue, Linked, RevenueExampleNote } from './BandScopeCards';
+import { changeDelta, type DashboardT, formatCount, formatDayMonth, kpiDelta } from './format';
 import { PanelSection } from './PanelSection';
 
 const KEY = 'tenantOwner.finance.products';
@@ -138,23 +138,73 @@ function ProductCard({
   );
 }
 
-/** Produtos (D-08): the store's products by the month's revenue, each opening its detail. */
-export function OwnerFinanceProducts({ t }: { t: DashboardT; view: OwnerFinanceView }) {
-  const products = financeProducts();
+/** The paid events: the next ones soonest first, then the past ones most recent first (PD-12). */
+function paidEvents() {
+  const { upcoming, past } = tenantOwnerPanel.events;
+  const paid = (event: { ticketCents: { value: number } }) => event.ticketCents.value > 0;
+  return {
+    events: [
+      ...upcoming.filter(paid).sort((a, b) => a.date.localeCompare(b.date)),
+      ...past.filter(paid).sort((a, b) => b.date.localeCompare(a.date)),
+    ],
+    free: [...upcoming, ...past].filter((event) => !paid(event)).length,
+  };
+}
+
+/**
+ * Eventos pagos (D-04, PD-12): the events with a ticket, each as the events' own 16:10 card with no
+ * link — date, registrations and the example revenue (one pill for the whole list), the ticket on the
+ * gray line. Their revenue is never part of the store's total; the free events are counted below.
+ */
+function PaidEvents({ t }: { t: DashboardT }) {
+  const { events, free } = paidEvents();
+  const key = 'tenantOwner.finance.events';
   return (
-    <PanelSection title={t(`${KEY}.title`)}>
-      <p className="text-sm text-text-secondary">{t(`${KEY}.order`)}</p>
+    <PanelSection title={t(`${key}.title`)}>
+      <p className="text-sm text-text-secondary">{t(`${key}.note`)}</p>
+      <RevenueExampleNote t={t} />
       <ul className="flex flex-col gap-3">
-        {products.map((product) => (
-          <li key={product.id} id={financeProductAnchor(product.id)} className="scroll-mt-20">
-            <ProductCard
+        {events.map((event) => (
+          <li key={event.id} id={`evento-${event.id}`} className="scroll-mt-20">
+            <EventCard
               t={t}
-              product={product}
-              href={ownerFinanceHref({ ...financeTabView('products'), productId: product.id })}
+              id={event.id}
+              href={null}
+              detail={t(`${key}.ticket`, { value: formatBrl(event.ticketCents.value) })}
+              cells={[
+                { label: t(`${key}.date`), value: formatDayMonth(event.date) },
+                { label: t(`${key}.confirmed`), value: formatCount(event.confirmed) },
+                { label: t(`${key}.revenue`), value: eventRevenue(t, event) },
+              ]}
             />
           </li>
         ))}
       </ul>
+      <p className="text-xs text-text-secondary">{t(`${key}.free`, { count: free })}</p>
     </PanelSection>
+  );
+}
+
+/** Produtos (D-08): the store's products by the month's revenue, each opening its detail. */
+export function OwnerFinanceProducts({ t }: { t: DashboardT; view: OwnerFinanceView }) {
+  const products = financeProducts();
+  return (
+    <>
+      <PanelSection title={t(`${KEY}.title`)}>
+        <p className="text-sm text-text-secondary">{t(`${KEY}.order`)}</p>
+        <ul className="flex flex-col gap-3">
+          {products.map((product) => (
+            <li key={product.id} id={financeProductAnchor(product.id)} className="scroll-mt-20">
+              <ProductCard
+                t={t}
+                product={product}
+                href={ownerFinanceHref({ ...financeTabView('products'), productId: product.id })}
+              />
+            </li>
+          ))}
+        </ul>
+      </PanelSection>
+      <PaidEvents t={t} />
+    </>
   );
 }

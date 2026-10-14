@@ -11,7 +11,7 @@ import {
 import type { DashboardT } from './format';
 import { OwnerFinanceBuyers } from './OwnerFinanceBuyers';
 import { OwnerFinanceOverview } from './OwnerFinanceOverview';
-import { FinanceNumberList, OwnerFinancePeople } from './OwnerFinancePeople';
+import { FinanceNumberList, NeverList, OwnerFinancePeople } from './OwnerFinancePeople';
 import { OwnerFinanceProductDetail } from './OwnerFinanceProductDetail';
 import { OwnerFinanceProducts } from './OwnerFinanceProducts';
 import { OwnerMemberDetail } from './OwnerMemberDetail';
@@ -81,9 +81,10 @@ function FinanceMember({
 /**
  * Level 4, "Financeiro" (quick 261014-dwc): one cascade of plain links, as Membros and Conteúdo
  * (D-01). The tab screens — Visão geral, Produtos and Quem compra — carry the one row of three tabs;
- * every deeper step (an overview number's or attention row's list, a product, an offer's buyers, a
- * member's insights, the list behind one of them) replaces the area under its "Voltar". The period
- * is the panel's fixed 30 days against the 30 before: there is no period selector.
+ * an open band of Quem compra is still a tab screen; every deeper step (an overview number's or
+ * attention row's list, a never-again list, a product, an offer's buyers, a member's insights, the
+ * list behind one of them) replaces the area under its "Voltar". The period is the panel's fixed
+ * 30 days against the 30 before: there is no period selector.
  */
 export async function OwnerFinance({ finance: view }: { finance: OwnerFinanceView }) {
   const t = await getTranslations('dashboard');
@@ -91,12 +92,13 @@ export async function OwnerFinance({ finance: view }: { finance: OwnerFinanceVie
   if (view.offerId) return <OwnerFinancePeople t={t} view={view} />;
   if (view.productId) return <OwnerFinanceProductDetail t={t} view={view} />;
   if (view.number || view.attention) return <FinanceNumberList t={t} view={view} />;
+  if (view.neverBand) return <NeverList t={t} view={view} />;
   return (
     <>
       <FinanceTabs t={t} view={view} />
       {view.tab === 'overview' ? <OwnerFinanceOverview t={t} /> : null}
       {view.tab === 'products' ? <OwnerFinanceProducts t={t} view={view} /> : null}
-      {view.tab === 'buyers' ? <OwnerFinanceBuyers t={t} /> : null}
+      {view.tab === 'buyers' ? <OwnerFinanceBuyers t={t} view={view} /> : null}
     </>
   );
 }

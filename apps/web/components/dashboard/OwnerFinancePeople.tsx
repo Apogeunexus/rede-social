@@ -1,5 +1,6 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import {
+  type EngagementBand,
   type FinancePerson,
   financeOffer,
   financeProductOffers,
@@ -10,7 +11,7 @@ import {
   ownerFinanceWindow,
 } from '@rede-social/module-dashboard/fixtures';
 import { ActionCard, BarList, percentOf } from '@rede-social/module-dashboard/ui';
-import { BellRing, HeartHandshake } from 'lucide-react';
+import { BellRing, HeartHandshake, Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 import {
   type FinanceAttentionList,
@@ -22,7 +23,14 @@ import {
 } from '@/lib/owner-finance-view';
 import { BackLink } from './BackLink';
 import { ExamplePill } from './ExamplePill';
-import { type DashboardT, exampleBadge, formatCount, formatPercent, momentText } from './format';
+import {
+  bandLabel,
+  type DashboardT,
+  exampleBadge,
+  formatCount,
+  formatPercent,
+  momentText,
+} from './format';
 import { PeopleCards } from './OwnerContentPeople';
 import { financeProducts } from './OwnerFinanceProducts';
 import { PanelSection, PreviewAction } from './PanelSection';
@@ -282,6 +290,91 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
           />
         ) : null}
         {spec.body}
+      </PanelSection>
+    </div>
+  );
+}
+
+/**
+ * The month's buyers of one band, inside its open "Receita por faixa" row (D-09): the cards do not
+ * repeat the band; each says what they bought, for how much and when, and opens the member (whose
+ * Voltar reopens this band).
+ */
+export function BandBuyers({
+  t,
+  view,
+  band,
+}: {
+  t: DashboardT;
+  view: OwnerFinanceView;
+  band: EngagementBand;
+}) {
+  const { people, total } = ownerFinancePeople({ kind: 'band', band });
+  return (
+    <PeopleCards
+      t={t}
+      people={people}
+      total={total}
+      hrefOf={(memberId) =>
+        ownerFinanceHref({ ...view, band, neverBand: null, memberId, list: null })
+      }
+      leadOf={(person) =>
+        t(`${LISTS}.secondary.lead`, {
+          offer: financeOffer(person.offerId).composition,
+          value: formatBrl(person.cents),
+          when: momentText(t, person.when),
+        })
+      }
+      showBand={false}
+      moreText={(more) => t(`${LISTS}.band.more`, { count: more })}
+    />
+  );
+}
+
+/**
+ * Who of a band entered and never bought again (D-09), a deeper step under its "Voltar": how many,
+ * the sample's cards (each saying how they entered and when, opening the member), and the
+ * suggested action, disabled as in the rest of the preview.
+ */
+export function NeverList({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
+  const back = financeBackHref(view);
+  const band = view.neverBand;
+  if (!band || back === null) throw new Error('a never-again list with no band');
+  const { people, total } = ownerFinancePeople({ kind: 'never', band });
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <BackLink href={back} label={t('tenantOwner.memberDetail.back')} />
+      <PanelSection title={t(`${LISTS}.never.title`, { band: bandLabel(t, band) })} prominent>
+        <p className="text-sm text-text-secondary">
+          {t(`${LISTS}.never.count`, { count: total, value: formatCount(total) })}
+        </p>
+        <PeopleCards
+          t={t}
+          people={people}
+          total={total}
+          hrefOf={(memberId) => ownerFinanceHref({ ...view, memberId, list: null })}
+          leadOf={(person) =>
+            t(`${LISTS}.never.lead`, {
+              offer: financeOffer(person.offerId).composition,
+              when: momentText(t, person.when),
+            })
+          }
+          showBand={false}
+          moreText={(more) => t('tenantOwner.bandMembers.more', { count: more })}
+        />
+        <ActionCard
+          icon={Sparkles}
+          title={t('tenantOwner.finance.buyers.never.action.title')}
+          detail={t('tenantOwner.finance.buyers.never.action.detail', {
+            count: total,
+            value: formatCount(total),
+          })}
+          action={
+            <PreviewAction variant="outline">
+              {t('tenantOwner.finance.buyers.never.action.button')}
+            </PreviewAction>
+          }
+        />
       </PanelSection>
     </div>
   );

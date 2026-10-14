@@ -3238,6 +3238,254 @@ test('dono-do-cliente financeiro: the overview and its lists at 1440x900, inside
   }
 });
 
+const BUYERS_AREA = `${FINANCE_AREA}&vista=quem-compra`;
+
+/** A band of "Receita por faixa" (a native details). */
+function financeBand(page: Page, label: string) {
+  return sectionTitled(ownerArea(page), 'Receita por faixa')
+    .locator('details')
+    .filter({ has: page.locator('summary span.font-bold', { hasText: new RegExp(`^${label}$`) }) });
+}
+
+test.describe('dono-do-cliente financeiro: Quem compra and the product detail', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('six bands with their month, Em risco and Inativos saying why they bought nothing', async ({
+    page,
+  }) => {
+    await page.goto(BUYERS_AREA);
+    const cases: [string, RegExp][] = [
+      ['Novos', /R\$\s4\.753,00 · 99 pedidos · 96 compradores/],
+      ['Superfãs', /R\$\s2\.122,00 · 10 pedidos/],
+      ['Engajados', /R\$\s1\.733,00 · 11 pedidos/],
+      ['Ocasionais', /R\$\s332,00 · 6 pedidos/],
+      ['Em risco', /nenhum pedido nos últimos 30 dias/],
+      ['Inativos', /nenhum pedido nos últimos 30 dias/],
+    ];
+    for (const [label, summary] of cases) {
+      const band = financeBand(page, label);
+      await expect(band, label).toHaveCount(1);
+      await expect(band.locator('summary'), label).toContainText(summary);
+      await expect(band, label).not.toHaveAttribute('open');
+    }
+    await expect(
+      sectionTitled(ownerArea(page), 'Receita por faixa').getByText(
+        /^43% da receita do mês \(R\$\s3\.855,00\) vem de superfãs e engajados/,
+      ),
+    ).toBeVisible();
+    await expectNoEnglish(page, 'quem compra');
+  });
+
+  test('a band opens its buyers, a buyer the member, and Voltar reopens the band', async ({
+    page,
+  }) => {
+    await page.goto(BUYERS_AREA);
+    const engaged = financeBand(page, 'Engajados');
+    await engaged.locator('summary').click();
+    const card = engaged.getByRole('listitem').first().getByRole('link');
+    await expect(card).toContainText(/^.*Comprou /);
+    const href = (await card.getAttribute('href')) ?? '';
+    expect(href).toMatch(/\?area=financeiro&vista=quem-compra&faixa=engajados&membro=om-\d\d$/);
+    const member = /membro=(om-\d\d)$/.exec(href)?.[1];
+    await card.click();
+    await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    await backLink(page).click();
+    await expect(page).toHaveURL(
+      new RegExp(`&vista=quem-compra&faixa=engajados#membro-${member}$`),
+    );
+    await expect(financeBand(page, 'Engajados')).toHaveAttribute('open');
+    await expect(financeTabs(page)).toHaveCount(1);
+  });
+
+  test('the ladder: big paths with their people and days, the small ones last', async ({
+    page,
+  }) => {
+    await page.goto(BUYERS_AREA);
+    const rows = sectionTitled(ownerArea(page), 'Escada de compra').getByRole('listitem');
+    const count = await rows.count();
+    expect(count).toBeGreaterThanOrEqual(4);
+    await expect(rows.last()).toContainText('Outros caminhos');
+    await expect(rows.first()).toContainText('E-book de entrada → Comunidade VIP');
+    for (let i = 0; i < count - 1; i += 1) {
+      const text = await rows.nth(i).innerText();
+      const people = Number(/(\d+) pessoas/.exec(text)?.[1] ?? Number.NaN);
+      expect(people, text).toBeGreaterThanOrEqual(5);
+      expect(text).toMatch(/em média \d+ dias/);
+    }
+    await expect(sectionTitled(ownerArea(page), 'Escada de compra').getByRole('link')).toHaveCount(
+      0,
+    );
+  });
+
+  test('never bought again: a band, its list, a member and back two steps', async ({ page }) => {
+    await page.goto(BUYERS_AREA);
+    const row = ownerArea(page).locator('#nunca-ocasionais');
+    await expect(row).toContainText('108 membros · 72% da faixa');
+    await row.click();
+    await expect(page).toHaveURL(/&vista=quem-compra&nunca=ocasionais$/);
+    await expect(financeTabs(page)).toHaveCount(0);
+    await expect(
+      ownerArea(page).getByText(/^108 membros da faixa só têm a compra de entrada/),
+    ).toBeVisible();
+    await expectNoEnglish(page, 'nunca');
+    const card = ownerArea(page).getByRole('listitem').first().getByRole('link');
+    const member = /membro=(om-\d\d)$/.exec((await card.getAttribute('href')) ?? '')?.[1];
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`&nunca=ocasionais&membro=${member}$`));
+    await backLink(page).click();
+    await expect(page).toHaveURL(new RegExp(`&nunca=ocasionais#membro-${member}$`));
+    await backLink(page).click();
+    await expect(page).toHaveURL(/&vista=quem-compra#nunca-ocasionais$/);
+  });
+
+  test('the VIP detail: numbers, weeks, bands with no value under 5, the publications', async ({
+    page,
+  }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos&produto=s2`);
+    const area = ownerArea(page);
+    for (const label of ['Receita', 'Pedidos', 'Compradores', 'Cancelamentos']) {
+      await expect(kpiCard(sectionTitled(area, 'Números do mês'), label), label).toBeVisible();
+    }
+    await expect(kpiCard(area, 'Receita')).toContainText(/R\$\s4\.096,00/);
+    await expect(kpiCard(area, 'Pedidos')).toContainText('11 entradas · 7 adicionais');
+    await expect(kpiCard(area, 'Cancelamentos')).toContainText('menos de 5');
+    const weekly = sectionTitled(area, 'Receita por semana');
+    await expect(weekly.locator('svg')).toHaveCount(3);
+    await expect(weekly.getByText('12 semanas anteriores')).toBeVisible();
+    const bands = sectionTitled(area, 'Compradores por faixa').getByRole('listitem');
+    for (let i = 0; i < (await bands.count()); i += 1) {
+      const text = await bands.nth(i).innerText();
+      if (text.includes('menos de 5')) expect(text).not.toContain('R$');
+    }
+    const posts = sectionTitled(area, 'Publicações que venderam');
+    await expect(posts.locator('a[href$="post=op-15"]')).toContainText(
+      /6 pedidos · R\$\s1\.182,00/,
+    );
+    for (const post of ['op-41', 'op-11']) {
+      await expect(posts.locator(`a[href$="post=${post}"]`), post).toContainText(
+        'menos de 5 pedidos',
+      );
+      await expect(posts.locator(`a[href$="post=${post}"]`), post).not.toContainText('R$');
+    }
+    await expectNoEnglish(page, 'detail');
+  });
+
+  test('the Workshop gravado detail reads zero and how long it has been unsold', async ({
+    page,
+  }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos&produto=s4`);
+    const area = ownerArea(page);
+    await expect(area.getByText('Nenhuma venda há 74 dias.', { exact: true })).toBeVisible();
+    await expect(kpiCard(area, 'Pedidos')).toContainText('0');
+    await expect(sectionTitled(area, 'Publicações que venderam')).toContainText(
+      'Nenhuma venda de quem interagiu',
+    );
+  });
+
+  test('paid events: four cards, next first, one example pill, out of the store total', async ({
+    page,
+  }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos`);
+    const section = sectionTitled(ownerArea(page), 'Eventos pagos');
+    const cards = section.locator('li[id^="evento-"]');
+    await expect(cards).toHaveCount(4);
+    const expected: [string, string][] = [
+      ['Encontro mensal', '17/10'],
+      ['Imersão presencial', '24/10'],
+      ['Workshop', '01/10'],
+      ['Encontro set.', '19/09'],
+    ];
+    for (const [i, [name, date]] of expected.entries()) {
+      await expect(cards.nth(i).locator('.text-xl'), name).toHaveText(name);
+      await expect(cardCell(cards.nth(i), 'Data'), name).toHaveText(date);
+      const cover = cards.nth(i).locator('[data-testid="event-cover-fallback"]');
+      expect(Math.abs((await boxRatio(cover)) - 16 / 10), name).toBeLessThanOrEqual(0.02);
+    }
+    await expect(section.getByText('exemplo', { exact: true })).toHaveCount(1);
+    await expect(section.getByText('3 eventos gratuitos ficaram de fora.')).toBeVisible();
+    await expect(section.getByRole('link')).toHaveCount(0);
+    await page.goto(FINANCE_AREA);
+    await expect(
+      ownerArea(page).getByText(/^Receita total registrada: R\$\s8\.940,00 em 126 pedidos$/),
+    ).toBeVisible();
+  });
+
+  test('a forged Quem compra URL falls one level up', async ({ page }) => {
+    for (const query of ['&faixa=em-risco', '&faixa=xyz', '&nunca=xyz', '&nunca=EM-RISCO']) {
+      await page.goto(`${BUYERS_AREA}${query}`);
+      await expect(financeTabs(page), query).toHaveCount(1);
+      await expect(
+        sectionTitled(ownerArea(page), 'Receita por faixa').locator('details[open]'),
+        query,
+      ).toHaveCount(0);
+    }
+    await page.goto(`${BUYERS_AREA}&faixa=superfas&membro=om-27`);
+    await expect(financeBand(page, 'Superfãs')).toHaveAttribute('open');
+    await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toHaveCount(0);
+  });
+});
+
+const BUYERS_VIEWS = [
+  '&vista=quem-compra',
+  '&vista=quem-compra&faixa=engajados',
+  '&vista=quem-compra&nunca=engajados',
+  '&vista=produtos',
+  '&vista=produtos&produto=s2',
+  '&vista=produtos&produto=s4',
+];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente financeiro: Quem compra and the details at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const query of BUYERS_VIEWS) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(ownerArea(page), query).toBeVisible();
+      await openAllDetails(page);
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+      await expectNoEnglish(page, query);
+    }
+  });
+}
+
+test('dono-do-cliente financeiro: Quem compra and the details at 1440x900, inside the phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const query of BUYERS_VIEWS) {
+    await page.goto(`${FINANCE_AREA}${query}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    await openAllDetails(page);
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, query).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, query).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible'), query).toHaveCount(
+      0,
+    );
+  }
+});
+
+test.describe('dono-do-cliente financeiro: Quem compra without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('a band opens natively and a never-again row is a plain link', async ({ page }) => {
+    await page.goto(BUYERS_AREA);
+    const engaged = financeBand(page, 'Engajados');
+    await expect(engaged).not.toHaveAttribute('open');
+    await engaged.locator('summary').click();
+    await expect(engaged).toHaveAttribute('open');
+    await expect(engaged.getByRole('listitem').first()).toBeVisible();
+    await ownerArea(page).locator('#nunca-engajados').click();
+    await expect(page).toHaveURL(/&vista=quem-compra&nunca=engajados$/);
+  });
+});
+
 const FINANCE_VIEWS = [
   '&vista=produtos',
   '&vista=produtos&produto=s2',

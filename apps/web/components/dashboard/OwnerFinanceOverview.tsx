@@ -322,7 +322,7 @@ function axisReais(t: DashboardT, cents: number): string {
 const THOUSANDS = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
 /** One weekly revenue chart: the last 12 weeks and the 12 before, dashed (PD-13). */
-function WeeklyChart({
+export function WeeklyChart({
   t,
   title,
   current,

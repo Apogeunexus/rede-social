@@ -1,13 +1,26 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import { CommunityCover } from '@rede-social/module-communities/ui';
 import {
+  type EngagementBand,
   type FinanceOffer,
+  type FinanceProductDetail,
   financeProductOffers,
-  ownerFinanceProduct,
+  ownerContentItem,
+  ownerFinanceProductDetail,
   ownerFinanceWindow,
 } from '@rede-social/module-dashboard/fixtures';
+import {
+  BarList,
+  ENGAGEMENT_BAND_ORDER,
+  isBelowPrivacyFloor,
+  KpiCard,
+  KpiGrid,
+  mergeBandsBelowFloor,
+  PRIVACY_FLOOR,
+} from '@rede-social/module-dashboard/ui';
 import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ChevronRight } from 'lucide-react';
+import { contentTabView, ownerContentHref } from '@/lib/owner-content-view';
 import {
   financeBackHref,
   financeOfferAnchor,
@@ -16,7 +29,15 @@ import {
 } from '@/lib/owner-finance-view';
 import { BackLink } from './BackLink';
 import { Linked } from './BandScopeCards';
-import type { DashboardT } from './format';
+import {
+  bandGroupLabel,
+  changeDelta,
+  type DashboardT,
+  formatCount,
+  formatFloored,
+  kpiDelta,
+} from './format';
+import { WeeklyChart } from './OwnerFinanceOverview';
 import { ProductChange, ProductName } from './OwnerFinanceProducts';
 import { PanelSection } from './PanelSection';
 
@@ -71,15 +92,146 @@ function OfferCard({
   );
 }
 
+/** (1) Números: revenue, orders, buyers against the 30 days before, and the cancellations (D-05). */
+function Numbers({ t, product }: { t: DashboardT; product: FinanceProductDetail }) {
+  const key = `${KEY}.detail.numbers`;
+  const delta = (now: number, before: number) => {
+    const change = changeDelta(now, before);
+    return change ? kpiDelta(t, change) : undefined;
+  };
+  return (
+    <PanelSection title={t(`${key}.title`)}>
+      <KpiGrid>
+        <KpiCard
+          label={t(`${key}.revenue`)}
+          value={formatBrl(product.month.cents)}
+          delta={delta(product.month.cents, product.before.cents)}
+        />
+        <KpiCard
+          label={t(`${key}.orders`)}
+          value={formatCount(product.month.orders)}
+          delta={delta(product.month.orders, product.before.orders)}
+          note={t(`${key}.ordersNote`, {
+            entry: product.month.entry,
+            addon: product.month.addon,
+          })}
+        />
+        <KpiCard
+          label={t(`${key}.buyers`)}
+          value={formatCount(product.month.buyers)}
+          delta={delta(product.month.buyers, product.before.buyers)}
+        />
+        <KpiCard
+          label={t(`${key}.revoked`)}
+          value={formatFloored(t, product.revoked.orders)}
+          note={
+            isBelowPrivacyFloor(product.revoked.orders)
+              ? t(`${key}.revokedFloor`)
+              : t(`${key}.revokedValue`, { value: formatBrl(product.revoked.cents) })
+          }
+        />
+      </KpiGrid>
+      {product.month.orders === 0 && product.lastSaleDaysAgo !== null ? (
+        <p className="text-sm font-bold text-text">
+          {t(`${key}.unsold`, { days: product.lastSaleDaysAgo })}
+        </p>
+      ) : null}
+    </PanelSection>
+  );
+}
+
 /**
- * A product opened from its card (D-08): "Voltar" to the card, the header (cover, name, "Parado",
- * the store price and the change against the 30 days before), then its offers, the entry first, each
- * opening the buyers of the month.
+ * (3) Compradores por faixa (PD-14): the month's orders by the buyer's band of today, the bands
+ * under 5 orders merged with a neighbour (C-1), so no small band is read nor deduced from the total;
+ * a value only from 5 orders on (D-06).
+ */
+function BuyersByBand({ t, product }: { t: DashboardT; product: FinanceProductDetail }) {
+  const key = `${KEY}.detail.bands`;
+  const counts = Object.fromEntries(
+    ENGAGEMENT_BAND_ORDER.map((band) => [band, product.byBand[band].orders]),
+  ) as Record<EngagementBand, number>;
+  const groups = mergeBandsBelowFloor({ counts, newActivated: 0 });
+  return (
+    <PanelSection title={t(`${key}.title`)}>
+      {product.month.orders === 0 ? (
+        <p className="text-sm text-text-secondary">{t(`${key}.empty`)}</p>
+      ) : (
+        <>
+          <BarList
+            rows={groups.map((group) => {
+              const cents = group.bands.reduce((sum, band) => sum + product.byBand[band].cents, 0);
+              const floored = isBelowPrivacyFloor(group.count);
+              return {
+                id: group.bands.join('-'),
+                // A band with no order adds nothing to the row's name.
+                label: bandGroupLabel(
+                  t,
+                  group.bands.filter((band) => counts[band] > 0),
+                ),
+                value: floored ? 0 : cents,
+                display: floored ? t(`${key}.floor`, { floor: PRIVACY_FLOOR }) : formatBrl(cents),
+                rate: floored ? undefined : t(`${key}.orders`, { count: group.count }),
+                highlight: group.bands.includes('superfan') || group.bands.includes('engaged'),
+              };
+            })}
+          />
+          <p className="text-xs text-text-secondary">{t(`${key}.note`)}</p>
+        </>
+      )}
+    </PanelSection>
+  );
+}
+
+/** (5) Publicações que venderam: each opens its detail in Conteúdo; association, not cause. */
+function SoldBy({ t, product }: { t: DashboardT; product: FinanceProductDetail }) {
+  const key = `${KEY}.detail.posts`;
+  return (
+    <PanelSection title={t(`${key}.title`)}>
+      {product.posts.length === 0 ? (
+        <p className="text-sm text-text-secondary">{t(`${key}.empty`)}</p>
+      ) : (
+        <>
+          <Card>
+            <ul className="divide-y divide-border">
+              {product.posts.map((post) => (
+                <li key={post.postId}>
+                  <a
+                    href={ownerContentHref({ ...contentTabView('posts'), postId: post.postId })}
+                    className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
+                  >
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5 [overflow-wrap:anywhere]">
+                      <span className="line-clamp-2 text-sm text-text">
+                        {ownerContentItem(post.postId).excerpt}
+                      </span>
+                      <span className="text-xs font-bold text-text">
+                        {isBelowPrivacyFloor(post.orders)
+                          ? t(`${key}.floor`, { floor: PRIVACY_FLOOR })
+                          : t(`${key}.value`, { count: post.orders, value: formatBrl(post.cents) })}
+                      </span>
+                    </span>
+                    <ChevronRight aria-hidden size={18} className="shrink-0 text-brand" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Card>
+          <p className="text-xs text-text-secondary">{t(`${key}.note`)}</p>
+        </>
+      )}
+    </PanelSection>
+  );
+}
+
+/**
+ * A product opened from its card or from Visão geral (D-08): "Voltar" to where it opened, the header
+ * (cover, name, "Parado", the store price and the change), then Números, Receita por semana,
+ * Compradores por faixa, the offers (the entry first, each opening the month's buyers) and the
+ * publications that sold it.
  */
 export function OwnerFinanceProductDetail({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
   const back = financeBackHref(view);
   if (!view.productId || back === null) throw new Error('a product detail with no product');
-  const product = ownerFinanceProduct(view.productId);
+  const product = ownerFinanceProductDetail(view.productId);
   const { byOffer } = ownerFinanceWindow(0, 29);
 
   return (
@@ -101,6 +253,19 @@ export function OwnerFinanceProductDetail({ t, view }: { t: DashboardT; view: Ow
         </div>
       </Card>
 
+      <Numbers t={t} product={product} />
+
+      <PanelSection title={t(`${KEY}.detail.weekly`)}>
+        <WeeklyChart
+          t={t}
+          title={t(`${KEY}.detail.weeklyChart`, { product: product.name })}
+          current={product.weekly.current}
+          previous={product.weekly.previous}
+        />
+      </PanelSection>
+
+      <BuyersByBand t={t} product={product} />
+
       <PanelSection title={t(`${KEY}.offers.title`)}>
         <p className="text-sm text-text-secondary">{t(`${KEY}.offers.note`)}</p>
         <ul className="flex flex-col gap-3">
@@ -120,6 +285,8 @@ export function OwnerFinanceProductDetail({ t, view }: { t: DashboardT; view: Ow
           })}
         </ul>
       </PanelSection>
+
+      <SoldBy t={t} product={product} />
     </div>
   );
 }

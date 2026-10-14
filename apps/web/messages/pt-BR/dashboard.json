@@ -639,11 +639,6 @@
           }
         }
       },
-      "buyers": {
-        "title": "Quem compra",
-        "sentence": "{orders} das compras vêm de {members} dos membros (superfãs e engajados).",
-        "footnote": "Cada pedido conta na faixa de hoje de quem comprou. Comprar é uma ação, então ninguém em risco ou inativo comprou nos últimos 30 dias."
-      },
       "recover": {
         "title": "Recuperar quem está em risco",
         "detail": "{atRisk} em risco · {withPush} com push",
@@ -1113,7 +1108,83 @@
           "expiring": {
             "title": "Acessos que vencem em 7 dias",
             "count": "{count, plural, one {# acesso} other {# acessos}} da {product} vencem nos próximos 7 dias"
+          },
+          "band": {
+            "more": "e mais {count, plural, one {# comprador} other {# compradores}}"
+          },
+          "never": {
+            "title": "{band}: entraram e nunca compraram de novo",
+            "count": "{value} {count, plural, one {membro da faixa só tem} other {membros da faixa só têm}} a compra de entrada · com atividade mais recente primeiro",
+            "lead": "Entrou por {offer} · {when}"
           }
+        },
+        "buyers": {
+          "bands": {
+            "title": "Receita por faixa",
+            "sentence": "{percent} da receita do mês ({value}) vem de superfãs e engajados, que são {members} dos membros.",
+            "note": "Cada pedido conta na faixa de hoje de quem comprou. Toque em uma faixa para ver quem comprou.",
+            "summary": "{value} · {orders, plural, one {# pedido} other {# pedidos}} · {buyers, plural, one {# comprador} other {# compradores}} ({percent} da faixa)",
+            "floor": "menos de {floor} pedidos",
+            "none": "nenhum pedido nos últimos 30 dias",
+            "idle": "Comprar é uma ação: quem está nesta faixa não agiu nos últimos 30 dias, então não comprou."
+          },
+          "ladder": {
+            "title": "Escada de compra",
+            "note": "Da oferta de entrada até a segunda compra, desde que cada membro entrou. Caminhos com menos de 5 pessoas ficam juntos no fim.",
+            "path": "{from} de entrada → {to}",
+            "people": "{count, plural, one {# pessoa} other {# pessoas}}",
+            "days": "em média {count, plural, one {# dia} other {# dias}}",
+            "others": "Outros caminhos ({count, plural, one {# caminho} other {# caminhos}})",
+            "floor": "menos de {floor} pessoas"
+          },
+          "never": {
+            "title": "Entraram e nunca compraram de novo",
+            "note": "Quem só tem a compra de entrada, pela faixa de hoje: são os próximos a receber uma oferta.",
+            "row": "{value} {count, plural, one {membro} other {membros}} · {percent} da faixa",
+            "action": {
+              "title": "Oferecer a próxima compra a quem só tem a entrada",
+              "detail": "{value} {count, plural, one {membro entrou e ainda não comprou} other {membros entraram e ainda não compraram}} mais nada.",
+              "button": "Montar oferta"
+            }
+          }
+        },
+        "detail": {
+          "numbers": {
+            "title": "Números do mês",
+            "revenue": "Receita",
+            "orders": "Pedidos",
+            "ordersNote": "{entry, plural, one {# entrada} other {# entradas}} · {addon, plural, one {# adicional} other {# adicionais}}",
+            "buyers": "Compradores",
+            "revoked": "Cancelamentos",
+            "revokedFloor": "fora da receita",
+            "revokedValue": "{value}, fora da receita",
+            "unsold": "Nenhuma venda há {days} dias."
+          },
+          "weekly": "Receita por semana",
+          "weeklyChart": "Receita de {product} por semana, em reais",
+          "bands": {
+            "title": "Compradores por faixa",
+            "orders": "{count, plural, one {# pedido} other {# pedidos}}",
+            "floor": "menos de {floor} pedidos",
+            "note": "Faixa de hoje de quem comprou nos últimos 30 dias. Faixas com menos de 5 pedidos aparecem juntas com a vizinha.",
+            "empty": "Nenhum pedido nos últimos 30 dias."
+          },
+          "posts": {
+            "title": "Publicações que venderam",
+            "value": "{count, plural, one {# pedido} other {# pedidos}} · {value}",
+            "floor": "menos de {floor} pedidos",
+            "note": "Pedidos de quem interagiu com a publicação até 7 dias antes. Associação, não causa.",
+            "empty": "Nenhuma venda de quem interagiu com uma publicação nos últimos 30 dias."
+          }
+        },
+        "events": {
+          "title": "Eventos pagos",
+          "note": "Os ingressos ficam fora da receita da loja: ainda não há venda de ingresso registrada.",
+          "ticket": "Ingresso {value}",
+          "date": "Data",
+          "confirmed": "Inscritos",
+          "revenue": "Receita",
+          "free": "{count, plural, one {# evento gratuito ficou} other {# eventos gratuitos ficaram}} de fora."
         }
       }
     },

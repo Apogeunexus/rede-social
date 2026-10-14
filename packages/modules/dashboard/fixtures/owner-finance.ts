@@ -1040,6 +1040,8 @@ export function ownerFinanceVipUsage(): { cents: number; activeWeek: number; hol
 /** The lists of named buyers (D-11: level 4 only, read by one web file). */
 export type FinancePeopleList =
   | { kind: 'offer'; offerId: FinanceOfferId }
+  /** `band`: the band's buyers of the month; `never`: the band's members with one paid order. */
+  | { kind: 'band' | 'never'; band: EngagementBand }
   | {
       kind:
         | 'primary'
@@ -1168,6 +1170,34 @@ function buildPeople(list: FinancePeopleList): FinancePeople {
       const ending = endingEntries();
       return { people: rosterOf(ending), total: ending.length };
     }
+    case 'band': {
+      // One card per buyer: their latest order of the month.
+      const orders = [...month]
+        .reverse()
+        .filter((order) => memberOf(order.memberId).band === list.band);
+      return {
+        people: rosterOf(orders),
+        total: new Set(orders.map((order) => order.memberId)).size,
+      };
+    }
+    case 'never': {
+      const single = ownerFinanceMembers.filter(
+        (member) => member.band === list.band && (PAID_BY_MEMBER.get(member.id) ?? []).length === 1,
+      );
+      const people = ownerBandRoster.flatMap((row) => {
+        const [entry] = paidOf(row);
+        return entry && paidOf(row).length === 1 && row.band === list.band
+          ? [personOf(row, entry)]
+          : [];
+      });
+      return {
+        // The most recently active first: the likeliest to buy next.
+        people: people.sort(
+          (a, b) => a.lastActive.daysAgo - b.lastActive.daysAgo || a.id.localeCompare(b.id),
+        ),
+        total: single.length,
+      };
+    }
   }
 }
 
@@ -1178,7 +1208,12 @@ const PEOPLE = new Map<string, FinancePeople>();
  * many in all. An unknown offer throws.
  */
 export function ownerFinancePeople(list: FinancePeopleList): FinancePeople {
-  const key = list.kind === 'offer' ? `offer:${list.offerId}` : list.kind;
+  const key =
+    list.kind === 'offer'
+      ? `offer:${list.offerId}`
+      : list.kind === 'band' || list.kind === 'never'
+        ? `${list.kind}:${list.band}`
+        : list.kind;
   const cached = PEOPLE.get(key);
   if (cached) return cached;
   const people = buildPeople(list);
@@ -1204,4 +1239,135 @@ export function ownerFinanceVipProspects(): number {
       !orders.some((order) => order.productId === VIP_PRODUCT)
     );
   }).length;
+}
+
+/* -------------------------------------------------------------------------- who buys */
+
+export interface FinanceBand extends FinanceTotals {
+  /** Members in the band today. */
+  members: number;
+}
+
+/** The month's orders by the buyer's band of today (PD-4), with the band's size (D-09). */
+export function ownerFinanceBands(): Record<EngagementBand, FinanceBand> {
+  const { byBand } = ownerFinanceWindow(0, MONTH_DAYS - 1);
+  return Object.fromEntries(
+    ENGAGEMENT_BAND_ORDER.map((band) => [
+      band,
+      { ...byBand[band], members: engagement.counts[band] },
+    ]),
+  ) as Record<EngagementBand, FinanceBand>;
+}
+
+/** Below this many people a ladder path is grouped into "Outros caminhos" (D-06's floor). */
+const PATH_FLOOR = 5;
+
+export interface FinancePath {
+  entry: FinanceOfferId;
+  next: FinanceOfferId;
+  people: number;
+  averageDays: number;
+}
+
+/**
+ * The purchase ladder (PD-15), since each member joined: the entry offer, the offer of the second
+ * paid order, how many took that path and the average days between the two. Paths with 5 or more
+ * people, most people first; the smaller ones together in `others`.
+ */
+export function ownerFinancePaths(): {
+  paths: FinancePath[];
+  others: { people: number; paths: number; averageDays: number } | null;
+} {
+  const groups = new Map<string, { entry: FinanceOfferId; next: FinanceOfferId; gaps: number[] }>();
+  for (const orders of PAID_BY_MEMBER.values()) {
+    const [first, second] = orders;
+    if (!first || !second) continue;
+    const key = `${first.offerId}>${second.offerId}`;
+    const group = groups.get(key) ?? { entry: first.offerId, next: second.offerId, gaps: [] };
+    group.gaps.push(first.daysAgo - second.daysAgo);
+    groups.set(key, group);
+  }
+  const all = [...groups.values()].map((group) => ({
+    entry: group.entry,
+    next: group.next,
+    people: group.gaps.length,
+    averageDays: group.gaps.reduce((sum, gap) => sum + gap, 0) / group.gaps.length,
+  }));
+  const paths = all
+    .filter((path) => path.people >= PATH_FLOOR)
+    .sort((a, b) => b.people - a.people || a.entry.localeCompare(b.entry));
+  const small = all.filter((path) => path.people < PATH_FLOOR);
+  const people = small.reduce((sum, path) => sum + path.people, 0);
+  return {
+    paths,
+    others:
+      small.length === 0
+        ? null
+        : {
+            people,
+            paths: small.length,
+            averageDays:
+              small.reduce((sum, path) => sum + path.averageDays * path.people, 0) / people,
+          },
+  };
+}
+
+/** Members with exactly one paid order (the entry), by today's band: the next to offer to. */
+export function ownerFinanceNeverAgain(): Record<EngagementBand, number> {
+  return Object.fromEntries(
+    ENGAGEMENT_BAND_ORDER.map((band) => [
+      band,
+      ownerFinanceMembers.filter(
+        (member) => member.band === band && (PAID_BY_MEMBER.get(member.id) ?? []).length === 1,
+      ).length,
+    ]),
+  ) as Record<EngagementBand, number>;
+}
+
+export interface FinanceProductDetail extends FinanceProductSummary {
+  /** The month's cancellations of the product (D-05). */
+  revoked: FinanceAmount;
+  /** The product's revenue per week: the last 12 and the 12 before, oldest first. */
+  weekly: FinanceWeeks;
+  /** The month's orders by the buyer's band of today. */
+  byBand: Record<EngagementBand, FinanceAmount>;
+  /** The publications that sold it (associations), most orders first. */
+  posts: { postId: string; orders: number; cents: number }[];
+}
+
+/** One product's detail (D-08); an unknown id throws. */
+export function ownerFinanceProductDetail(productId: string): FinanceProductDetail {
+  const summary = ownerFinanceProduct(productId);
+  const addon = financeProductOffers(productId).find((offer) => offer.kind === 'addon');
+  if (!addon) throw new Error(`no add-on offer for ${productId}`);
+  const mine = PAID_ORDERS.filter((order) => order.productId === productId);
+  const weeks = (from: number) =>
+    Array.from({ length: 12 }, (_, i) => {
+      const weeksBack = from + 11 - i;
+      return mine
+        .filter((order) => order.daysAgo >= 7 * weeksBack && order.daysAgo <= 7 * weeksBack + 6)
+        .reduce((sum, order) => sum + order.cents, 0);
+    });
+  const month = mine.filter((order) => order.daysAgo < MONTH_DAYS);
+  const revoked = ownerFinanceOrders.filter(
+    (order) =>
+      order.status === 'revoked' && order.productId === productId && order.daysAgo < MONTH_DAYS,
+  );
+  return {
+    ...summary,
+    revoked: amountOf(revoked),
+    weekly: { current: weeks(0), previous: weeks(12) },
+    byBand: Object.fromEntries(
+      ENGAGEMENT_BAND_ORDER.map((band) => [
+        band,
+        amountOf(month.filter((order) => memberOf(order.memberId).band === band)),
+      ]),
+    ) as Record<EngagementBand, FinanceAmount>,
+    posts: Object.entries(CONTENT_SALES)
+      .flatMap(([postId, rows]) => {
+        const count = rows.find(([id]) => id === productId)?.[1] ?? 0;
+        return count === 0 ? [] : [{ postId, orders: count, cents: count * addon.priceCents }];
+      })
+      .sort((a, b) => b.orders - a.orders || a.postId.localeCompare(b.postId)),
+  };
 }
