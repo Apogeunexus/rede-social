@@ -177,3 +177,8 @@ Nenhum stub que impeça o objetivo. Seguem como "exemplo" (dado que o app ainda 
 - Arquivos criados existem: `owner-finance.ts`, `owner-finance.test.ts`, `owner-finance-view.ts`, `owner-finance-view.test.ts`, os cinco `OwnerFinance*.tsx` novos e as 4 capturas.
 - Commits existem em `git log e153d2aa..HEAD`: bc4dfeca, 28d03bf4, 409a3bec, f8da6f77, 44f4695c, 998b61ac, 71a379af, 865bd861, 4f891121.
 - `screens/` fica fora do commit; nenhuma cópia "* 2*" nem arquivo sem dados do iCloud.
+
+## Revisões (orquestrador)
+
+- **Integração:** avanço simples na `feat/painel-preview` (797e99af).
+- **Revisões:** comportamento REPROVADO, fluxo REPROVADO. Os achados (variação de Pedidos dos níveis 5 e 6, lista vazia com "e mais", beco sem saída da Imersão, valores quebrados, capas iguais, definição de primária/secundária, palavras em inglês) foram corrigidos na quick 261014-ia8.

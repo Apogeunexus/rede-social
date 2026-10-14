@@ -176,3 +176,26 @@ Nenhuma superfície nova: a âncora `#espera-<id>` é só fragmento, montada com
 
 - Arquivos: `OwnerContentPeople.test.tsx` existe; `owner-band-scope.ts` tem `ownerWaitlistHref`; `money.ts` tem `Math.round`; `OwnerFinanceOverview.tsx` tem `data-finance-total`; `CoverThumb.tsx` tem `strip`; `tenant-panels.ts` tem `amount: 16`.
 - Commits: `53454da0`, `26445c27`, `958ff12a`, `ce1c4cc4`, `7b9c484b`, `9b8015b2` presentes no log.
+
+## Revisões e integração (orquestrador)
+
+- **Integração:** avanço simples na `feat/painel-preview` (cf7ff7d5).
+- **Revisão de comportamento:** APROVADO. Dois achados menores:
+  - espera em eventos que já passaram;
+  - "check-in" ainda na tela.
+- **Revisão de fluxo:** APROVADO. Seis achados menores:
+  - variação lida como preço no detalhe;
+  - eventos passados com espera;
+  - "Números do mês" no detalhe;
+  - "vs." e "Admin" na tela;
+  - escala das barras;
+  - linha de destino sem destaque.
+- **Correção:** todos os achados menores das duas revisões foram corrigidos em c6b1e6e1.
+- **Fica de fora:** "Fazer check-in" está na tela real de eventos do app (`messages/pt-BR/events.json`), fora da prévia dos painéis.
+- **Verificações finais:**
+  - lint 16/16;
+  - typecheck 18/18;
+  - testes 15/15;
+  - fronteiras limpas;
+  - rotas estáticas OK;
+  - Playwright 244/245. O único caso que mudou de propósito foi atualizado, e o grupo do Financeiro passou 39/39.
