@@ -3143,12 +3143,12 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     const vip = sources.getByRole('listitem').filter({ hasText: 'Comunidade VIP' });
     await expect(vip).toContainText(/R\$\s4,1\smil/);
     const rate = vip.getByText('18 pedidos · 46%', { exact: true });
-    const value = vip.getByText(/^R\$\s4,1\smil$/);
+    // The rate is a block inside the value: it starts a second line under "R$ 4,1 mil".
+    const value = rate.locator('..');
+    await expect(value).toContainText(/^R\$\s4,1\smil/);
     const rateBox = await rate.boundingBox();
     const valueBox = await value.boundingBox();
-    expect(rateBox?.y ?? 0).toBeGreaterThanOrEqual(
-      (valueBox?.y ?? 0) + (valueBox?.height ?? 0) - 1,
-    );
+    expect(rateBox?.y ?? 0).toBeGreaterThanOrEqual((valueBox?.y ?? 0) + 10);
     const hero = ownerArea(page).locator('[data-finance-total-value]');
     const lines = await hero.evaluate(
       (el) =>

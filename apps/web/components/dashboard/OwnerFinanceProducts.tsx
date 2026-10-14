@@ -124,7 +124,7 @@ function ProductCard({
           <ProductName t={t} product={product} />
           <dl className="grid grid-cols-2 gap-y-3 border-t border-border pt-3 @xs:grid-cols-[repeat(4,minmax(max-content,1fr))] @xs:gap-y-0">
             {[
-              { label: t(`${KEY}.price`), value: formatBrlCompact(product.priceCents) },
+              { label: t(`${KEY}.price`), value: formatBrl(product.priceCents) },
               { label: t(`${KEY}.entry`), value: formatCount(product.month.entry) },
               { label: t(`${KEY}.addon`), value: formatCount(product.month.addon) },
               { label: t(`${KEY}.revenue`), value: formatBrlCompact(product.month.cents) },

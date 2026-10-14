@@ -24,6 +24,11 @@ export interface BarListProps {
   rows: readonly BarRow[];
   /** The 100% mark; defaults to the largest value. */
   max?: number;
+  /**
+   * Stack each row (name and value, the rate under the value, then a full-width bar) even without a
+   * `leading` visual: for long values and rates that would squeeze the bar at 360 px.
+   */
+  stacked?: boolean;
   className?: string;
 }
 
@@ -50,12 +55,13 @@ function Track({ row, top }: { row: BarRow; top: number }) {
  * Horizontal bars drawn to scale (`barPercent`). The rows share one grid (each row a subgrid), so
  * every track starts and ends at the same x whatever its value label. The label column wraps instead
  * of pushing the row wider than a 360 px screen. The highlighted bar is the full brand token, the
- * others a lighter tint. Rows with a `leading` visual stack instead: the visual, then the name and
- * value over a full-width track, because a fourth grid column would leave the name no room at 360 px.
+ * others a lighter tint. Rows with a `leading` visual (or a `stacked` list) stack instead: the visual,
+ * then the name and value over a full-width track, because a fourth grid column would leave the name
+ * no room at 360 px.
  */
-export function BarList({ rows, max, className }: BarListProps) {
+export function BarList({ rows, max, stacked = false, className }: BarListProps) {
   const top = max ?? Math.max(0, ...rows.map((row) => row.value));
-  if (rows.some((row) => row.leading !== undefined)) {
+  if (stacked || rows.some((row) => row.leading !== undefined)) {
     return (
       <Card className={cn('p-4', className)}>
         <ul className="flex flex-col gap-3">

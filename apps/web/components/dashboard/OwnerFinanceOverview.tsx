@@ -1,6 +1,5 @@
-import { formatBrl, formatBrlWhole } from '@rede-social/contracts/money';
+import { formatBrlCompact, formatBrlWhole } from '@rede-social/contracts/money';
 import {
-  type Delta,
   type FinanceSummary,
   ownerContentItem,
   ownerFinanceAttention,
@@ -19,6 +18,7 @@ import {
   ENGAGEMENT_BAND_ORDER,
   isBelowPrivacyFloor,
   KpiCard,
+  type KpiDelta,
   KpiGrid,
   LineChart,
   PRIVACY_FLOOR,
@@ -51,7 +51,7 @@ import {
   kpiDelta,
 } from './format';
 import { LegendStroke } from './LegendStroke';
-import { financeProducts } from './OwnerFinanceProducts';
+import { DeltaLine, financeProducts } from './OwnerFinanceProducts';
 import { PanelSection, PreviewAction } from './PanelSection';
 
 const KEY = 'tenantOwner.finance.overview';
@@ -96,28 +96,111 @@ function NumberLink({ number, children }: { number: FinanceNumber; children: Rea
   );
 }
 
-/** A change in percentage points (the share of add-ons), against the 30 days before. */
-function pointsDelta(now: number, before: number): Delta {
+/**
+ * The share of add-ons against the 30 days before, in words (quick 261014-ia8 F-10): "igual aos 30
+ * dias antes" with no sentiment, else "N pontos percentuais a mais/a menos que nos 30 dias antes".
+ */
+function shareDelta(t: DashboardT, now: number, before: number): KpiDelta {
   const amount = Math.round(Math.abs(now - before));
-  const direction: Delta['direction'] = amount === 0 ? 'flat' : now > before ? 'up' : 'down';
+  const key = `${KEY}.numbers.shareChange`;
+  if (amount === 0) return { text: t(`${key}.same`), direction: 'flat', tone: 'neutral' };
+  const up = now > before;
   return {
-    amount,
-    kind: 'points',
-    direction,
-    good: direction === 'flat' ? null : direction === 'up',
-    basis: 'previous_30_days',
+    text: t(up ? `${key}.more` : `${key}.less`, { count: amount }),
+    direction: up ? 'up' : 'down',
+    tone: up ? 'success' : 'danger',
+    sentiment: t(up ? 'sentiment.good' : 'sentiment.bad'),
   };
 }
 
 /**
- * (1) The six numbers of the month (D-07), each against the 30 days before and opening its list;
- * then the month's total, the notice that a registered value is not money received, and the
- * cancellations (D-05) under the privacy floor (D-06).
+ * The month's total above the six numbers (quick 261014-ia8 F-9): the total in whole reais on one
+ * line, its change, the orders, a decorative bar of primary × secondary with both values under it,
+ * the notice that a registered value is not money received, and the cancellations (D-05) under the
+ * privacy floor (D-06).
+ */
+function TotalCard({
+  t,
+  now,
+  before,
+}: {
+  t: DashboardT;
+  now: FinanceSummary;
+  before: FinanceSummary;
+}) {
+  const { revoked } = ownerFinanceWindow(0, 29);
+  const key = `${KEY}.numbers`;
+  const change = changeDelta(now.total.cents, before.total.cents);
+  const primaryShare = percentOf(now.primary.cents, now.total.cents);
+  const parts = [
+    { kind: 'primary', cents: now.primary.cents, width: primaryShare, paint: 'bg-brand' },
+    {
+      kind: 'secondary',
+      cents: now.secondary.cents,
+      width: 100 - primaryShare,
+      paint: 'bg-brand/40',
+    },
+  ] as const;
+  return (
+    <Card data-finance-total className="flex flex-col gap-2 p-4">
+      <span className="text-xs font-bold text-text-secondary">{t(`${key}.hero.label`)}</span>
+      <span
+        data-finance-total-value
+        className="whitespace-nowrap text-3xl font-extrabold leading-tight tabular-nums text-text"
+      >
+        {formatBrlWhole(now.total.cents)}
+      </span>
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {change ? <DeltaLine delta={kpiDelta(t, change)} /> : null}
+        <span className="text-xs text-text-secondary">
+          {t(`${key}.hero.orders`, { count: now.total.orders })}
+        </span>
+      </span>
+      <span aria-hidden className="mt-1 flex h-2.5 overflow-hidden rounded-full bg-bg-tertiary">
+        {parts.map((part) => (
+          <span
+            key={part.kind}
+            data-finance-total-part={part.kind}
+            className={`block h-full ${part.paint}`}
+            style={{ width: `${part.width}%` }}
+          />
+        ))}
+      </span>
+      <dl className="grid grid-cols-2 gap-2">
+        {parts.map((part) => (
+          <div
+            key={part.kind}
+            data-finance-total-legend={part.kind}
+            className="flex min-w-0 flex-col gap-0.5"
+          >
+            <dt className="flex items-center gap-1.5 text-xs text-text-secondary">
+              <span aria-hidden className={`size-2.5 shrink-0 rounded-full ${part.paint}`} />
+              {t(`${key}.hero.${part.kind}`)}
+            </dt>
+            <dd className="text-base font-bold tabular-nums text-text">
+              {formatBrlWhole(part.cents)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="text-xs text-text-secondary">{t(`${KEY}.notice`)}</p>
+      <p className="text-xs text-text-secondary" data-floor-line="revoked">
+        {isBelowPrivacyFloor(revoked.orders)
+          ? t(`${key}.revokedFloor`, { floor: PRIVACY_FLOOR })
+          : t(`${key}.revoked`, { count: revoked.orders, value: formatBrlWhole(revoked.cents) })}
+      </p>
+    </Card>
+  );
+}
+
+/**
+ * (1) Números (D-07): what primary and secondary mean (quick 261014-ia8 F-4), the month's total
+ * card, then the six numbers, each against the 30 days before and opening its list; the two that
+ * add up since the community opened say so (F-12).
  */
 function Numbers({ t }: { t: DashboardT }) {
   const now = ownerFinanceSummary(0);
   const before = ownerFinanceSummary(30);
-  const { revoked } = ownerFinanceWindow(0, 29);
   const key = `${KEY}.numbers`;
   const seeList = (
     <span className="flex items-center gap-1 text-xs font-bold text-brand">
@@ -132,6 +215,8 @@ function Numbers({ t }: { t: DashboardT }) {
   const rebought = percentOf(now.rebought, now.base);
   return (
     <PanelSection title={t(`${key}.title`)}>
+      <p className="text-sm text-text-secondary">{t(`${key}.definition`)}</p>
+      <TotalCard t={t} now={now} before={before} />
       <KpiGrid>
         <NumberLink number="primary">
           <KpiCard
@@ -140,7 +225,7 @@ function Numbers({ t }: { t: DashboardT }) {
             delta={delta(now.primary.cents, before.primary.cents)}
             note={t(`${key}.primaryNote`, {
               count: now.primary.orders,
-              average: formatBrl(Math.round(now.primary.cents / now.primary.orders)),
+              average: formatBrlWhole(now.primary.cents / now.primary.orders),
             })}
             footer={seeList}
           />
@@ -158,7 +243,7 @@ function Numbers({ t }: { t: DashboardT }) {
           <KpiCard
             label={t(`${key}.share`)}
             value={formatPercent(secondaryShare(now))}
-            delta={kpiDelta(t, pointsDelta(secondaryShare(now), secondaryShare(before)))}
+            delta={shareDelta(t, secondaryShare(now), secondaryShare(before))}
             note={t(`${key}.shareNote`)}
             footer={seeList}
           />
@@ -188,27 +273,13 @@ function Numbers({ t }: { t: DashboardT }) {
         <NumberLink number="lifetime">
           <KpiCard
             label={t(`${key}.lifetime`)}
-            value={formatBrl(Math.round(lifetimePerMember(now)))}
+            value={formatBrlWhole(lifetimePerMember(now))}
             delta={delta(lifetimePerMember(now), lifetimePerMember(before))}
             note={t(`${key}.lifetimeNote`)}
             footer={seeList}
           />
         </NumberLink>
       </KpiGrid>
-      <Card className="flex flex-col gap-1.5 p-4">
-        <p className="text-sm font-bold text-text">
-          {t(`${key}.total`, {
-            value: formatBrl(now.total.cents),
-            count: now.total.orders,
-          })}
-        </p>
-        <p className="text-xs text-text-secondary">{t(`${KEY}.notice`)}</p>
-        <p className="text-xs text-text-secondary" data-floor-line="revoked">
-          {isBelowPrivacyFloor(revoked.orders)
-            ? t(`${key}.revokedFloor`, { floor: PRIVACY_FLOOR })
-            : t(`${key}.revoked`, { count: revoked.orders, value: formatBrl(revoked.cents) })}
-        </p>
-      </Card>
     </PanelSection>
   );
 }
@@ -408,12 +479,13 @@ function Sources({ t }: { t: DashboardT }) {
     <PanelSection title={t(`${key}.title`)}>
       <p className="text-xs font-bold text-text-secondary">{t(`${key}.byProduct`)}</p>
       <BarList
+        stacked
         max={month.total.cents}
         rows={products.map((product, i) => ({
           id: product.id,
           label: product.name,
           value: product.month.cents,
-          display: formatBrl(product.month.cents),
+          display: formatBrlCompact(product.month.cents),
           rate:
             product.month.orders === 0
               ? t(`${key}.noOrders`)
@@ -429,6 +501,7 @@ function Sources({ t }: { t: DashboardT }) {
       </TabLink>
       <p className="text-xs font-bold text-text-secondary">{t(`${key}.byBand`)}</p>
       <BarList
+        stacked
         max={month.total.cents}
         rows={bands.map((band) => {
           const row = month.byBand[band];
@@ -437,7 +510,9 @@ function Sources({ t }: { t: DashboardT }) {
             id: band,
             label: bandLabel(t, band),
             value: floored ? 0 : row.cents,
-            display: floored ? t(`${key}.floor`, { floor: PRIVACY_FLOOR }) : formatBrl(row.cents),
+            display: floored
+              ? t(`${key}.floor`, { floor: PRIVACY_FLOOR })
+              : formatBrlCompact(row.cents),
             rate: floored
               ? undefined
               : t(`${key}.rate`, {
@@ -458,7 +533,7 @@ function Sources({ t }: { t: DashboardT }) {
 function floored(t: DashboardT, orders: number, cents: number): string {
   return isBelowPrivacyFloor(orders)
     ? t(`${KEY}.app.floor`, { floor: PRIVACY_FLOOR })
-    : t(`${KEY}.app.value`, { count: orders, value: formatBrl(cents) });
+    : t(`${KEY}.app.value`, { count: orders, value: formatBrlWhole(cents) });
 }
 
 function AppLine({ label, children }: { label: string; children: ReactNode }) {
@@ -546,7 +621,7 @@ function AppKnows({ t }: { t: DashboardT }) {
                 <span className="text-text-secondary">{t(`${key}.vip`)}</span>
                 <span className="font-bold text-text">
                   {t(`${key}.vipLine`, {
-                    value: formatBrl(vip.cents),
+                    value: formatBrlWhole(vip.cents),
                     active: formatCount(vip.activeWeek),
                     holders: formatCount(vip.holders),
                   })}
@@ -595,7 +670,7 @@ function NextSteps({ t }: { t: DashboardT }) {
 }
 
 /**
- * Financeiro › Visão geral (D-07), in order: the six numbers of the month, Precisa de atenção,
+ * Financeiro › Visão geral (D-07), in order: Números (the total card and the six numbers), Precisa de atenção,
  * Receita por semana, De onde vem a receita, O que só o app sabe and Próximos passos. Nothing here
  * names a member: the names are one step down, in the lists.
  */

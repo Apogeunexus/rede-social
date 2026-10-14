@@ -8,7 +8,8 @@ import { z } from 'zod';
  *
  * 1. **Money is integer CENTS end to end.** The API body, the `store_products.price_cents` column, the
  *    `store_orders.amount_cents` snapshot and every comparison are integers. The division by 100
- *    happens in ONE file, here (`formatBrl`, `formatBrlCompact`), at the display edge.
+ *    happens in ONE file, here (`formatBrl`, `formatBrlWhole`, `formatBrlCompact`), at the display
+ *    edge.
  * 2. **`parseBrlToCents` never calls `parseFloat`.** "19,90" is split into its reais and centavos
  *    digits and added as integers, so no binary fraction (0.1 + 0.2) can ever reach a price.
  * 3. **The cap is the schema's job, not the parser's.** A value above `STORE_MAX_PRICE_CENTS` still
@@ -50,11 +51,13 @@ const BRL_WHOLE = new Intl.NumberFormat('pt-BR', {
 });
 
 /**
- * A whole-real KPI for a narrow card: `416200` -> `R$ 4.162` (with centavos it stays `formatBrl`, so
- * no value is ever rounded away). The gap is U+00A0, as `formatBrl`'s.
+ * A highlight or a total, in whole reais rounded to the nearest: `416200` -> `R$ 4.162`, `7361` ->
+ * `R$ 74`. The money rule of the panels (quick 261014-ia8 F-8): whole reais for highlighted numbers,
+ * totals and averages; `formatBrlCompact` for bars and card cells; centavos (`formatBrl`) only for
+ * the value of one order. The gap is U+00A0, as `formatBrl`'s.
  */
 export function formatBrlWhole(cents: number): string {
-  return cents % 100 === 0 ? BRL_WHOLE.format(cents / 100) : formatBrl(cents);
+  return BRL_WHOLE.format(Math.round(cents / 100));
 }
 
 const BRL_COMPACT = new Intl.NumberFormat('pt-BR', {
@@ -65,11 +68,13 @@ const BRL_COMPACT = new Intl.NumberFormat('pt-BR', {
 });
 
 /**
- * A KPI total for a narrow card: `1438000` -> `R$ 14,4 mil`, `150000000` -> `R$ 1,5 mi`; below
- * R$ 1.000 it is `formatBrl`. Both gaps are U+00A0, so the value never wraps mid-number.
+ * A bar's value or a card cell (quick 261014-ia8 F-8): `1438000` -> `R$ 14,4 mil`, `150000000` ->
+ * `R$ 1,5 mi`; below a thousand reais it is `formatBrlWhole` (`33200` -> `R$ 332`), never centavos.
+ * Both gaps are U+00A0, so the value never wraps mid-number.
  */
 export function formatBrlCompact(cents: number): string {
-  return cents < 100_000 ? formatBrl(cents) : BRL_COMPACT.format(cents / 100);
+  const reais = Math.round(cents / 100);
+  return reais < 1000 ? BRL_WHOLE.format(reais) : BRL_COMPACT.format(reais);
 }
 
 /**

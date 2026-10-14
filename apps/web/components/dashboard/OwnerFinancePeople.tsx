@@ -1,4 +1,4 @@
-import { formatBrl } from '@rede-social/contracts/money';
+import { formatBrl, formatBrlCompact, formatBrlWhole } from '@rede-social/contracts/money';
 import {
   type EngagementBand,
   type FinancePerson,
@@ -106,7 +106,7 @@ function ShareBody({ t }: { t: DashboardT }) {
         id: `${kind}-${row.product.id}`,
         label: row.product.name,
         value: row[kind],
-        display: formatBrl(row[kind]),
+        display: formatBrlCompact(row[kind]),
         rate:
           row.entry + row.addon === 0
             ? undefined
@@ -149,7 +149,7 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
     primary: () => ({
       title: t('tenantOwner.finance.overview.numbers.primary'),
       count: t(`${LISTS}.primary.count`, {
-        value: formatBrl(summary.primary.cents),
+        value: formatBrlWhole(summary.primary.cents),
         count: summary.primary.orders,
       }),
       lead: (person) =>
@@ -163,7 +163,7 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
     secondary: () => ({
       title: t('tenantOwner.finance.overview.numbers.secondary'),
       count: t(`${LISTS}.secondary.count`, {
-        value: formatBrl(summary.secondary.cents),
+        value: formatBrlWhole(summary.secondary.cents),
         count: summary.secondary.orders,
       }),
       lead: (person) =>
@@ -178,8 +178,8 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
       title: t('tenantOwner.finance.overview.numbers.share'),
       count: t(`${LISTS}.share.count`, {
         percent: formatPercent(percentOf(summary.secondary.cents, summary.total.cents)),
-        value: formatBrl(summary.secondary.cents),
-        total: formatBrl(summary.total.cents),
+        value: formatBrlWhole(summary.secondary.cents),
+        total: formatBrlWhole(summary.total.cents),
       }),
       body: <ShareBody t={t} />,
     }),
@@ -207,11 +207,11 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
     lifetime: () => ({
       title: t('tenantOwner.finance.overview.numbers.lifetime'),
       count: t(`${LISTS}.lifetime.count`, {
-        value: formatBrl(Math.round(summary.lifetimeCents / summary.base)),
-        total: formatBrl(summary.lifetimeCents),
+        value: formatBrlWhole(summary.lifetimeCents / summary.base),
+        total: formatBrlWhole(summary.lifetimeCents),
         members: formatCount(summary.base),
       }),
-      lead: (person) => t(`${LISTS}.lifetime.lead`, { value: formatBrl(person.cents) }),
+      lead: (person) => t(`${LISTS}.lifetime.lead`, { value: formatBrlWhole(person.cents) }),
       more: members,
     }),
   };
