@@ -147,6 +147,12 @@ describe('D-01/D-03 (quick 261013-p31): miniatura nas listas de comparação', (
     }
   });
 
+  it('anchors each Lista de espera row by its event (quick 261014-ia8 F-1)', async () => {
+    const items = [...section(await renderArea(), 'Lista de espera').querySelectorAll('li')];
+    expect(items.map((item) => item.id)).toEqual(['espera-e1', 'espera-u3', 'espera-e3']);
+    expect(items[1]?.textContent).toContain('17 na espera');
+  });
+
   it('puts a cover thumbnail on each Comparecimento por evento bar', async () => {
     const items = thumbedRows(details(await renderArea(), 'Comparecimento por evento'), 4);
     const expected: [string, string][] = [

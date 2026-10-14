@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { BarList } from '../ui/BarList';
+import { BarList, type BarRow } from '../ui/BarList';
 import { LineChart } from '../ui/LineChart';
 import { barPercent } from '../ui/scale';
 
@@ -63,6 +63,24 @@ describe('BarList', () => {
     expect(fillWidths(container)).toEqual(['100%', `${barPercent(410, 5230)}%`]);
     expect(screen.getByText('shown-a')).toBeInTheDocument();
     expect(screen.getByText('rate-a')).toBeInTheDocument();
+  });
+
+  it('puts a row anchor on its li in both layouts, and no id without one (quick 261014-ia8 F-1)', () => {
+    const anchored: BarRow[] = [
+      { id: 'a', label: 'row-a', value: 5230, display: 'shown-a', anchor: 'anchor-a' },
+      { id: 'b', label: 'row-b', value: 410, display: 'shown-b' },
+    ];
+    const grid = render(<BarList rows={anchored} />);
+    let items = [...grid.container.querySelectorAll('li')];
+    expect(items[0]?.id).toBe('anchor-a');
+    expect(items[0]).toHaveClass('scroll-mt-20');
+    expect(items[1]?.hasAttribute('id')).toBe(false);
+    cleanup();
+    const led = render(<BarList rows={anchored.map((row) => ({ ...row, leading: <span /> }))} />);
+    items = [...led.container.querySelectorAll('li')];
+    expect(items[0]?.id).toBe('anchor-a');
+    expect(items[0]).toHaveClass('scroll-mt-20');
+    expect(items[1]?.hasAttribute('id')).toBe(false);
   });
 
   it("keeps today's grid without leading", () => {

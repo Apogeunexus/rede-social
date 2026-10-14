@@ -20,6 +20,8 @@ import {
   ownerInsightAnchor,
   ownerListScope,
   ownerMembersHref,
+  ownerWaitlistAnchor,
+  ownerWaitlistHref,
   parseOwnerMembersView,
 } from './owner-band-scope';
 
@@ -348,5 +350,13 @@ describe('the member lists (quick 261012-tru D-07)', () => {
     expect(ownerMembersHref(view('member', 'superfan', null, 'om-13'))).toBe(
       `${AREA}&faixa=superfas&membro=om-13`,
     );
+  });
+});
+
+describe('the waiting list of an event (quick 261014-ia8 F-1)', () => {
+  it('anchors each event on its Lista de espera row, in the Eventos area', () => {
+    expect(ownerWaitlistAnchor('u3')).toBe('espera-u3');
+    expect(ownerWaitlistHref('u3')).toBe('/painel-preview/dono-do-cliente?area=eventos#espera-u3');
+    expect(ownerWaitlistHref('e1').endsWith('?area=eventos#espera-e1')).toBe(true);
   });
 });

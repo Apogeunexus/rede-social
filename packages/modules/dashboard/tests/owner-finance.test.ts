@@ -685,6 +685,16 @@ describe('levels 5 and 6 read the same list (PD-7)', () => {
     expect(tenantStaffPanel.store.orders7d.count).toBe(week.total.orders);
     expect(tenantAdminPanel.kpis.orders.count).toBe(week.total.orders);
   });
+
+  it('moves the 7-day orders by this week against the week before (quick 261014-ia8 C-1)', () => {
+    const previous = ownerFinanceWindow(7, 13);
+    expect(previous.total.orders).toBe(29);
+    const amount = week.total.orders - previous.total.orders;
+    expect(amount).toBe(16);
+    const expected = { amount, kind: 'count', direction: 'up', good: true, basis: 'none' };
+    expect(tenantAdminPanel.kpis.orders.delta).toEqual(expected);
+    expect(tenantStaffPanel.store.orders7d.delta).toEqual(expected);
+  });
 });
 
 describe('Quem compra (quick 261014-dwc D-09, PD-4, PD-15)', () => {

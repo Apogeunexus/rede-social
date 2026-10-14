@@ -3138,9 +3138,18 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     await backLink(page).click();
     await expect(page).toHaveURL(new RegExp(`&atencao=pagantes-sumindo#membro-${member}$`));
 
+    // Nobody of the 6 is in the sample (quick 261014-ia8 C-2/F-2): an honest sentence, no "e mais".
     await page.goto(`${FINANCE_AREA}&atencao=vencendo`);
     await expect(area.getByRole('listitem')).toHaveCount(0);
-    await expect(area.getByText('e mais 6 membros', { exact: true })).toBeVisible();
+    await expect(
+      area.getByText(
+        'Nenhum destes membros está na amostra da prévia. O vencimento ainda não é gravado.',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(area.getByText(/^e mais/)).toHaveCount(0);
+    await expect(area.getByRole('button', { name: 'Ver todos' })).toHaveCount(0);
+    await expect(area.getByText('Lembrar quem tem acesso vencendo', { exact: true })).toBeVisible();
     await expect(area.getByText('exemplo', { exact: true })).toHaveCount(1);
 
     await page.goto(FINANCE_AREA);
@@ -3149,13 +3158,16 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     await expect(area.getByRole('heading', { level: 3, name: 'Workshop gravado' })).toBeVisible();
     await expect(backLink(page)).toHaveAttribute('href', /\?area=financeiro#produto-s4$/);
 
+    // The full event opens its waiting list in Eventos (quick 261014-ia8 F-1), never a dead end.
     await page.goto(FINANCE_AREA);
     await area.getByRole('link', { name: /Imersão presencial: vagas esgotadas/ }).click();
-    await expect(page).toHaveURL(/\?area=financeiro&vista=produtos#evento-u3$/);
-    await expect(financeTabs(page).getByRole('link', { name: 'Produtos' })).toHaveAttribute(
+    await expect(page).toHaveURL(/\?area=eventos#espera-u3$/);
+    await expect(ownerTabs(page).getByRole('link', { name: 'Eventos' })).toHaveAttribute(
       'aria-current',
       'page',
     );
+    await expect(area.locator('#espera-u3')).toBeVisible();
+    await expect(area.locator('#espera-u3')).toContainText('17 na espera');
   });
 
   test('a group under 5 orders shows no value; the VIP line opens the VIP', async ({ page }) => {
@@ -3348,7 +3360,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     for (const label of ['Receita', 'Pedidos', 'Compradores', 'Cancelamentos']) {
       await expect(kpiCard(sectionTitled(area, 'Números do mês'), label), label).toBeVisible();
     }
-    await expect(kpiCard(area, 'Receita')).toContainText(/R\$\s4\.096,00/);
+    await expect(kpiCard(area, 'Receita').locator('span.text-2xl')).toHaveText(/^R\$\s4\.096$/);
     await expect(kpiCard(area, 'Pedidos')).toContainText('11 entradas · 7 adicionais');
     await expect(kpiCard(area, 'Cancelamentos')).toContainText('menos de 5');
     const weekly = sectionTitled(area, 'Receita por semana');
@@ -3405,7 +3417,29 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     }
     await expect(section.getByText('exemplo', { exact: true })).toHaveCount(1);
     await expect(section.getByText('3 eventos gratuitos ficaram de fora.')).toBeVisible();
-    await expect(section.getByRole('link')).toHaveCount(0);
+    // A full paid event with a waiting list says so and opens it in Eventos (quick 261014-ia8 F-1).
+    for (const [id, waiting] of [
+      ['u3', 17],
+      ['e1', 38],
+      ['e3', 12],
+    ] as const) {
+      const card = section.locator(`#evento-${id}`);
+      await expect(
+        card.getByText(`Vagas esgotadas · ${waiting} na espera`, { exact: true }),
+        id,
+      ).toBeVisible();
+      await expect(card.getByRole('link'), id).toHaveCount(1);
+      expect(await card.getByRole('link').getAttribute('href'), id).toMatch(
+        new RegExp(`\\?area=eventos#espera-${id}$`),
+      );
+    }
+    const monthly = section.locator('#evento-u1');
+    await expect(monthly.getByText(/Vagas esgotadas/)).toHaveCount(0);
+    await expect(monthly.getByRole('link')).toHaveCount(0);
+    await expect(section.getByRole('link')).toHaveCount(3);
+    await section.locator('#evento-e1').getByRole('link').click();
+    await expect(page).toHaveURL(/\?area=eventos#espera-e1$/);
+    await expect(ownerArea(page).locator('#espera-e1')).toContainText('38 na espera');
     await page.goto(FINANCE_AREA);
     await expect(
       ownerArea(page).getByText(/^Receita total registrada: R\$\s8\.940,00 em 126 pedidos$/),
@@ -3793,6 +3827,51 @@ test('suporte-da-plataforma: aggregates only, small bands merged, no count under
   await expect(
     page.getByText('Alcance de push: 21% dos membros ativos', { exact: true }),
   ).toBeVisible();
+});
+
+/** Every highlighted value (`span.text-2xl`) of the area sits on one line. */
+async function wrappedValues(page: Page) {
+  return ownerArea(page)
+    .locator('span.text-2xl')
+    .evaluateAll((spans) =>
+      spans
+        .filter((el) => {
+          const line = Number.parseFloat(getComputedStyle(el).lineHeight);
+          return el.getBoundingClientRect().height > line * 1.5;
+        })
+        .map((el) => el.textContent),
+    );
+}
+
+test('dono-do-cliente financeiro at 360px: no highlighted value breaks its line', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  for (const query of [
+    '',
+    ...['s1', 's2', 's3', 's4'].map((id) => `&vista=produtos&produto=${id}`),
+  ]) {
+    await page.goto(`${FINANCE_AREA}${query}`);
+    await expect(ownerArea(page).locator('span.text-2xl').first(), query).toBeVisible();
+    expect(await wrappedValues(page), query).toEqual([]);
+  }
+});
+
+test('admin-do-cliente and equipe-do-cliente: Pedidos moves 16 up with the single list', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/admin-do-cliente');
+  const admin = kpiCard(page, 'Pedidos');
+  await expect(admin.locator('span.text-2xl')).toHaveText('45');
+  await expect(admin).toContainText('16');
+  await expect(admin.getByText('melhorou', { exact: true })).toHaveCount(1);
+  await expect(admin.getByText('piorou', { exact: true })).toHaveCount(0);
+  await page.goto('/painel-preview/equipe-do-cliente?simular=1&funcoes=loja');
+  const staff = kpiCard(page, 'Pedidos 7d');
+  await expect(staff.locator('span.text-2xl')).toHaveText('45');
+  await expect(staff).toContainText('16');
+  await expect(staff.getByText('melhorou', { exact: true })).toHaveCount(1);
 });
 
 test('equipe-do-cliente: per-function metrics', async ({ page }) => {
