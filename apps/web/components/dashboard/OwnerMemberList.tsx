@@ -1,6 +1,8 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import {
   type OwnerMemberInsights,
+  type OwnerPost,
+  ownerContentItem,
   ownerMemberInsights,
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
@@ -8,6 +10,7 @@ import { Card } from '@rede-social/ui';
 import { OWNER_MEMBER_LIST_ANCHOR, type OwnerMemberListSlug } from '@/lib/owner-band-scope';
 import { BackLink } from './BackLink';
 import { ownerCommunity, ownerEvent } from './BandScopeCards';
+import { CoverThumb, type CoverThumbProps } from './CoverThumb';
 import { ExamplePill } from './ExamplePill';
 import {
   communityLabel,
@@ -21,6 +24,8 @@ import { PanelSection } from './PanelSection';
 
 interface ListRow {
   id: string;
+  /** The publication's (or event's, or product's) decorative thumbnail; none for an active day. */
+  thumb?: CoverThumbProps;
   title: string;
   lines: string[];
   /** A short value on the right ("3 ações", "visto 2× · 40 s"). */
@@ -51,6 +56,12 @@ function productName(id: string): string {
 
 const KEY = 'tenantOwner.memberLists';
 
+/** A post's thumbnail: its Conteúdo item's kind and length, toned by its id (D-01, D-03). */
+function postThumb(post: OwnerPost): CoverThumbProps {
+  const item = ownerContentItem(post.id);
+  return { kind: item.kind, seed: item.id, durationSeconds: item.durationSeconds };
+}
+
 /** Every list slug has its view: a slug added to OWNER_MEMBER_LISTS without one fails typecheck. */
 const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListView> = {
   'dias-ativos': (t, { activeDays }) => ({
@@ -72,6 +83,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
     empty: t(`${KEY}.likes.empty`),
     rows: likes.map((like) => ({
       id: like.post.id,
+      thumb: postThumb(like.post),
       title: like.post.excerpt,
       lines: [
         t(`${KEY}.likes.line`, {
@@ -88,6 +100,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
     empty: t(`${KEY}.comments.empty`),
     rows: comments.map((comment) => ({
       id: comment.post.id,
+      thumb: postThumb(comment.post),
       title: comment.post.excerpt,
       lines: [
         t(`${KEY}.comments.line`, {
@@ -107,6 +120,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
       if (action.kind === 'comment') {
         return {
           id: `comment-${action.post.id}`,
+          thumb: postThumb(action.post),
           title: action.post.excerpt,
           lines: [
             t(`${KEY}.strongActions.comment`, {
@@ -120,6 +134,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
         const event = ownerEvent(action.eventId);
         return {
           id: `check-in-${action.eventId}`,
+          thumb: { kind: 'event', seed: action.eventId },
           title: t('tenantOwner.bandScope.event', {
             name: event.name,
             date: formatDayMonth(event.date),
@@ -129,6 +144,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
       }
       return {
         id: `order-${action.productId}`,
+        thumb: { kind: 'order', seed: action.productId },
         title: productName(action.productId),
         lines: [t(`${KEY}.strongActions.order`, { value: formatBrl(action.cents), when })],
       };
@@ -144,6 +160,7 @@ const VIEWS: Record<OwnerMemberListSlug, (t: DashboardT, lists: Lists) => ListVi
     empty: t(`${KEY}.postsSeen.empty`),
     rows: postsSeen.value.map((row) => ({
       id: row.post.id,
+      thumb: postThumb(row.post),
       title: row.post.excerpt,
       lines: [
         t(`${KEY}.postsSeen.line`, {
@@ -174,7 +191,8 @@ export interface OwnerMemberListProps {
  * opened it, the title, the member and the window, the count with the order of the rows (and the
  * "exemplo" pill for the example Posts vistos), then the rows, or one sentence when there are none.
  * Its count is the number on the insights card by construction. Visible to the client's management
- * only: which posts a member liked, commented on and saw, never a comment's text.
+ * only: which posts a member liked, commented on and saw, never a comment's text. A publication,
+ * check-in or order row starts with its decorative thumbnail (quick 261013-orf D-01); a day has none.
  */
 export function OwnerMemberList({ t, memberId, list: slug, backHref }: OwnerMemberListProps) {
   // Each opening parser only sets a list together with a member it let through: a gap is a bug.
@@ -200,8 +218,9 @@ export function OwnerMemberList({ t, memberId, list: slug, backHref }: OwnerMemb
           <Card>
             <ul className="divide-y divide-border">
               {list.rows.map((row) => (
-                <li key={row.id} className="flex items-start justify-between gap-3 px-3 py-2.5">
-                  <div className="flex min-w-0 flex-col gap-0.5 [overflow-wrap:anywhere]">
+                <li key={row.id} className="flex items-start gap-3 px-3 py-2.5">
+                  {row.thumb ? <CoverThumb t={t} {...row.thumb} /> : null}
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5 [overflow-wrap:anywhere]">
                     <p className="text-sm font-semibold text-text">{row.title}</p>
                     {row.lines.map((line) => (
                       <p key={line} className="text-xs text-text-secondary">

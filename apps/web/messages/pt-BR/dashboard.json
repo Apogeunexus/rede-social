@@ -369,7 +369,7 @@
         "orderValue": "Vendas do mês",
         "orderValueNote": "valor registrado, sem pagamento real",
         "engaged": "Engajados",
-        "perPost": "Interações por post",
+        "perPost": "Interações por publicação",
         "perPostNote": "curtidas e comentários em {posts} posts",
         "awaiting": "Conversas aguardando resposta",
         "awaitingNote": "mais antiga: {hours}h"
@@ -727,8 +727,12 @@
           "comments": "Comentários",
           "saves": "Salvamentos",
           "shares": "Compartilhamentos",
-          "none": "—",
-          "open": "Ver publicação"
+          "compact": {
+            "likes": "{count, plural, one {curtida} other {curtidas}}",
+            "comments": "{count, plural, one {comentário} other {comentários}}",
+            "saves": "{count, plural, one {salvamento} other {salvamentos}}",
+            "shares": "{count, plural, one {compartilhamento} other {compartilhamentos}}"
+          }
         },
         "list": {
           "exampleNote": "Salvamentos e compartilhamentos: valores de exemplo",
@@ -740,10 +744,10 @@
           "title": "Tipos de publicação",
           "note": "Métricas próprias: valores de exemplo, exceto Texto",
           "posts": "Publicações",
-          "perPost": "Interações por post",
+          "perPost": "Interações por publicação",
           "metric": {
             "video": "% assistido",
-            "photo": "Salvamentos por post",
+            "photo": "Salvamentos por publicação",
             "carousel": "Até o último cartão",
             "text": "% de comentários",
             "link": "Clicaram no link",
@@ -751,7 +755,8 @@
           },
           "open": "Ver publicações",
           "back": "Voltar aos tipos",
-          "postsOf": "Publicações deste tipo, da melhor para a pior"
+          "postsOf": "Publicações deste tipo, da melhor para a pior",
+          "openedNote": "{examples, select, metricSaves {Métrica do tipo, salvamentos e compartilhamentos} metric {Métrica do tipo e compartilhamentos} other {Salvamentos e compartilhamentos}}: valores de exemplo"
         },
         "posts": {
           "title": "Todas as publicações",
@@ -759,6 +764,7 @@
         },
         "detail": {
           "back": "Voltar",
+          "watch": "Assistir",
           "interactions": "{count, plural, one {{value} interação} other {{value} interações}}",
           "vsKind": "{ratio}× a média {kinds}",
           "inProgress": "Em andamento",
@@ -780,8 +786,8 @@
           "app": {
             "title": "O que só o app sabe",
             "reactivated": "Membros que voltaram após 30+ dias parados",
-            "rsvps": "Inscrições em eventos até 7 dias depois",
-            "rsvp": "{name} · {date}: {count}",
+            "rsvps": "Inscritos em eventos nos 7 dias seguintes",
+            "rsvp": "{name}, {date}: {count, plural, =0 {nenhum inscrito} one {# inscrito} other {# inscritos}}",
             "noRsvps": "nenhuma",
             "sales": "Vendas até 7 dias depois",
             "salesValue": "{count, plural, one {# pedido} other {# pedidos}} · {value}",
@@ -927,7 +933,7 @@
             },
             "schedule": {
               "title": "Publique no melhor horário",
-              "detail": "{kinds} rendem mais ({perPost} interações por post) e {day}, {from}h–{to}h, é o melhor horário ({best} por publicação).",
+              "detail": "{kinds} rendem mais ({perPost} interações por publicação) e {day}, {from}h–{to}h, é o melhor horário ({best} por publicação).",
               "action": "Agendar publicação"
             },
             "series": {
@@ -1102,7 +1108,7 @@
           "vsMedian": "vs. mediana"
         },
         "inProgress": "em andamento",
-        "medianNote": "Comparado à mediana de {median} interações por post nas primeiras {hours}h."
+        "medianNote": "Comparado à mediana de {median} interações por publicação nas primeiras {hours}h."
       },
       "store": {
         "orders": "Pedidos 7d",

@@ -615,7 +615,7 @@ test('dono-do-cliente: Visão geral', async ({ page }) => {
   const expected: [string, string | RegExp][] = [
     ['Membros', '1.240'],
     ['Engajados', '22%'],
-    ['Interações por post', '65'],
+    ['Interações por publicação', '65'],
     ['Comparecimento em eventos', '64%'],
     ['Vendas do mês', /R\$\s8\.940,00/],
     ['Conversas aguardando resposta', '2'],
@@ -1470,6 +1470,23 @@ test("dono-do-cliente membros: the insights' numbers open their lists", async ({
     await expect(sectionTitled(area, list.title).getByRole('listitem'), list.slug).toHaveCount(
       value,
     );
+    // Quick 261013-orf D-01: one decorative thumbnail per row, except the active days.
+    const thumbs = area.locator('#lista [data-testid="cover-thumb"]');
+    const withThumb = list.slug === 'dias-ativos' ? 0 : value;
+    await expect(thumbs, list.slug).toHaveCount(withThumb);
+    await expect(
+      area.locator('#lista li').filter({ has: page.locator('[data-testid="cover-thumb"]') }),
+      list.slug,
+    ).toHaveCount(withThumb);
+    await expect(
+      area.locator('#lista [data-testid="cover-thumb"]:not([aria-hidden="true"])'),
+      list.slug,
+    ).toHaveCount(0);
+    if (list.slug === 'acoes-fortes') {
+      await expect(
+        area.locator('#lista [data-testid="cover-thumb"][data-kind="event"]'),
+      ).toHaveCount(4);
+    }
     await expect(area.getByText('exemplo', { exact: true }), list.slug).toHaveCount(
       list.slug === 'posts-vistos' ? 1 : 0,
     );
@@ -1535,7 +1552,7 @@ test('dono-do-cliente membros: a forged lista falls one level up', async ({ page
   await expect(area.locator('#lista')).toHaveCount(0);
 });
 
-const OWNER_LIST_VIEWPORT_SLUGS = ['curtidas', 'acoes-fortes', 'posts-vistos'];
+const OWNER_LIST_VIEWPORT_SLUGS = ['curtidas', 'comentarios', 'acoes-fortes', 'posts-vistos'];
 
 for (const width of PHONE_WIDTHS) {
   test(`dono-do-cliente membros: a member's lists at ${width}px, no sideways scroll`, async ({
@@ -1592,6 +1609,12 @@ function postCards(scope: Locator) {
 /** The Voltar link of a deeper step. */
 function backLink(page: Page) {
   return ownerArea(page).getByRole('link', { name: 'Voltar', exact: true });
+}
+
+/** A compact card's number (quick 261013-orf E-01): `likes`, `comments`, `saves` or `shares`. */
+async function cardCount(card: Locator, name: string) {
+  const text = (await card.locator(`[data-count="${name}"]`).textContent()) ?? '';
+  return Number(/^\s*([\d.]+)/.exec(text)?.[1]?.replace('.', '') ?? Number.NaN);
 }
 
 async function coverRatio(scope: Page | Locator) {
@@ -1654,7 +1677,7 @@ test.describe('dono-do-cliente conteudo', () => {
       const card = area.locator(`#tipo-${slug}`);
       await expect(card, slug).toContainText(name);
       await expect(cardCell(card, 'Publicações'), slug).toHaveText(posts);
-      await expect(cardCell(card, 'Interações por post'), slug).toHaveText(perPost);
+      await expect(cardCell(card, 'Interações por publicação'), slug).toHaveText(perPost);
     }
     await expect(cardCell(area.locator('#tipo-video'), '% assistido')).toHaveText('58%');
     await expect(cardCell(area.locator('#tipo-texto'), '% de comentários')).toHaveText('38%');
@@ -1697,13 +1720,32 @@ test.describe('dono-do-cliente conteudo', () => {
     }
     const totals: number[] = [];
     for (let i = 0; i < 10; i += 1) {
-      const likes = Number(await cardCell(cards.nth(i), 'Curtidas').innerText());
-      const comments = Number(await cardCell(cards.nth(i), 'Comentários').innerText());
+      const likes = await cardCount(cards.nth(i), 'likes');
+      const comments = await cardCount(cards.nth(i), 'comments');
       totals.push(likes + comments);
     }
     expect([...totals].sort((a, b) => b - a)).toEqual(totals);
     await expect(cards.first()).toContainText('Como organizar a agenda');
     await expect(cards.first()).toContainText('22/09 · Geral · Vídeo');
+
+    // Quick 261013-orf E-01: the compact card — the cover thumbnail at the feed's ratio on the
+    // left, the four numbers named for screen readers, the whole card one link, no "Ver publicação".
+    const first = cards.first();
+    const thumb = first.locator('[data-testid="cover-thumb"]');
+    await expect(thumb).toHaveCount(1);
+    await expect(thumb).toHaveAttribute('aria-hidden', 'true');
+    await expect(thumb).toHaveAttribute('data-ratio', '0.5625');
+    expect(Math.abs((await boxRatio(thumb)) - 9 / 16)).toBeLessThanOrEqual(0.02);
+    expect((await thumb.boundingBox())?.height ?? 0).toBeCloseTo(112, 0);
+    await expect(first.locator('.sr-only')).toHaveText([
+      /^\s*curtidas$/,
+      /^\s*comentários$/,
+      /^\s*salvamentos$/,
+      /^\s*compartilhamentos$/,
+    ]);
+    await expect(first.getByRole('link')).toHaveCount(1);
+    await expect(area.getByText('Ver publicação')).toHaveCount(0);
+    await expect(area.locator('[data-testid="content-cover"]')).toHaveCount(0);
   });
 
   test('the tracer: a publication, who liked it, a member, a list and back', async ({ page }) => {
@@ -1794,6 +1836,36 @@ test.describe('dono-do-cliente conteudo', () => {
     await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=texto`);
     await expect(postCards(ownerArea(page))).toHaveCount(10);
     await expect(ownerArea(page).locator('[data-testid="content-cover"]')).toHaveCount(0);
+    // Quick 261013-orf E-01: a text post's card thumbnail is a square with the text icon.
+    const textThumbs = ownerArea(page).locator('[data-testid="cover-thumb"]');
+    await expect(textThumbs).toHaveCount(10);
+    for (const ratio of await textThumbs.evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-ratio')),
+    )) {
+      expect(ratio).toBe('1');
+    }
+  });
+
+  test('the detail cover has no grey band and a disabled Assistir on videos', async ({ page }) => {
+    // Quick 261013-orf E-01: the sides are the brand gradient darkened; ▶ is a preview action.
+    for (const [query, playable] of [
+      ['&vista=publicacoes&post=op-41', true],
+      ['&vista=tipos&tipo=story&post=os-01', true],
+      ['&vista=publicacoes&post=op-18', false],
+    ] as const) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      const cover = ownerArea(page).locator('[data-testid="content-cover"]');
+      const wrapper = cover.locator('..');
+      expect(await wrapper.evaluate((el) => getComputedStyle(el).backgroundImage), query).toContain(
+        'gradient',
+      );
+      const watch = ownerArea(page).getByRole('button', { name: 'Assistir' });
+      await expect(watch, query).toHaveCount(playable ? 1 : 0);
+      if (playable) {
+        await expect(watch, query).toBeDisabled();
+        await expect(watch, query).toHaveAttribute('aria-describedby', 'dashboard-preview-note');
+      }
+    }
   });
 });
 
@@ -2133,7 +2205,7 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
     const app = detailSection(page, 'O que só o app sabe');
     await expect(app).toContainText(/R\$\s?502,00/);
     await expect(app).toContainText('6 pedidos');
-    await expect(app).toContainText('Live de dúvidas · 15/10: 21');
+    await expect(app).toContainText('Live de dúvidas, 15/10: 21 inscritos');
     await expect(app).toContainText('Não quer dizer que a publicação causou.');
     await expect(detailSection(page, 'Primeiras 48 horas').getByRole('img')).toHaveCount(1);
     await expect(
@@ -2148,6 +2220,42 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
       .getByRole('link')
       .evaluateAll((els) => els.map((el) => el.getAttribute('href') ?? ''));
     expect(links.some((href) => /quem=(visualizacoes|alcance)/.test(href))).toBe(false);
+  });
+
+  test('the 41 s video reads its retention in video time and its RSVPs as inscritos', async ({
+    page,
+  }) => {
+    // Quick 261013-orf E-03.5 and E-03.6.
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-41`);
+    const chart = detailSection(page, 'Retenção do vídeo').getByRole('img');
+    expect(
+      (await chart.locator('[data-x-label]').allTextContents()).map((text) => text.trim()),
+    ).toEqual(['0:00', '0:20', '0:41']);
+    const app = detailSection(page, 'O que só o app sabe');
+    await expect(app).toContainText('Inscritos em eventos nos 7 dias seguintes');
+    await expect(app).toContainText('Workshop, 01/10: 11 inscritos');
+  });
+
+  test('says "por publicação", and an opened type has one example sentence', async ({ page }) => {
+    // Quick 261013-orf E-03.9.
+    for (const query of ['', '&vista=tipos', '&vista=tipos&tipo=video']) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      await expect(ownerArea(page).getByText(/por post\b/), query).toHaveCount(0);
+    }
+    await expect(ownerArea(page).getByText('exemplo', { exact: true })).toHaveCount(1);
+    await expect(
+      ownerArea(page).getByText(
+        'Métrica do tipo, salvamentos e compartilhamentos: valores de exemplo',
+      ),
+    ).toBeVisible();
+    await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=texto`);
+    await expect(
+      ownerArea(page).getByText(/^Salvamentos e compartilhamentos: valores de exemplo/),
+    ).toBeVisible();
+    await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=story`);
+    await expect(
+      ownerArea(page).getByText('Métrica do tipo e compartilhamentos: valores de exemplo'),
+    ).toBeVisible();
   });
 
   test('sales under 5 orders show no value; the shop window shows its subscriptions', async ({
@@ -2531,7 +2639,7 @@ test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, a
   const atRisk = kpiCard(page, 'Entraram em risco nesta semana');
   await expect(atRisk).toContainText('23');
   await expect(atRisk).toContainText('9 com push');
-  await expect(page.getByText('Interações por post')).toHaveCount(0);
+  await expect(page.getByText('Interações por publicação')).toHaveCount(0);
   await expect(page.getByText('15 de 28 ativados (54%)', { exact: true })).toBeVisible();
   await expect(kpiCard(page, 'Membros que interagiram')).toContainText('380');
 

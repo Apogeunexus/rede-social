@@ -60,35 +60,66 @@ export interface CoverThumbProps {
   seed: string;
   /** A video's length, drawn as a small badge. */
   durationSeconds?: number | null;
+  /** `row`: a 56 px square at the start of a list row; `card`: the compact card's cover (E-01). */
+  variant?: 'row' | 'card';
+  /** `card` only: the feed's width ÷ height (`contentCoverRatio`); null (a text post) is square. */
+  ratio?: number | null;
 }
 
+/** The compact card's cover: 7rem high at the feed's ratio, never wider than 8rem (PD-I). */
+const CARD_HEIGHT_REM = 7;
+const CARD_MAX_WIDTH_REM = 8;
+
 /**
- * The publication's cover as a 56 px thumbnail at the start of a list row (quick 261013-orf D-02),
- * the "Sua atividade" look: the same brand cover as Conteúdo's cards, with the kind's icon, a video's
- * length and a story's ring. Decorative (D-04): the row's text stays its accessible name. With real
- * data this becomes the post's media (`MediaImage`); the gradient stays for posts without media.
+ * The publication's cover as a thumbnail (quick 261013-orf D-02): 56 px at the start of a list row,
+ * the "Sua atividade" look, or the compact card's cover at the feed's ratio (E-01). The same brand
+ * cover as Conteúdo's detail, with the kind's icon, a video's length and a story's ring. Decorative
+ * (D-04): the row's text stays its accessible name. With real data this becomes the post's media
+ * (`MediaImage`); the gradient stays for posts without media.
  */
 export function CoverThumb({
   t,
   kind,
   seed,
   durationSeconds = null,
+  variant = 'row',
+  ratio = null,
 }: CoverThumbProps & { t: DashboardT }) {
   const Icon = COVER_ICON[kind];
+  const card = variant === 'card';
+  const aspect = ratio ?? 1;
   return (
     <span
       aria-hidden="true"
       data-testid="cover-thumb"
       data-kind={kind}
+      data-ratio={card ? String(aspect) : undefined}
       className={cn(
-        'relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg',
+        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg',
+        !card && 'size-14',
         kind === 'story' && 'ring-2 ring-brand ring-offset-2 ring-offset-card',
       )}
-      style={coverStyle(seed)}
+      style={
+        card
+          ? {
+              ...coverStyle(seed),
+              aspectRatio: aspect,
+              width: `${(CARD_HEIGHT_REM * aspect).toFixed(3)}rem`,
+              maxWidth: `${CARD_MAX_WIDTH_REM}rem`,
+            }
+          : coverStyle(seed)
+      }
     >
-      <Icon size={24} className="opacity-90" />
+      <Icon size={card ? 28 : 24} className="opacity-90" />
       {durationSeconds !== null ? (
-        <span className="absolute right-1 bottom-1 rounded bg-black/50 px-1 text-[10px] leading-4 font-bold tabular-nums text-white">
+        <span
+          className={cn(
+            'absolute rounded bg-black/50 font-bold tabular-nums text-white',
+            card
+              ? 'right-1.5 bottom-1.5 px-1.5 py-0.5 text-xs'
+              : 'right-1 bottom-1 px-1 text-[10px] leading-4',
+          )}
+        >
           {formatClock(t, durationSeconds)}
         </span>
       ) : null}

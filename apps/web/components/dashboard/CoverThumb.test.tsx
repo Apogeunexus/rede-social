@@ -94,7 +94,8 @@ describe('CoverThumb (row)', () => {
     expect(el.classList).not.toContain('size-14');
     const style = el.getAttribute('style') ?? '';
     // 7rem × 9/16 = 3.938rem wide; the ratio then gives the 7rem height.
-    expect(style).toContain('width: min(8rem, 3.938rem)');
+    expect(el.style.width).toBe('3.938rem');
+    expect(el.style.maxWidth).toBe('8rem');
     expect(style).toContain('aspect-ratio: 0.5625');
     const badge = el.querySelector('span');
     expect(badge?.textContent).toBe('0:41');

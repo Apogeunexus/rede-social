@@ -4,11 +4,20 @@ import {
   tenantOwnerPanel,
 } from '@rede-social/module-dashboard/fixtures';
 import { Card } from '@rede-social/ui';
-import { ChevronRight } from 'lucide-react';
+import {
+  Bookmark,
+  ChevronRight,
+  Heart,
+  type LucideIcon,
+  MessageCircle,
+  Play,
+  Send,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
+import { PREVIEW_NOTE_ID } from '@/lib/dashboard-preview';
 import { contentCoverRatio, contentPostAnchor } from '@/lib/owner-content-view';
-import { Cell, Linked } from './BandScopeCards';
-import { COVER_ICON, coverStyle } from './CoverThumb';
+import { Linked } from './BandScopeCards';
+import { COVER_ICON, CoverThumb, coverStyle } from './CoverThumb';
 import { ExamplePill } from './ExamplePill';
 import {
   communityLabel,
@@ -45,10 +54,12 @@ export function contentMeta(t: DashboardT, item: ContentItem): string {
 }
 
 /**
- * The publication's media at the ratio the feed draws it (PD-2, `contentCoverRatio`): no photo in the
- * preview, so the `--brand-gradient` fallback with the kind's icon (and a video's length), at the
- * publication's tone (`coverStyle`, shared with the list thumbnails), as the community and event covers. Its height is capped by narrowing it, never by changing the ratio, so a
- * 9:16 video does not fill a whole phone screen. A text post has no cover.
+ * The publication's media at the ratio the feed draws it (PD-2, `contentCoverRatio`), on the detail:
+ * no photo in the preview, so the `--brand-gradient` fallback with the kind's icon (and a video's
+ * length), at the publication's tone (`coverStyle`, shared with the list thumbnails). Its height is
+ * capped by narrowing it, never by changing the ratio, so a 9:16 video does not fill a whole phone
+ * screen; the sides are the same gradient darkened, never a grey band (quick 261013-orf E-01). A
+ * video or story plays from the round ▶, disabled like every preview action. A text post has none.
  */
 export function ContentCover({
   t,
@@ -62,8 +73,10 @@ export function ContentCover({
   const ratio = contentCoverRatio(item);
   if (ratio === null) return null;
   const Icon = COVER_ICON[item.kind];
+  const playable = item.kind === 'video' || item.kind === 'story';
   return (
-    <div className="flex justify-center bg-bg-tertiary">
+    <div className="relative flex justify-center overflow-hidden" style={coverStyle(item.id)}>
+      <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
       <div
         data-testid="content-cover"
         data-ratio={ratio.toFixed(4)}
@@ -74,7 +87,19 @@ export function ContentCover({
           ...coverStyle(item.id),
         }}
       >
-        <Icon aria-hidden size={32} className="opacity-90" />
+        {playable ? (
+          <button
+            type="button"
+            disabled
+            aria-label={t(`${KEY}.detail.watch`)}
+            aria-describedby={PREVIEW_NOTE_ID}
+            className="flex size-16 items-center justify-center rounded-full bg-black/40 text-white"
+          >
+            <Play aria-hidden size={32} />
+          </button>
+        ) : (
+          <Icon aria-hidden size={32} className="opacity-90" />
+        )}
         {item.durationSeconds !== null ? (
           <span className="absolute right-2 bottom-2 rounded-md bg-black/50 px-1.5 py-0.5 text-xs font-bold tabular-nums text-white">
             {formatClock(t, item.durationSeconds)}
@@ -85,27 +110,33 @@ export function ContentCover({
   );
 }
 
-/** The four numbers of a publication: measured likes and comments, example saves and shares. */
-function Numbers({ t, item }: { t: DashboardT; item: ContentItem }) {
-  const key = `${KEY}.card`;
+/** One of the compact card's numbers: its icon, the value and, for screen readers, its name. */
+function Count({
+  t,
+  icon: Icon,
+  name,
+  value,
+}: {
+  t: DashboardT;
+  icon: LucideIcon;
+  name: 'likes' | 'comments' | 'saves' | 'shares';
+  value: number;
+}) {
   return (
-    <dl className="grid grid-cols-2 gap-x-2 gap-y-3 border-t border-border pt-3">
-      <Cell label={t(`${key}.likes`)} value={formatCount(item.likes)} />
-      <Cell label={t(`${key}.comments`)} value={formatCount(item.comments)} />
-      <Cell
-        label={t(`${key}.saves`)}
-        value={item.saves === null ? t(`${key}.none`) : formatCount(item.saves.value)}
-      />
-      <Cell label={t(`${key}.shares`)} value={formatCount(item.shares.value)} />
-    </dl>
+    <span data-count={name} className="inline-flex items-center gap-1">
+      <Icon aria-hidden size={14} className="shrink-0 text-text-secondary" />
+      {formatCount(value)}
+      <span className="sr-only"> {t(`${KEY}.card.compact.${name}`, { count: value })}</span>
+    </span>
   );
 }
 
 /**
- * One publication as a card (D-05), in the look of the community and event cards: the cover at the
- * feed's ratio, the caption in two lines, `dd/mm · comunidade · tipo`, the four numbers and, when it
- * opens, a chevron line. The whole card is the link; its id lets the detail's "Voltar" land on it.
- * The "exemplo" of saves and shares is said once per list, never per card.
+ * One publication as a compact card (D-05, quick 261013-orf E-01): the cover thumbnail at the feed's
+ * ratio on the left and, on the right, the caption in two lines, `dd/mm · comunidade · tipo` and the
+ * four numbers in one line (a story cannot be saved), then an optional line, with a chevron. The
+ * whole card is the link to the detail, where the cover is big; its id lets the detail's "Voltar"
+ * land on it. The "exemplo" of saves and shares is said once per list, never per card.
  */
 export function ContentPostCard({
   t,
@@ -115,7 +146,7 @@ export function ContentPostCard({
 }: {
   t: DashboardT;
   item: ContentItem;
-  /** The detail's link; null = not a link (the detail's own header). */
+  /** The detail's link; null = not a link. */
   href: string | null;
   /** A last line under the numbers (a KPI list's metric). */
   extra?: ReactNode;
@@ -123,24 +154,33 @@ export function ContentPostCard({
   return (
     <div id={contentPostAnchor(item.id)} className="scroll-mt-20">
       <Linked href={href}>
-        <Card className="flex flex-col transition-colors hover:bg-card-hover">
-          <ContentCover t={t} item={item} />
-          <div className="flex flex-col gap-3 p-4 [overflow-wrap:anywhere]">
-            <div className="flex flex-col gap-1">
-              <span className="line-clamp-2 text-base font-bold leading-snug text-text">
-                {item.excerpt}
-              </span>
-              <span className="text-xs text-text-secondary">{contentMeta(t, item)}</span>
-            </div>
-            <Numbers t={t} item={item} />
+        <Card className="flex items-start gap-3 p-3 transition-colors hover:bg-card-hover">
+          <CoverThumb
+            t={t}
+            kind={item.kind}
+            seed={item.id}
+            durationSeconds={item.durationSeconds}
+            variant="card"
+            ratio={contentCoverRatio(item)}
+          />
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 [overflow-wrap:anywhere]">
+            <span className="line-clamp-2 text-sm font-bold leading-snug text-text">
+              {item.excerpt}
+            </span>
+            <span className="text-xs text-text-secondary">{contentMeta(t, item)}</span>
+            <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold tabular-nums text-text">
+              <Count t={t} icon={Heart} name="likes" value={item.likes} />
+              <Count t={t} icon={MessageCircle} name="comments" value={item.comments} />
+              {item.saves === null ? null : (
+                <Count t={t} icon={Bookmark} name="saves" value={item.saves.value} />
+              )}
+              <Count t={t} icon={Send} name="shares" value={item.shares.value} />
+            </p>
             {extra}
-            {href === null ? null : (
-              <p className="flex items-center justify-between gap-2 text-sm font-bold text-brand">
-                <span>{t(`${KEY}.card.open`)}</span>
-                <ChevronRight aria-hidden size={18} className="shrink-0" />
-              </p>
-            )}
           </div>
+          {href === null ? null : (
+            <ChevronRight aria-hidden size={18} className="shrink-0 self-center text-brand" />
+          )}
         </Card>
       </Linked>
     </div>

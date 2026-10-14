@@ -122,6 +122,17 @@ function MetricsNote({ t }: { t: DashboardT }) {
 }
 
 /**
+ * The one example sentence of an opened type (quick 261013-orf E-03.9): the type's own metric when
+ * it is an example, saves when the type has them (not a story), and always shares.
+ */
+function openedNote(t: DashboardT, kind: ContentKind): string {
+  const metric = kindMetric(kind).metric.example;
+  const saves = kind !== 'story';
+  const examples = metric && saves ? 'metricSaves' : metric ? 'metric' : 'saves';
+  return t(`${KEY}.types.openedNote`, { examples });
+}
+
+/**
  * The Por tipo tab (D-03): the six kinds as cards in CONTENT_KIND_ORDER. A card opens that kind in
  * place: "Voltar aos tipos", the card (not a link here) and its publications best first, each opening
  * its detail. Reels are videos (PD-1); stories are a kind only here.
@@ -134,13 +145,13 @@ export function OwnerContentTypes({ t, view }: { t: DashboardT; view: OwnerConte
     return (
       <PanelSection title={t(`${KEY}.types.title`)}>
         <BackLink href={back} label={t(`${KEY}.types.back`)} />
-        <MetricsNote t={t} />
         <KindCard t={t} kind={kind} href={null} />
         <p className="text-sm font-bold text-text">{t(`${KEY}.types.postsOf`)}</p>
         <ContentPostList
           t={t}
           items={[...itemsOfKind(kind)].sort(byInteractions)}
           hrefOf={(item) => ownerContentHref({ ...view, postId: item.id })}
+          exampleNote={openedNote(t, kind)}
         />
       </PanelSection>
     );

@@ -41,6 +41,7 @@ import {
   bandLabel,
   type DashboardT,
   exampleBadge,
+  formatClock,
   formatCount,
   formatDayMonth,
   formatDecimal,
@@ -285,7 +286,7 @@ function AppKnows({ t, detail }: { t: DashboardT; detail: ContentDetail }) {
                       {t(`${key}.rsvp`, {
                         name: event.name,
                         date: formatDayMonth(event.date),
-                        count: formatCount(row.members),
+                        count: row.members,
                       })}
                     </li>
                   );
@@ -388,12 +389,24 @@ function Recommendation({ t, item }: { t: DashboardT; item: ContentItem }) {
   );
 }
 
-/** Retenção do vídeo (videos only, example): % still watching at each tenth, against the videos'. */
-function Retention({ t, detail }: { t: DashboardT; detail: ContentDetail }) {
+/**
+ * Retenção do vídeo (videos only, example): % still watching at each tenth, against the videos'. The
+ * axis reads the video's own time at its start, middle and end (0:00 · 0:20 · 0:41, E-03.5).
+ */
+function Retention({
+  t,
+  item,
+  detail,
+}: {
+  t: DashboardT;
+  item: ContentItem;
+  detail: ContentDetail;
+}) {
   const { retention } = detail;
   if (!retention) return null;
   const key = `${KEY}.retention`;
   const curve = retention.value;
+  const duration = item.durationSeconds ?? 0;
   return (
     <PanelSection as="h4" title={t(`${key}.title`)}>
       <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
@@ -411,7 +424,9 @@ function Retention({ t, detail }: { t: DashboardT; detail: ContentDetail }) {
         <LineChart
           series={curve}
           previous={ownerContentKindRetention()}
-          xLabels={curve.map((_, i) => (i % 5 === 0 && i < 10 ? formatPercent(i * 10) : ''))}
+          xLabels={curve.map((_, i) =>
+            i % 5 === 0 ? formatClock(t, Math.floor((duration * i) / (curve.length - 1))) : '',
+          )}
           yStep={20}
           formatValue={formatPercent}
           ariaLabel={t(`${key}.label`)}
@@ -465,7 +480,7 @@ export function OwnerContentPostDetail({ t, view }: { t: DashboardT; view: Owner
       <AppKnows t={t} detail={detail} />
       <Comments t={t} item={item} view={view} />
       <Recommendation t={t} item={item} />
-      <Retention t={t} detail={detail} />
+      <Retention t={t} item={item} detail={detail} />
       <Taps t={t} detail={detail} />
     </div>
   );

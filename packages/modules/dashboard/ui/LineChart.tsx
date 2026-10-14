@@ -122,7 +122,8 @@ export function LineChart({
             key={i}
             x={point.x}
             y={HEIGHT - 6}
-            textAnchor="middle"
+            // The last label ends at the last point, so it never runs past the chart.
+            textAnchor={i === points.length - 1 ? 'end' : 'middle'}
             fontSize={LABEL_SIZE}
             className="fill-current text-text-tertiary"
           >
