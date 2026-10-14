@@ -159,6 +159,7 @@ export function EventCard({
   href,
   detail,
   status,
+  cover,
   cells,
   children,
 }: {
@@ -168,6 +169,8 @@ export function EventCard({
   detail?: string;
   /** A warning next to the format ("Vagas esgotadas · 17 na espera"), already worded. */
   status?: string;
+  /** Replaces the 16:10 event cover (Financeiro's low, varied band, quick 261014-ia8 F-7). */
+  cover?: ReactNode;
   cells: readonly [CardCell, CardCell, CardCell];
   children?: ReactNode;
 }) {
@@ -177,12 +180,14 @@ export function EventCard({
       <Card
         className={cn('flex flex-col', href !== null && 'transition-colors hover:bg-card-hover')}
       >
-        <EventCover
-          geometry="hero"
-          coverAssetId={null}
-          coverVariantWidths={[]}
-          coverAlt={event.name}
-        />
+        {cover ?? (
+          <EventCover
+            geometry="hero"
+            coverAssetId={null}
+            coverVariantWidths={[]}
+            coverAlt={event.name}
+          />
+        )}
         <div className="flex flex-col gap-3 p-4 [overflow-wrap:anywhere]">
           <div className="flex flex-col items-start gap-2">
             <span className="text-xl font-bold leading-tight text-text">{event.name}</span>

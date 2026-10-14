@@ -1,5 +1,4 @@
 import { formatBrl, formatBrlCompact } from '@rede-social/contracts/money';
-import { CommunityCover } from '@rede-social/module-communities/ui';
 import {
   FINANCE_STALLED_DAYS,
   type FinanceProductSummary,
@@ -17,6 +16,7 @@ import {
   ownerFinanceHref,
 } from '@/lib/owner-finance-view';
 import { Cell, EventCard, eventRevenue, Linked } from './BandScopeCards';
+import { type CoverKind, CoverThumb } from './CoverThumb';
 import { ExamplePill } from './ExamplePill';
 import {
   changeDelta,
@@ -35,6 +35,18 @@ export function financeProducts(): FinanceProductSummary[] {
   return tenantOwnerPanel.store.products
     .map((row) => ownerFinanceProduct(row.id))
     .sort((a, b) => b.month.cents - a.month.cents || a.name.localeCompare(b.name));
+}
+
+/** Each store product's cover icon (quick 261014-ia8 F-7); an unknown product reads as an order. */
+const PRODUCT_COVER: Readonly<Record<string, CoverKind>> = {
+  s1: 'mentoring',
+  s2: 'community',
+  s3: 'ebook',
+  s4: 'recorded',
+};
+
+export function productCoverKind(id: string): CoverKind {
+  return PRODUCT_COVER[id] ?? 'order';
 }
 
 /** Stalled: no paid order for over 60 days (PD-9). */
@@ -95,7 +107,8 @@ const CELL_EDGES = [
 ] as const;
 
 /**
- * One product as a card (D-08, PD-9): the cover, the name, four columns split by thin lines (the
+ * One product as a card (D-08, PD-9): a low cover band with the product's icon and tone (quick
+ * 261014-ia8 F-7), the name, four columns split by thin lines (the
  * store price, the month's sales as an entry and as an add-on, the revenue), the change against the
  * 30 days before and a chevron: the whole card opens the product.
  */
@@ -111,13 +124,7 @@ function ProductCard({
   return (
     <Linked href={href}>
       <Card className="flex flex-col transition-colors hover:bg-card-hover">
-        {/* The communities module's own 16:7 box with its gradient fallback (PD-8). */}
-        <CommunityCover
-          geometry="card"
-          coverAssetId={null}
-          coverVariantWidths={[]}
-          coverAlt={product.name}
-        />
+        <CoverThumb t={t} kind={productCoverKind(product.id)} seed={product.id} variant="strip" />
         {/* A container: the four columns become two rows of two when the card is narrower than
             20rem (a 360 px phone), so "R$ 4,1 mil" never gets cut. */}
         <div className="@container flex flex-col gap-3 p-4 [overflow-wrap:anywhere]">
@@ -168,9 +175,9 @@ function waitingFor(event: { id: string; confirmed: number; capacity: number | n
 }
 
 /**
- * Eventos pagos (D-04, PD-12): the events with a ticket, each as the events' own 16:10 card — date,
- * registrations and the example revenue (one pill for the whole list, the waiting lists being
- * examples too), the ticket on the gray line. A full event with people waiting says so and opens its
+ * Eventos pagos (D-04, PD-12): the events with a ticket, each as the events' card under a low cover
+ * of its format (quick 261014-ia8 F-7) — date, registrations and the example revenue (one pill for
+ * the whole list, the waiting lists being examples too), the ticket on the gray line. A full event with people waiting says so and opens its
  * waiting list in Eventos (quick 261014-ia8 F-1); the others open nothing. Their revenue is never
  * part of the store's total; the free events are counted below.
  */
@@ -195,6 +202,7 @@ function PaidEvents({ t }: { t: DashboardT }) {
                 id={event.id}
                 href={waiting === null ? null : ownerWaitlistHref(event.id)}
                 status={waiting === null ? undefined : t(`${key}.full`, { count: waiting })}
+                cover={<CoverThumb t={t} kind={event.format} seed={event.id} variant="strip" />}
                 detail={t(`${key}.ticket`, { value: formatBrl(event.ticketCents.value) })}
                 cells={[
                   { label: t(`${key}.date`), value: formatDayMonth(event.date) },

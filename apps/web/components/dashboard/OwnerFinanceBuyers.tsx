@@ -1,4 +1,4 @@
-import { formatBrl } from '@rede-social/contracts/money';
+import { formatBrlWhole } from '@rede-social/contracts/money';
 import {
   type EngagementBand,
   financeOffer,
@@ -48,7 +48,7 @@ function Bands({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
       <p className="text-sm text-text">
         {t(`${KEY}.bands.sentence`, {
           percent: formatPercent(percentOf(activeCents, total)),
-          value: formatBrl(activeCents),
+          value: formatBrlWhole(activeCents),
           members: formatPercent(percentOf(activeMembers, members)),
         })}
       </p>
@@ -61,7 +61,7 @@ function Bands({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
             : isBelowPrivacyFloor(row.orders)
               ? t(`${KEY}.bands.floor`, { floor: PRIVACY_FLOOR })
               : t(`${KEY}.bands.summary`, {
-                  value: formatBrl(row.cents),
+                  value: formatBrlWhole(row.cents),
                   orders: row.orders,
                   buyers: row.buyers,
                   percent: formatPercent(percentOf(row.buyers, row.members)),

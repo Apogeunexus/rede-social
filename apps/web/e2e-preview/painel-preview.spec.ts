@@ -1503,7 +1503,7 @@ const OWNER_LIST_CASES: { slug: string; card: string; title: string; order: stri
     slug: 'posts-vistos',
     card: 'Publicações vistas',
     title: 'Publicações vistas',
-    order: 'mais vistos primeiro',
+    order: 'mais vistas primeiro',
   },
 ];
 

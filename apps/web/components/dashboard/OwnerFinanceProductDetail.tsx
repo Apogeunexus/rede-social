@@ -1,5 +1,4 @@
-import { formatBrl, formatBrlWhole } from '@rede-social/contracts/money';
-import { CommunityCover } from '@rede-social/module-communities/ui';
+import { formatBrl, formatBrlCompact, formatBrlWhole } from '@rede-social/contracts/money';
 import {
   type EngagementBand,
   type FinanceOffer,
@@ -29,6 +28,7 @@ import {
 } from '@/lib/owner-finance-view';
 import { BackLink } from './BackLink';
 import { Linked } from './BandScopeCards';
+import { CoverThumb } from './CoverThumb';
 import {
   bandGroupLabel,
   changeDelta,
@@ -38,7 +38,7 @@ import {
   kpiDelta,
 } from './format';
 import { WeeklyChart } from './OwnerFinanceOverview';
-import { ProductChange, ProductName } from './OwnerFinanceProducts';
+import { ProductChange, ProductName, productCoverKind } from './OwnerFinanceProducts';
 import { PanelSection } from './PanelSection';
 
 const KEY = 'tenantOwner.finance';
@@ -81,7 +81,7 @@ function OfferCard({
           <span className="text-sm text-text-secondary">
             {orders === 0
               ? t(`${KEY}.offers.none`)
-              : t(`${KEY}.offers.orders`, { count: orders, value: formatBrl(cents) })}
+              : t(`${KEY}.offers.orders`, { count: orders, value: formatBrlWhole(cents) })}
           </span>
         </span>
         {href !== null ? (
@@ -127,7 +127,7 @@ function Numbers({ t, product }: { t: DashboardT; product: FinanceProductDetail 
           note={
             isBelowPrivacyFloor(product.revoked.orders)
               ? t(`${key}.revokedFloor`)
-              : t(`${key}.revokedValue`, { value: formatBrl(product.revoked.cents) })
+              : t(`${key}.revokedValue`, { value: formatBrlWhole(product.revoked.cents) })
           }
         />
       </KpiGrid>
@@ -158,6 +158,7 @@ function BuyersByBand({ t, product }: { t: DashboardT; product: FinanceProductDe
       ) : (
         <>
           <BarList
+            stacked
             rows={groups.map((group) => {
               const cents = group.bands.reduce((sum, band) => sum + product.byBand[band].cents, 0);
               const floored = isBelowPrivacyFloor(group.count);
@@ -169,7 +170,9 @@ function BuyersByBand({ t, product }: { t: DashboardT; product: FinanceProductDe
                   group.bands.filter((band) => counts[band] > 0),
                 ),
                 value: floored ? 0 : cents,
-                display: floored ? t(`${key}.floor`, { floor: PRIVACY_FLOOR }) : formatBrl(cents),
+                display: floored
+                  ? t(`${key}.floor`, { floor: PRIVACY_FLOOR })
+                  : formatBrlCompact(cents),
                 rate: floored ? undefined : t(`${key}.orders`, { count: group.count }),
                 highlight: group.bands.includes('superfan') || group.bands.includes('engaged'),
               };
@@ -206,7 +209,10 @@ function SoldBy({ t, product }: { t: DashboardT; product: FinanceProductDetail }
                       <span className="text-xs font-bold text-text">
                         {isBelowPrivacyFloor(post.orders)
                           ? t(`${key}.floor`, { floor: PRIVACY_FLOOR })
-                          : t(`${key}.value`, { count: post.orders, value: formatBrl(post.cents) })}
+                          : t(`${key}.value`, {
+                              count: post.orders,
+                              value: formatBrlWhole(post.cents),
+                            })}
                       </span>
                     </span>
                     <ChevronRight aria-hidden size={18} className="shrink-0 text-brand" />
@@ -238,12 +244,7 @@ export function OwnerFinanceProductDetail({ t, view }: { t: DashboardT; view: Ow
     <div className="flex min-w-0 flex-col gap-6">
       <BackLink href={back} label={t('tenantOwner.memberDetail.back')} />
       <Card className="flex flex-col">
-        <CommunityCover
-          geometry="card"
-          coverAssetId={null}
-          coverVariantWidths={[]}
-          coverAlt={product.name}
-        />
+        <CoverThumb t={t} kind={productCoverKind(product.id)} seed={product.id} variant="banner" />
         <div className="flex flex-col gap-2 p-4 [overflow-wrap:anywhere]">
           <ProductName t={t} product={product} as="h3" />
           <span className="text-sm text-text-secondary">

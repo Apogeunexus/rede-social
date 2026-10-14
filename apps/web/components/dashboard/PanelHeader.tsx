@@ -1,12 +1,15 @@
 import { type AttentionItem, AttentionList } from '@rede-social/module-dashboard/ui';
-import { SectionTitle, StatusPill } from '@rede-social/ui';
+import { SectionTitle } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
 import { AlertsBell } from './AlertsBell';
 
 export interface PanelHeaderProps {
   title: string;
   subtitle?: string;
-  /** A static, informative period chip ("30 dias"): the preview has no filter to change. */
+  /**
+   * The period the numbers cover ("30 dias"), as plain gray text: no pill, border or background, so
+   * it never reads as a button (quick 261014-ia8 E-3); the preview has no filter to change.
+   */
   period?: string;
   /** Already-translated alerts: a non-empty list puts a bell on the right that opens them. */
   alerts?: readonly AttentionItem[];
@@ -37,7 +40,11 @@ export async function PanelHeader({ title, subtitle, period, alerts }: PanelHead
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1">
-        {period ? <StatusPill className="shrink-0">{period}</StatusPill> : null}
+        {period ? (
+          <span data-panel-period className="shrink-0 text-xs text-text-secondary">
+            {period}
+          </span>
+        ) : null}
         {alerts && count > 0 ? (
           <AlertsBell
             label={

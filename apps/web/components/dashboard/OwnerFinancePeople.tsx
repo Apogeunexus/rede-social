@@ -101,6 +101,7 @@ function ShareBody({ t }: { t: DashboardT }) {
   const max = Math.max(...rows.flatMap((row) => [row.entry, row.addon]));
   const bars = (kind: 'entry' | 'addon') => (
     <BarList
+      stacked
       max={max}
       rows={rows.map((row) => ({
         id: `${kind}-${row.product.id}`,

@@ -2,20 +2,38 @@ import type { ContentKind } from '@rede-social/module-dashboard/fixtures';
 import { cn } from '@rede-social/ui';
 import {
   Aperture,
+  BookOpen,
   GalleryHorizontal,
+  GraduationCap,
   Image as ImageIcon,
   Link2,
   type LucideIcon,
+  MapPin,
+  MonitorPlay,
   Play,
   ShoppingBag,
   Ticket,
   Type,
+  Users,
+  Video,
 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { type DashboardT, formatClock } from './format';
 
-/** A publication's kind, plus the two strong actions that are not publications (PD-D). */
-export type CoverKind = ContentKind | 'event' | 'order';
+/**
+ * A publication's kind, plus the two strong actions that are not publications (PD-D), the store's
+ * products and the events' formats (quick 261014-ia8 F-7).
+ */
+export type CoverKind =
+  | ContentKind
+  | 'event'
+  | 'order'
+  | 'community'
+  | 'mentoring'
+  | 'ebook'
+  | 'recorded'
+  | 'in_person'
+  | 'online';
 
 /** One icon per kind, shared by the list thumbnail and the content cover (D-02). */
 export const COVER_ICON: Record<CoverKind, LucideIcon> = {
@@ -27,6 +45,12 @@ export const COVER_ICON: Record<CoverKind, LucideIcon> = {
   story: Aperture,
   event: Ticket,
   order: ShoppingBag,
+  community: Users,
+  mentoring: GraduationCap,
+  ebook: BookOpen,
+  recorded: MonitorPlay,
+  in_person: MapPin,
+  online: Video,
 };
 
 /** The five angles of the brand pair: the tones a cover can take (quick 261013-uoi PD-I). */
@@ -66,8 +90,12 @@ export interface CoverThumbProps {
   seed: string;
   /** A video's length, drawn as a small badge. */
   durationSeconds?: number | null;
-  /** `row`: a 56 px square at the start of a list row; `card`: the compact card's cover (E-01). */
-  variant?: 'row' | 'card';
+  /**
+   * `row`: a 56 px square at the start of a list row; `card`: the compact card's cover (E-01);
+   * `strip`: a low full-width band on top of a list card; `banner`: a full-width 16:7 header cover.
+   * The last two have no corners of their own: the card around them clips them.
+   */
+  variant?: 'row' | 'card' | 'strip' | 'banner';
   /** `card` only: the feed's width ÷ height (`contentCoverRatio`); null (a text post) is square. */
   ratio?: number | null;
 }
@@ -97,6 +125,23 @@ export function CoverThumb({
   ratio = null,
 }: CoverThumbProps & { t: DashboardT }) {
   const Icon = COVER_ICON[kind];
+  if (variant === 'strip' || variant === 'banner') {
+    return (
+      <span
+        aria-hidden="true"
+        data-testid="cover-thumb"
+        data-kind={kind}
+        data-tone={coverTone(seed)}
+        className={cn(
+          'flex w-full shrink-0 items-center justify-center overflow-hidden',
+          variant === 'strip' ? 'h-16' : 'aspect-[16/7]',
+        )}
+        style={coverStyle(seed)}
+      >
+        <Icon size={variant === 'strip' ? 28 : 44} className="opacity-90" />
+      </span>
+    );
+  }
   const card = variant === 'card';
   const story = kind === 'story';
   const aspect = story ? 1 : (ratio ?? 1);
