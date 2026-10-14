@@ -32,9 +32,10 @@ import type { PostType } from './tenant-panels';
  * same active days, attended events and VIP order, and `build` throws when a list's length differs
  * from its 30-day count. "Posts vistos" is the number of distinct posts in the seen list (still an
  * example: no post views are recorded yet). Which posts each member liked and commented on is
- * assigned once for the whole roster (`assignRosterInteractions`, quick 261013-orf E-03.1): the
- * likes KPI stays active days + the band's extras, the comments KPI is what was assigned, and the
- * actions since joining are never fewer than the last 30 days'.
+ * assigned once for the whole roster (`assignRosterInteractions`): the likes KPI stays active days +
+ * the band's extras, the comments KPI is the band's realistic table (`COMMENTS`, quick 261013-uoi:
+ * the roster is a sample of the base, so a post's people list may hold fewer names than its number),
+ * and the actions since joining are never fewer than the last 30 days'.
  *
  * Visible to the client's management only: with real data the privacy notice must say that the
  * management sees each member's individual behavior. Support is counts and dates, never message text.
@@ -124,6 +125,19 @@ const ATTENDS: Record<EngagementBand, (j: number) => boolean> = {
   inactive: () => false,
 };
 
+/**
+ * 30-day comments by band and slot (quick 261013-uoi C-1): near 2f39aec6 inside the realistic ranges
+ * (superfã 6-12, engajado 3-8, ocasional 1-3, novo 0-3), 168 in all, never more than 2 a day.
+ */
+const COMMENTS: Record<EngagementBand, (j: number) => number> = {
+  new: (j) => j % 3,
+  superfan: (j) => 6 + (j % 4),
+  engaged: (j) => 3 + (j % 3),
+  occasional: (j) => 1 + (j % 2),
+  at_risk: () => 0,
+  inactive: () => 0,
+};
+
 /** Likes beyond one per active day. */
 const EXTRA_LIKES: Record<EngagementBand, (j: number) => number> = {
   new: (j) => j % 3,
@@ -195,6 +209,7 @@ interface MemberBase {
   purchaseDay: number | null;
   activeDays: number;
   likes: number;
+  comments: number;
 }
 
 function baseOf(row: OwnerRosterMember): MemberBase {
@@ -251,22 +266,30 @@ function baseOf(row: OwnerRosterMember): MemberBase {
 
   const activeDays = countIn(days, 0, 29);
   const likes = activeDays === 0 ? 0 : activeDays + EXTRA_LIKES[band](j);
-  return { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes };
+  const comments = activeDays === 0 ? 0 : COMMENTS[band](j);
+  return { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes, comments };
 }
 
 let assignment: RosterInteractions | null = null;
 
 /**
  * Which posts every active member liked and commented on, assigned once for the whole roster
- * (quick 261013-orf E-03.1): the Conteúdo people lists are the inverse of these, so they must be
- * built together. Memoized: the roster is fixed, and this keeps every render the same.
+ * (quick 261013-uoi): the Conteúdo people lists are the inverse of these, so they must be built
+ * together. Memoized: the roster is fixed, and this keeps every render the same.
  */
 function rosterInteractions(): RosterInteractions {
   assignment ??= assignRosterInteractions(
     ownerBandRoster.flatMap((row) => {
       const base = baseOf(row);
       if (base.activeDays === 0) return [];
-      return [{ row, days: [...base.days].filter((day) => day <= 29), likes: base.likes }];
+      return [
+        {
+          row,
+          days: [...base.days].filter((day) => day <= 29),
+          likes: base.likes,
+          comments: base.comments,
+        },
+      ];
     }),
   );
   return assignment;
@@ -279,6 +302,7 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
   const checkIns = attended.size;
   const orders = purchaseDay !== null && purchaseDay < 30 ? 1 : 0;
   const assigned = rosterInteractions().get(row.id) ?? { likes: [], comments: [] };
+  // The assignment places the whole budget; the length check below catches any drift.
   const comments = assigned.comments.length;
   const lists = buildOwnerMemberLists({
     row,

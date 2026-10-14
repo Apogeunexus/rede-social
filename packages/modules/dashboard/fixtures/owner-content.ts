@@ -32,8 +32,8 @@ import { tenantOwnerPanel, type Weekday } from './tenant-owner';
  * People (P1). Who liked or commented on a post is the inverse of every roster member's insights
  * lists (`ownerMemberInsights(id).lists.likes` / `comments`, same moment), so "a member liked this
  * post" and "this post's likers" are one fact; the roster's likes and comments are assigned so every
- * list holds min(its number, 10) people, or every member who could act on a post of today or
- * yesterday (`assignRosterInteractions`, quick 261013-orf E-03.1). Story likers and repliers are
+ * list with a number above 0 holds at least 1 and at most 10 people, each member keeping a realistic
+ * activity (`assignRosterInteractions`, quick 261013-uoi). Story likers and repliers are
  * picked from the active bands' roster members who had joined and had not acted after the story's
  * day for the last time (the insights count feed actions only, so nothing contradicts them). Who
  * saved or shared is an example: a subset of the item's likers, never longer than the value. The

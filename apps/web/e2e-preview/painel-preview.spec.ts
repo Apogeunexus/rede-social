@@ -2453,7 +2453,9 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
   });
 
   test('the commenters put the unanswered first', async ({ page }) => {
-    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-12&quem=comentarios`);
+    // Quick 261013-uoi: op-24 holds answered commenters after its unanswered ones (op-12's roster
+    // commenters are now all unanswered).
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-24&quem=comentarios`);
     const rows = ownerArea(page).getByRole('listitem');
     await expect(rows.first()).toContainText('Sem resposta');
     const flags = await rows.evaluateAll((els) =>

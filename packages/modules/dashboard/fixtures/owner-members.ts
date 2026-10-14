@@ -20,6 +20,24 @@ export const OWNER_BAND_LIST_LIMIT = 10;
 export const PREVIEW_TODAY = '2026-10-12';
 
 /**
+ * The preview's "now" on PREVIEW_TODAY: after the latest member action (22:40), so a wait in hours
+ * becomes a day and clock reading no member action contradicts (quick 261013-uoi C-3).
+ */
+export const PREVIEW_NOW_TIME = '23:00';
+
+const DAY_MINUTES = 1440;
+
+/** The moment `hours` before the preview's now: whole days ago (⌊hours / 24⌋) and its clock reading. */
+export function momentHoursAgo(hours: number): RelativeMoment {
+  const [hh = 0, mm = 0] = PREVIEW_NOW_TIME.split(':').map(Number);
+  const minutes = hh * 60 + mm - 60 * hours;
+  const daysAgo = Math.max(0, Math.ceil(-minutes / DAY_MINUTES));
+  const clock = minutes + DAY_MINUTES * daysAgo;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return { daysAgo, time: `${pad(Math.floor(clock / 60))}:${pad(clock % 60)}` };
+}
+
+/**
  * One row of a band list (the member card, quick 261012-qer B-1). `lastActive` is the scope's;
  * `topCommunityId` and `dailyMinutes` are the member's own, in every scope.
  */

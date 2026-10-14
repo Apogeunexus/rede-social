@@ -229,11 +229,24 @@ before the like, the newest at the roster's last activity), comments (distinct r
 on an active day after the post was published), strong actions (comments, check-ins, the 30-day
 order) and posts seen. Each list's length is its KPI, and the builder throws otherwise. Which posts
 the roster liked and commented on is assigned once for the whole roster (`assignRosterInteractions`,
-261013-orf E-03.1): each post gets min(its likes, 10) likers and min(its comments, 10) commenters
-among the members who reach it and were active after it was published; the posts of today and
-yesterday (op-01, op-02, op-03) reach fewer active members, so their lists hold every one who could
-act. The likes KPI is unchanged (active days + the band's extras, every active day with a like); the
-comments KPI is the assigned comments (527 in all: superfãs 26-36 in 30 days, engajados 3-13), and the actions
+261013-uoi): the roster is a sample of the base, so a post's people list with a number holds at least
+1 and at most 10 of its members ("e mais N" for the rest), and each member keeps a realistic
+activity. Likes: up to min(its likes, 10) likers per post, each on the member's active day with the
+fewest likes (at most 6 on one day). The likes KPI is unchanged (active days + the band's extras,
+every active day with a like). Comments follow the band's table, never more than 2 a day:
+
+| Band | 30-day comments | Roster |
+|---|---|---|
+| superfã | 6 + (j mod 4): 6-9 | 90 |
+| engajado | 3 + (j mod 3): 3-5 | 48 |
+| ocasional | 1 + (j mod 2): 1-2 | 18 |
+| novo | j mod 3: 0-2 | 12 |
+| em risco / inativo | 0 | 0 |
+
+168 in all (96 in 2f39aec6). A post's oldest unanswered comment sits exactly at its recorded wait,
+counted from the preview's 23:00 (`momentHoursAgo`, 261013-uoi C-3), and no comment of the post is
+older. On a member's last day each action has its own time, the latest at the last action and each
+earlier one 35 min before (261013-uoi F-1). The actions
 since joining are never fewer than the 30-day ones. "Posts vistos" counts the distinct posts of
 that list (every liked or commented one plus one per active day) and stays an example
 (`needs_post_views`); `tests/owner-member-lists.test.ts` proves all of it for the 72 members.
@@ -278,8 +291,8 @@ Data: `fixtures/owner-content.ts` holds the 61 posts of `owner-posts.ts` (now wi
 and media) and 16 stories, the people behind each number (the inverse of the roster's insights lists,
 so a member's like and a post's liker are one fact), the overview aggregates and each publication's
 detail; `tests/owner-content.test.ts` proves the sums and both directions. Every people list with a
-number has people: at least min(the number, 10), or, on op-01, op-02, op-03 and the story os-01 (today
-and yesterday), every active member who could act — a ceiling the test computes (261013-orf E-03.1).
+number above 0 has at least 1 and at most 10 people; the screen counts the rest as "e mais N" and
+says the list shows the members' sample (261013-uoi).
 Saves take the first likers and shares the last ones. A post reaches at most 530 members (the 513
 active ones and a slice of em risco), never an inativo, and em risco is at most 10% of a reach;
 `reach.value.perPost` is 385, the average of the 61 posts (261013-orf E-03.4).
