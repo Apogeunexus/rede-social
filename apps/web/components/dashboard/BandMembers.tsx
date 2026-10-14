@@ -70,23 +70,30 @@ function bandShare(t: DashboardT, count: number, total: number): string {
     : formatPercent(percent);
 }
 
-function BandSummary({
+/**
+ * A band's count and share with its mini bar. `label` replaces the default "N · P%" text (Conteúdo's
+ * "41 membros · 43% da faixa", quick 261013-orf E-03.3); the bar stays.
+ */
+export function BandSummary({
   t,
   band,
   count,
   total,
+  label,
 }: {
   t: DashboardT;
   band: EngagementBand;
   count: number;
   total: number;
+  label?: string;
 }) {
   return (
     <span className="inline-flex items-center gap-2">
-      {t('tenantOwner.bandMembers.summary', {
-        count: formatCount(count),
-        percent: bandShare(t, count, total),
-      })}
+      {label ??
+        t('tenantOwner.bandMembers.summary', {
+          count: formatCount(count),
+          percent: bandShare(t, count, total),
+        })}
       <span aria-hidden className="block h-1.5 w-16 overflow-hidden rounded-full bg-bg-tertiary">
         {/* min-w-1.5: a band with members never draws an empty bar (a 6 px dot at least). */}
         <span
@@ -118,13 +125,15 @@ function CardLine({ label, children }: { label: string; children: ReactNode }) {
  * large name, four labeled lines, and a chevron saying it opens (R-3). The whole card links to the
  * member's insights (B-3). The daily time is an example; the list says so once on top (R-2).
  * Outside a band list (the Conteúdo people, quick 261013-h51 P1) `band` adds a first line with the
- * member's band; `id` lets a "Voltar" land on the card.
+ * member's band; `lead` adds a line under the name (when they did it, quick 261013-orf E-03.2); `id`
+ * lets a "Voltar" land on the card.
  */
 export function MemberCard({
   t,
   member,
   href,
   band,
+  lead,
   id,
   status,
 }: {
@@ -132,6 +141,8 @@ export function MemberCard({
   member: OwnerBandMember;
   href: string;
   band?: EngagementBand;
+  /** A line right under the name ("Curtiu há 3 dias"). */
+  lead?: string;
   id?: string;
   /** A pill next to the name (a commenter's "Sem resposta"). */
   status?: ReactNode;
@@ -158,6 +169,7 @@ export function MemberCard({
           ) : (
             <span className="text-lg font-bold leading-tight text-text">{member.name}</span>
           )}
+          {lead ? <span className="text-sm font-semibold text-text">{lead}</span> : null}
           <dl className="flex flex-col gap-1">
             {band ? (
               <CardLine label={t('tenantOwner.bandMembers.band')}>{bandLabel(t, band)}</CardLine>

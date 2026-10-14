@@ -6,7 +6,7 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMessages } from '@/i18n/messages';
 import { contentTabView } from '@/lib/owner-content-view';
-import { bandLabel, type DashboardT } from './format';
+import type { DashboardT } from './format';
 import { OwnerContentReplies } from './OwnerContentReplies';
 
 // format.ts reaches the app's module registry for tab labels; this screen never names a module.
@@ -47,7 +47,9 @@ describe('OwnerContentReplies (quick 261013-orf E-02)', () => {
       const comment = comments[i];
       expect(comment).toBeDefined();
       expect(row.textContent).toContain(comment?.person.name ?? '');
-      expect(row.textContent).toContain(bandLabel(t, comment?.person.band ?? 'new'));
+      expect(row.textContent).toContain(
+        t(`tenantOwner.memberDetail.band.${comment?.person.band ?? 'new'}`),
+      );
       expect(row.textContent).toContain(comment?.text ?? '');
       const button = row.querySelector('button');
       expect(button?.textContent).toBe('Responder');

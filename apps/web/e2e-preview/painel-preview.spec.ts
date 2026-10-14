@@ -1774,7 +1774,7 @@ test.describe('dono-do-cliente conteudo', () => {
     const count = await rows.count();
     expect(count).toBeGreaterThan(0);
     expect(count).toBeLessThanOrEqual(10);
-    await expect(area.getByText(`e mais ${value - count} membros`, { exact: true })).toBeVisible();
+    await expect(area.getByText(`e mais ${value - count} curtidas`, { exact: true })).toBeVisible();
     await expect(rows.first()).toContainText('Faixa:');
 
     const card = rows.first().getByRole('link');
@@ -1921,14 +1921,16 @@ const CONTENT_NUMBERS: {
   },
 ];
 
+/** The bands with interactors (quick 261013-orf E-03.3): em risco and inativos are one static line. */
 const CONTENT_BANDS: [string, string][] = [
-  ['Novos', '41 · 43% da faixa'],
-  ['Superfãs', '62 · 100% da faixa'],
-  ['Engajados', '189 · 92% da faixa'],
-  ['Ocasionais', '136 · 91% da faixa'],
-  ['Em risco', '0 · 0% da faixa'],
-  ['Inativos', '0 · 0% da faixa'],
+  ['Novos', '41 membros · 43% da faixa'],
+  ['Superfãs', '62 membros · 100% da faixa'],
+  ['Engajados', '189 membros · 92% da faixa'],
+  ['Ocasionais', '136 membros · 91% da faixa'],
 ];
+
+const IDLE_BANDS_LINE =
+  'Em risco e Inativos: ninguém curtiu nem comentou em 30 dias, e é isso que define essas faixas.';
 
 function interactsSection(page: Page) {
   return sectionTitled(ownerArea(page), 'Quem interage, por faixa');
@@ -2004,18 +2006,21 @@ test.describe('dono-do-cliente conteudo: Visão geral', () => {
     await expect(heat.locator('[data-heat-cell="sun-7"] [aria-hidden]')).toHaveText('39');
     await expect(heat).toContainText('Melhor: quinta, 20h–22h, com 100 interações por publicação.');
 
+    await expect(interactsSection(page).locator('details')).toHaveCount(CONTENT_BANDS.length);
     for (const [label, summary] of CONTENT_BANDS) {
       const details = bandDetails(interactsSection(page), label);
       await expect(details, label).toHaveCount(1);
       await expect(details, label).not.toHaveAttribute('open');
       await expect(details.locator('summary'), label).toContainText(summary);
+      // The Membros mini bar, decorative.
+      await expect(details.locator('summary span[aria-hidden].w-16'), label).toHaveCount(1);
     }
-    await bandDetails(interactsSection(page), 'Em risco').locator('summary').click();
-    await expect(
-      bandDetails(interactsSection(page), 'Em risco').getByText(
-        'Ninguém desta faixa interagiu com o conteúdo nos últimos 30 dias: é o que define a faixa.',
-      ),
-    ).toBeVisible();
+    for (const label of ['Em risco', 'Inativos']) {
+      await expect(bandDetails(interactsSection(page), label), label).toHaveCount(0);
+    }
+    const idle = interactsSection(page).getByText(IDLE_BANDS_LINE, { exact: true });
+    await expect(idle).toBeVisible();
+    await expect(idle.locator('xpath=ancestor-or-self::a')).toHaveCount(0);
 
     const next = sectionTitled(area, 'Próximos passos');
     await expect(next.getByRole('button')).toHaveCount(3);
@@ -2105,13 +2110,96 @@ test.describe('dono-do-cliente conteudo: Visão geral', () => {
     await expect(contentTabs(page)).toHaveCount(1);
   });
 
-  test('an attention row opens its publication', async ({ page }) => {
+  test('an attention row opens its unanswered comments, and Voltar returns to it', async ({
+    page,
+  }) => {
+    // Quick 261013-orf E-02.
     await page.goto(CONTENT_AREA);
     const area = ownerArea(page);
-    await area.locator('#post-op-19').click();
-    await expect(page).toHaveURL(/\?area=conteudo&post=op-19$/);
-    await expect(area.getByText('60 interações', { exact: true })).toBeVisible();
-    expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#post-op-19$/);
+    const row = area.locator('#atencao-op-24');
+    await expect(row.locator('[data-testid="cover-thumb"]')).toHaveCount(1);
+    await expect(row.locator('[data-testid="cover-thumb"]')).toHaveAttribute('aria-hidden', 'true');
+    await row.click();
+    await expect(page).toHaveURL(/\?area=conteudo&responder=op-24$/);
+    await expect(contentTabs(page)).toHaveCount(0);
+    await expect(
+      area.getByRole('heading', { level: 3, name: 'Comentários sem resposta', exact: true }),
+    ).toBeVisible();
+    await expect(
+      area.getByText('Dica rápida: uma lista curta vale mais que uma longa'),
+    ).toBeVisible();
+    await expect(
+      area.getByText('2 comentários sem resposta · o mais antigo há 10 dias', { exact: true }),
+    ).toBeVisible();
+    const comments = area.getByRole('listitem');
+    await expect(comments).toHaveCount(2);
+    await expect(comments.first()).toContainText('Comentou há 10 dias');
+    const reply = comments.first().getByRole('button', { name: 'Responder' });
+    await expect(reply).toBeDisabled();
+    await expect(reply).toHaveAttribute('aria-describedby', 'dashboard-preview-note');
+
+    expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#atencao-op-24$/);
+    await backLink(page).click();
+    await expect(page).toHaveURL(/\?area=conteudo#atencao-op-24$/);
+    await expect(area.locator('#atencao-op-24')).toBeInViewport();
+
+    await page.goto(`${CONTENT_AREA}&responder=op-19`);
+    await expect(area.getByRole('listitem')).toHaveCount(9);
+    for (const query of ['&responder=op-11', '&responder=xyz']) {
+      await page.goto(`${CONTENT_AREA}${query}`);
+      await expect(area.locator('#numero-publicacoes'), query).toBeVisible();
+      await expect(
+        area.getByRole('heading', { name: 'Comentários sem resposta', exact: true }),
+        query,
+      ).toHaveCount(0);
+    }
+    await page.goto(`${CONTENT_AREA}&numero=interacoes&responder=op-24`);
+    await expect(
+      area.getByRole('heading', { level: 3, name: 'Interações', exact: true }),
+    ).toBeVisible();
+    await expect(
+      area.getByRole('heading', { name: 'Comentários sem resposta', exact: true }),
+    ).toHaveCount(0);
+  });
+
+  test('the overview never repeats an anchor id', async ({ page }) => {
+    // Quick 261013-orf E-03.10: an attention row is `atencao-`, a card `post-`.
+    await page.goto(CONTENT_AREA);
+    const ids = await ownerArea(page)
+      .locator('[id^="post-"], [id^="atencao-"]')
+      .evaluateAll((els) => els.map((el) => el.id));
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('the bands with interactors open, without repeating the band on each card', async ({
+    page,
+  }) => {
+    // Quick 261013-orf E-03.3.
+    await page.goto(`${CONTENT_AREA}&faixa=superfas`);
+    const superfans = bandDetails(interactsSection(page), 'Superfãs');
+    await expect(superfans).toHaveAttribute('open');
+    await expect(superfans.getByRole('listitem').first()).toBeVisible();
+    await expect(superfans.getByText('Faixa:')).toHaveCount(0);
+    await expect(superfans.getByRole('listitem').first()).toContainText(
+      /Interagiu (hoje|ontem|há)/,
+    );
+  });
+
+  test('Interações: one publication thumbnail per row, the person first', async ({ page }) => {
+    // Quick 261013-orf D-01.
+    await page.goto(`${CONTENT_AREA}&numero=interacoes`);
+    const area = ownerArea(page);
+    const rows = area.getByRole('listitem');
+    await expect(rows).toHaveCount(10);
+    await expect(area.locator('li [data-testid="cover-thumb"]')).toHaveCount(10);
+    await expect(
+      area.locator('li [data-testid="cover-thumb"]:not([aria-hidden="true"])'),
+    ).toHaveCount(0);
+    // The thumbnail (a video's length included) is aria-hidden: the link's name starts with the person.
+    const name = (await rows.first().locator('span.text-sm.font-bold').first().innerText()).trim();
+    expect(name.length).toBeGreaterThan(0);
+    await expect(rows.first().getByRole('link')).toHaveAccessibleName(new RegExp(`^${name}`));
   });
 
   test('a forged overview URL falls one level up', async ({ page }) => {
@@ -2134,6 +2222,7 @@ test.describe('dono-do-cliente conteudo: Visão geral', () => {
 const CONTENT_OVERVIEW_VIEWS = [
   '',
   '&faixa=engajados',
+  '&responder=op-19',
   ...CONTENT_NUMBERS.map((number) => `&numero=${number.slug}`),
 ];
 
@@ -2302,10 +2391,34 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
       await kpi.click();
       await expect(page, slug).toHaveURL(new RegExp(`&post=op-11&quem=${slug}$`));
       await expect(
-        area.getByText(new RegExp(`^${value} .* · mais recentes primeiro$`)),
+        area.getByText(
+          new RegExp(
+            `^${value} .* · (mais recentes primeiro|sem resposta primeiro, depois os mais recentes)$`,
+          ),
+        ),
         slug,
       ).toBeVisible();
     }
+  });
+
+  test('a people card says when; "e mais" counts in the list unit; zero reads "nenhum"', async ({
+    page,
+  }) => {
+    // Quick 261013-orf E-03.2, E-03.7, E-03.8.
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11&quem=curtidas`);
+    await expect(area.getByRole('listitem').first()).toContainText(
+      /Curtiu (hoje|ontem|há \d+ dias)/,
+    );
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11&quem=comentarios`);
+    await expect(
+      area.getByText(/^31 comentários · sem resposta primeiro, depois os mais recentes$/),
+    ).toBeVisible();
+    const cards = await area.getByRole('listitem').count();
+    await expect(area.getByText(`e mais ${31 - cards} comentários`, { exact: true })).toBeVisible();
+    await expect(area.getByRole('listitem').first()).toContainText(/Comentou (hoje|ontem|há)/);
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-57&quem=compartilhamentos`);
+    await expect(area.getByText(/^nenhum compartilhamento · /)).toBeVisible();
   });
 
   test('the commenters put the unanswered first', async ({ page }) => {

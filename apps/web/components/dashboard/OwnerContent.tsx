@@ -13,6 +13,7 @@ import { ContentNumberList, OwnerContentOverview } from './OwnerContentOverview'
 import { OwnerContentPeople } from './OwnerContentPeople';
 import { ContentPostList } from './OwnerContentPostCard';
 import { OwnerContentPostDetail } from './OwnerContentPostDetail';
+import { OwnerContentReplies } from './OwnerContentReplies';
 import { byInteractions, OwnerContentTypes } from './OwnerContentTypes';
 import { OwnerMemberDetail } from './OwnerMemberDetail';
 import { OwnerMemberList } from './OwnerMemberList';
@@ -102,11 +103,13 @@ function ContentMember({
  * screens — Visão geral, Por tipo (an opened type included) and Publicações — carry the one row of
  * three tabs (an opened band of "Quem interage" included); every deeper step (an overview number's
  * list, a publication, who did one of its numbers, a member's insights, the list behind one of them)
- * replaces the area under its "Voltar" (PD-3). The period is the panel's
+ * replaces the area under its "Voltar" (PD-3), as do the unanswered comments of a post in "Precisa
+ * de atenção" (quick 261013-orf E-02). The period is the panel's
  * fixed 30 days against the 30 before: there is no period selector.
  */
 export async function OwnerContent({ content: view }: { content: OwnerContentView }) {
   const t = await getTranslations('dashboard');
+  if (view.reply) return <OwnerContentReplies t={t} view={view} />;
   if (view.memberId) return <ContentMember t={t} view={view} memberId={view.memberId} />;
   if (view.who) return <OwnerContentPeople t={t} view={view} />;
   if (view.postId) return <OwnerContentPostDetail t={t} view={view} />;

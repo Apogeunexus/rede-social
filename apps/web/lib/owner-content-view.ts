@@ -35,7 +35,8 @@ export type ContentNumber = 'posts' | 'interactions' | 'rate' | 'members' | 'vie
  * list is open or the band of "Quem interage" that is open; the type opened under Por tipo; the
  * publication; who did one of its numbers; the member opened from a list (a publication's people,
  * the interactors or a band) and the list behind one of the member's insight numbers. Each level is
- * only ever set with the levels above it.
+ * only ever set with the levels above it. `reply` (quick 261013-orf E-02) is the post of "Precisa de
+ * atenção" whose unanswered comments are open: only on Visão geral, and alone.
  */
 export interface OwnerContentView {
   tab: ContentTab;
@@ -46,6 +47,7 @@ export interface OwnerContentView {
   who: ContentWho | null;
   memberId: string | null;
   list: OwnerMemberListSlug | null;
+  reply: string | null;
 }
 
 /** `?vista=` per tab; Visão geral has none. */
@@ -79,9 +81,25 @@ export const CONTENT_WHO_SLUGS: Readonly<Record<ContentWho, string>> = {
   shares: 'compartilhamentos',
 };
 
-/** The id of a publication card (or attention row): Voltar from its detail lands on it. */
+/** The id of a publication card: Voltar from its detail lands on it. */
 export function contentPostAnchor(postId: string): string {
   return `post-${postId}`;
+}
+
+/**
+ * The id of a "Precisa de atenção" row: Voltar from its unanswered comments lands on it. Its own
+ * prefix, so it never repeats the `post-` id of the same post's card below (E-03.10).
+ */
+export function contentAttentionAnchor(postId: string): string {
+  return `atencao-${postId}`;
+}
+
+/** A comment waiting longer than this for the team's answer needs attention. */
+const ATTENTION_HOURS = 24;
+
+/** Whether a publication has a comment unanswered for over 24 hours ("Precisa de atenção"). */
+export function needsAttention(item: Pick<ContentItem, 'kind' | 'commentMeta'>): boolean {
+  return item.kind !== 'story' && (item.commentMeta.oldestUnansweredHours ?? 0) > ATTENTION_HOURS;
 }
 
 /** The id of a type card: Voltar from an opened type lands on it. */
@@ -119,6 +137,11 @@ function bySlug<K extends string>(
 }
 
 const ITEM_IDS: readonly string[] = ownerContentItems.map((item) => item.id);
+
+/** The posts whose unanswered comments `responder` may open. */
+const REPLY_IDS: readonly string[] = ownerContentItems
+  .filter(needsAttention)
+  .map((item) => item.id);
 
 function itemOf(id: string): ContentItem {
   const item = ownerContentItems.find((row) => row.id === id);
@@ -177,12 +200,19 @@ function parseMember(
  * 6. `membro` must be in the opened list: the post's people (`ownerContentIncludes`), the
  *    interactors or that band's interactors (`ownerContentInteractorIncludes`).
  * 7. `lista` is one of OWNER_MEMBER_LISTS, only with a member.
+ * `responder` (quick 261013-orf E-02) is read right after `faixa`: on Visão geral with no `numero` and
+ * no `faixa`, the id of a post that `needsAttention`; with it every deeper param is ignored.
  * Only allow-listed constants ever reach markup or URLs.
  */
 export function parseOwnerContentView(params: SearchParams): OwnerContentView {
   const tab = bySlug(params.vista, TAB_SLUGS) ?? 'overview';
   const number = tab === 'overview' ? (bySlug(params.numero, CONTENT_NUMBER_SLUGS) ?? null) : null;
   const band = tab === 'overview' && number === null ? parseBand(params) : null;
+  const reply =
+    tab === 'overview' && number === null && band === null
+      ? (pick(params.responder, REPLY_IDS) ?? null)
+      : null;
+  if (reply) return { ...contentTabView('overview'), reply };
   const kind = tab === 'types' ? (bySlug(params.tipo, CONTENT_KIND_SLUGS) ?? null) : null;
   const postId = parsePost(params, { tab, number, band, kind });
   const rawWho = postId ? bySlug(params.quem, CONTENT_WHO_SLUGS) : undefined;
@@ -190,18 +220,19 @@ export function parseOwnerContentView(params: SearchParams): OwnerContentView {
     postId && rawWho && !(rawWho === 'saves' && itemOf(postId).saves === null) ? rawWho : null;
   const memberId = parseMember(params, { number, band, postId, who });
   const list = memberId ? (pick(params.lista, OWNER_MEMBER_LISTS) ?? null) : null;
-  return { tab, number, band, kind, postId, who, memberId, list };
+  return { tab, number, band, kind, postId, who, memberId, list, reply: null };
 }
 
 /**
- * The link to a cascade view: the area, then `vista`, `numero`, `faixa`, `tipo`, `post`, `quem`,
- * `membro` and `lista` in that order.
+ * The link to a cascade view: the area, then `vista`, `numero`, `faixa`, `responder`, `tipo`, `post`,
+ * `quem`, `membro` and `lista` in that order.
  */
 export function ownerContentHref(view: OwnerContentView): string {
   let query = '';
   if (view.tab !== 'overview') query += `&vista=${TAB_SLUGS[view.tab]}`;
   if (view.number) query += `&numero=${CONTENT_NUMBER_SLUGS[view.number]}`;
   if (view.band) query += `&faixa=${OWNER_BAND_SLUGS[view.band]}`;
+  if (view.reply) query += `&responder=${view.reply}`;
   if (view.kind) query += `&tipo=${CONTENT_KIND_SLUGS[view.kind]}`;
   if (view.postId) query += `&post=${view.postId}`;
   if (view.who) query += `&quem=${CONTENT_WHO_SLUGS[view.who]}`;
@@ -214,9 +245,13 @@ export function ownerContentHref(view: OwnerContentView): string {
  * "Voltar" one level up (D-01): the parent view's link landing on what was closed (the insight
  * number, the member card, the interaction number, the publication card, the type card, the overview
  * number). Null on a tab screen (an opened band and an opened type are tab screens only when nothing
- * deeper is open; an opened type still goes back to the six types).
+ * deeper is open; an opened type still goes back to the six types). The unanswered comments go back
+ * to Visão geral, on their attention row.
  */
 export function contentBackHref(view: OwnerContentView): string | null {
+  if (view.reply) {
+    return `${ownerContentHref({ ...view, reply: null })}#${contentAttentionAnchor(view.reply)}`;
+  }
   if (view.list) {
     return `${ownerContentHref({ ...view, list: null })}#${ownerInsightAnchor(view.list)}`;
   }
@@ -327,5 +362,6 @@ export function contentTabView(tab: ContentTab): OwnerContentView {
     who: null,
     memberId: null,
     list: null,
+    reply: null,
   };
 }

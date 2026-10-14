@@ -765,7 +765,7 @@
         "detail": {
           "back": "Voltar",
           "watch": "Assistir",
-          "interactions": "{count, plural, one {{value} interação} other {{value} interações}}",
+          "interactions": "{count, plural, =0 {nenhuma interação} one {{value} interação} other {{value} interações}}",
           "vsKind": "{ratio}× a média {kinds}",
           "inProgress": "Em andamento",
           "interactionsTitle": "Interações",
@@ -843,10 +843,24 @@
             "shares": "Quem compartilhou"
           },
           "count": {
-            "likes": "{count, plural, one {# curtida} other {# curtidas}} · mais recentes primeiro",
-            "comments": "{count, plural, one {# comentário} other {# comentários}} · mais recentes primeiro",
-            "saves": "{count, plural, one {# salvamento} other {# salvamentos}} · mais recentes primeiro",
-            "shares": "{count, plural, one {# compartilhamento} other {# compartilhamentos}} · mais recentes primeiro"
+            "likes": "{count, plural, =0 {nenhuma curtida} one {# curtida} other {# curtidas}} · mais recentes primeiro",
+            "comments": "{count, plural, =0 {nenhum comentário} one {# comentário} other {# comentários}} · sem resposta primeiro, depois os mais recentes",
+            "saves": "{count, plural, =0 {nenhum salvamento} one {# salvamento} other {# salvamentos}} · mais recentes primeiro",
+            "shares": "{count, plural, =0 {nenhum compartilhamento} one {# compartilhamento} other {# compartilhamentos}} · mais recentes primeiro"
+          },
+          "moment": "{days, plural, =0 {hoje{timed, select, yes { às {time}} other {}}} =1 {ontem{timed, select, yes { às {time}} other {}}} other {há # dias}}",
+          "when": {
+            "likes": "Curtiu {when}",
+            "comments": "Comentou {when}",
+            "saves": "Salvou {when}",
+            "shares": "Compartilhou {when}",
+            "interacted": "Interagiu {when}"
+          },
+          "more": {
+            "likes": "e mais {count, plural, =0 {nenhuma curtida} one {# curtida} other {# curtidas}}",
+            "comments": "e mais {count, plural, =0 {nenhum comentário} one {# comentário} other {# comentários}}",
+            "saves": "e mais {count, plural, =0 {nenhum salvamento} one {# salvamento} other {# salvamentos}}",
+            "shares": "e mais {count, plural, =0 {nenhum compartilhamento} one {# compartilhamento} other {# compartilhamentos}}"
           },
           "empty": {
             "likes": "Ninguém curtiu esta publicação ainda.",
@@ -855,6 +869,11 @@
             "shares": "Ninguém compartilhou esta publicação ainda."
           },
           "unanswered": "Sem resposta"
+        },
+        "replies": {
+          "title": "Comentários sem resposta",
+          "when": "Comentou {when}",
+          "reply": "Responder"
         },
         "weekday": {
           "mon": "Segunda",
@@ -920,8 +939,8 @@
           },
           "bands": {
             "title": "Quem interage, por faixa",
-            "summary": "{count} · {percent} da faixa",
-            "none": "Ninguém desta faixa interagiu com o conteúdo nos últimos 30 dias: é o que define a faixa.",
+            "summary": "{count, plural, =0 {nenhum membro} one {# membro} other {# membros}} · {percent} da faixa",
+            "idle": "Em risco e Inativos: ninguém curtiu nem comentou em 30 dias, e é isso que define essas faixas.",
             "note": "A faixa é a de hoje. A porcentagem é a parte da faixa que curtiu ou comentou nos últimos 30 dias."
           },
           "next": {

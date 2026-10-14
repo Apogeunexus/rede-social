@@ -264,7 +264,10 @@ selector (30 days against the 30 before). The params, in order: `vista`, `numero
 number: `publicacoes`, `interacoes`, `taxa`, `membros`, `visualizacoes`, `alcance`), `faixa` (a band
 of "Quem interage" with interactors), `tipo` (`video`, `foto`, `carrossel`, `texto`, `link`,
 `story`), `post`, `quem` (`curtidas`, `comentarios`, `salvamentos`, `compartilhamentos`; there is no
-views or reach value), `membro` and `lista`. `apps/web/lib/owner-content-view.ts` reads them level by
+views or reach value), `membro` and `lista`; on Visão geral alone, `responder` (261013-orf E-02)
+opens the unanswered comments of a post in "Precisa de atenção" (over 24 h without an answer,
+`needsAttention`) and ignores every deeper param; its "Voltar" lands on the row, whose anchor is
+`atencao-<id>` so it never repeats a card's `post-<id>` (E-03.10). `apps/web/lib/owner-content-view.ts` reads them level by
 level: each is an exact, single, allow-listed value that the opened list holds (a post of the opened
 type, a member of the opened people through `ownerContentIncludes` / `ownerContentInteractorIncludes`),
 and anything else falls one level up, never to an error. Every deeper step has a "Voltar" to the exact
@@ -283,7 +286,23 @@ active ones and a slice of em risco), never an inativo, and em risco is at most 
 `ownerContentUnanswered(itemId)` gives an item's unanswered comments, oldest first, with their text
 (261013-orf E-02); the oldest one is as old as the "Precisa de atenção" row says. Only
 `OwnerContentPeople.tsx` reads `ownerContentPeople`, `ownerContentInteractors` and
-`ownerContentInteractions`.
+`ownerContentInteractions`, and only `OwnerContentReplies.tsx` reads `ownerContentUnanswered`.
+
+Covers and cards (261013-orf). Every list row that is a publication starts with its cover thumbnail
+(`apps/web/components/dashboard/CoverThumb.tsx`): the member's seven lists (level 7, each post now
+has a `kind` and a video's `durationSeconds`), the member lists of level 4 (a check-in shows a
+ticket, an order a bag; Dias ativos has none), Interações, Precisa de atenção and the unanswered
+comments screen. The thumbnail is decorative (`aria-hidden`; the row's text stays its name) and is
+the same cover as the detail: the brand's own `--brand-gradient` shifted to one of five tones by the
+publication's id (`coverTone`), the kind's icon, a video's length and a story's ring. When real data
+is wired, the thumbnail becomes the post's media through `MediaImage`
+(`packages/core/ui/MediaImage.tsx`); the gradient stays only for posts without media. Melhores
+publicações, Publicações, an opened type and the number lists use a compact card: the thumbnail at
+the feed's ratio (7rem high, at most 8rem wide), the caption in two lines, the meta and the four
+numbers (named for screen readers); the whole card opens the detail. On the detail the cover stays
+big, its sides are the same gradient darkened (no grey band) and a video or story has a disabled
+"Assistir". A people card says when the person did it ("Curtiu há 3 dias"), and "e mais N" counts in
+the list's own unit.
 
 Planner decisions:
 
@@ -295,7 +314,7 @@ Planner decisions:
 - PD-6 The heatmap tint is `heatBucket` of the min–max-normalized value, so only the best cell is solid.
 - PD-7 The Interações list is the interactions themselves (who, band, liked or commented, which publication, when).
 - PD-8 Saves and shares people are example subsets of the likers; story likers and repliers are picked from the active roster.
-- PD-9 A comment's text is never shown; the commenters list puts the unanswered first.
+- PD-9 A comment's text is never shown, except the unanswered ones on the `responder` screen (261013-orf E-02, a user decision); the commenters list puts the unanswered first.
 - PD-10 Any order count under 5, zero included, reads "menos de 5 pedidos" with no value.
 - PD-11 Canais left Conteúdo with nothing moved: the panel's Visão geral already has one number per area.
 - PD-12 Taxa de engajamento = likes + comments ÷ the reach of the 61 posts (an example, because the reach is).
@@ -310,6 +329,9 @@ Planner decisions:
   pedidos", with no value.
 - P3: views per member are recorded only to count them, never to list who viewed; they are kept 90
   days. No views or reach number opens a list of people (the parser has no such `quem` value).
+- P4 (261013-orf E-02, user decision): the text of a comment the team has not answered yet is shown
+  to the client's team at level 4, on the screen to answer it, with who wrote it and their band. The
+  privacy notice must say that the client's team reads the comments waiting for an answer.
 
 Notes from the 261012-oxi review, for the change that replaces the fixture with API answers.
 

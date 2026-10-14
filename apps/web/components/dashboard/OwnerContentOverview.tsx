@@ -25,14 +25,17 @@ import { AlertTriangle, CalendarClock, ChevronRight, MessageCircle, Repeat } fro
 import type { ReactNode } from 'react';
 import {
   type ContentNumber,
+  contentAttentionAnchor,
   contentBackHref,
   contentNumberAnchor,
-  contentPostAnchor,
   contentTabView,
+  needsAttention,
   type OwnerContentView,
   ownerContentHref,
 } from '@/lib/owner-content-view';
 import { BackLink } from './BackLink';
+import { BandSummary } from './BandMembers';
+import { CoverThumb } from './CoverThumb';
 import {
   type DashboardT,
   exampleBadge,
@@ -187,10 +190,13 @@ function Kpis({ t }: { t: DashboardT }) {
 /** The posts with a comment waiting for the team over 24 hours, the longest wait first. */
 function attentionPosts(): ContentItem[] {
   const wait = (item: ContentItem) => item.commentMeta.oldestUnansweredHours ?? 0;
-  return POSTS.filter((item) => wait(item) > 24).sort((a, b) => wait(b) - wait(a));
+  return POSTS.filter(needsAttention).sort((a, b) => wait(b) - wait(a));
 }
 
-/** (2) Precisa de atenção: comments unanswered over 24 hours, each opening its publication. */
+/**
+ * (2) Precisa de atenção: comments unanswered over 24 hours; each row (the publication's thumbnail,
+ * the count with the alert icon, the caption) opens its unanswered comments (quick 261013-orf E-02).
+ */
 function Attention({ t }: { t: DashboardT }) {
   const rows = attentionPosts();
   const key = `${KEY}.attention`;
@@ -205,13 +211,23 @@ function Attention({ t }: { t: DashboardT }) {
             {rows.map((item) => (
               <li key={item.id}>
                 <a
-                  id={contentPostAnchor(item.id)}
-                  href={ownerContentHref({ ...contentTabView('overview'), postId: item.id })}
+                  id={contentAttentionAnchor(item.id)}
+                  href={ownerContentHref({ ...contentTabView('overview'), reply: item.id })}
                   className="flex scroll-mt-20 items-center gap-3 px-3 py-2.5 transition-colors hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand"
                 >
-                  <AlertTriangle aria-hidden size={18} className="shrink-0 text-warning" />
+                  <CoverThumb
+                    t={t}
+                    kind={item.kind}
+                    seed={item.id}
+                    durationSeconds={item.durationSeconds}
+                  />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5 [overflow-wrap:anywhere]">
-                    <span className="text-sm font-bold text-text">
+                    <span className="flex items-start gap-1.5 text-sm font-bold text-text">
+                      <AlertTriangle
+                        aria-hidden
+                        size={14}
+                        className="mt-0.5 shrink-0 text-warning"
+                      />
                       {t(`${key}.row`, {
                         count: item.comments - item.commentMeta.answered,
                         age: contentAgeText(t, item.commentMeta.oldestUnansweredHours ?? 0),
@@ -379,9 +395,10 @@ function Heatmap({ t }: { t: DashboardT }) {
 }
 
 /**
- * (6) Quem interage, por faixa: the six bands (today's), each summing who interacted and their share
- * of the band (PD-5); opened, the band's members who interacted, each opening their insights. Em
- * risco and inativos have none by definition, and say so.
+ * (6) Quem interage, por faixa: the bands with interactors (today's), each summing who interacted and
+ * their share of the band with the Membros mini bar (PD-5, quick 261013-orf E-03.3); opened, the
+ * band's members who interacted, each opening their insights. Em risco and inativos have none by
+ * definition: one static line says so, with nothing to open.
  */
 function Bands({ t, view }: { t: DashboardT; view: OwnerContentView }) {
   const { interactorsByBand } = ownerContent;
@@ -390,26 +407,31 @@ function Bands({ t, view }: { t: DashboardT; view: OwnerContentView }) {
   return (
     <PanelSection id="quem-interage" title={t(`${key}.title`)} className="scroll-mt-20">
       <p className="text-xs text-text-secondary">{t(`${key}.note`)}</p>
-      {ENGAGEMENT_BAND_ORDER.map((band) => {
+      {ENGAGEMENT_BAND_ORDER.filter((band) => interactorsByBand[band] > 0).map((band) => {
         const count = interactorsByBand[band];
         return (
           <Collapsible
             key={band}
             open={band === view.band}
             title={t(`bands.${band}`)}
-            summary={t(`${key}.summary`, {
-              count: formatCount(count),
-              percent: formatPercent(percentOf(count, counts[band])),
-            })}
+            summary={
+              <BandSummary
+                t={t}
+                band={band}
+                count={count}
+                total={counts[band]}
+                label={t(`${key}.summary`, {
+                  count,
+                  percent: formatPercent(percentOf(count, counts[band])),
+                })}
+              />
+            }
           >
-            {count === 0 ? (
-              <p className="text-sm text-text-secondary">{t(`${key}.none`)}</p>
-            ) : (
-              <InteractorList t={t} view={contentTabView('overview')} band={band} />
-            )}
+            <InteractorList t={t} view={contentTabView('overview')} band={band} />
           </Collapsible>
         );
       })}
+      <p className="text-sm text-text-secondary">{t(`${key}.idle`)}</p>
     </PanelSection>
   );
 }
