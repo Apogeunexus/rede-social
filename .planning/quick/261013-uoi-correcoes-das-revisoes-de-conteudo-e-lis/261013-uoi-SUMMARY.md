@@ -148,3 +148,16 @@ Nenhum novo.
 
 - Arquivos: todos os key-files existem; as 4 capturas existem em `screens/`.
 - Commits: eb83e4c6, 14623cff, 79b4716d, daaa6b63, 3f94f927, 166ab652 e e30a9577 estão no `git log`.
+
+## Revisões e integração (orquestrador)
+
+- **Integração:** os commits entraram na `feat/painel-preview` por avanço simples (HEAD 0eef01e2). A cópia separada foi removida.
+- **Revisão de comportamento: APROVADO.** Dois achados baixos:
+  1. A âncora do Voltar do detalhe escolhe a linha de atenção quando a publicação está nas duas seções (Atenção e Melhores). Hoje isso não acontece com os dados fictícios. Fica registrado como risco latente.
+  2. Este SUMMARY dizia "de 1 a 10 pessoas" para toda lista. Os dados de curtidas têm até 16 pessoas, e a tela corta em 10. A regra vale para a tela, e para comentários vale também nos dados (no máximo 9).
+- **Revisão de fluxo: APROVADO.** Os 4 achados baixos foram corrigidos em 26932391:
+  - tons com profundidade (luminosidade) além do ângulo, só com tokens da marca;
+  - toda ação de "ontem" com horário, começando num minuto próprio de cada membro;
+  - ícone do story trocado por `Aperture`;
+  - "nenhum" no lugar de "nenhuma".
+- **Checks finais:** lint 16/16, typecheck 18/18, testes 15/15, boundaries limpo, Playwright do preview 208/208.
