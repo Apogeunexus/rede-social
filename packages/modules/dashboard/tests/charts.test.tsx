@@ -122,6 +122,46 @@ describe('LineChart', () => {
     expect(xs).toEqual(['x1', 'x4']);
   });
 
+  describe('the last x label, anchored at the end (quick 261013-uoi C-2)', () => {
+    function labels(count: number, at: Record<number, string>) {
+      const { container } = render(
+        <LineChart
+          series={Array.from({ length: count }, (_, i) => 10 + i)}
+          xLabels={Array.from({ length: count }, (_, i) => at[i] ?? '')}
+          yStep={5}
+          formatValue={(n) => `v${n}`}
+          ariaLabel="chart-sentinel"
+        />,
+      );
+      return [...container.querySelectorAll('[data-x-label]')].map((el) => ({
+        text: el.textContent,
+        anchor: el.getAttribute('text-anchor'),
+      }));
+    }
+
+    it('drops the label before it when the two would touch', () => {
+      const months = ['nov', 'dez', 'jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set'];
+      const at: Record<number, string> = { 11: 'out' };
+      for (const [i, month] of months.entries()) if (i % 2 === 0) at[i] = month;
+      const xs = labels(12, at);
+      expect(xs.map((x) => x.text)).toEqual(['nov', 'jan', 'mar', 'mai', 'jul', 'out']);
+      expect(xs.at(-1)).toEqual({ text: 'out', anchor: 'end' });
+    });
+
+    it('keeps every label when there is room', () => {
+      expect(labels(12, { 3: 'S4', 7: 'S8', 11: 'S12' }).map((x) => x.text)).toEqual([
+        'S4',
+        'S8',
+        'S12',
+      ]);
+      expect(labels(11, { 0: '0:00', 5: '0:20', 10: '0:41' }).map((x) => x.text)).toEqual([
+        '0:00',
+        '0:20',
+        '0:41',
+      ]);
+    });
+  });
+
   it('ships no words: every text node comes from the caller', () => {
     const { container } = chart(true);
     const texts = [...container.querySelectorAll('text')].map((t) => t.textContent ?? '');

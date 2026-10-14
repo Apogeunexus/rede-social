@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMessages } from '@/i18n/messages';
-import { COVER_TONES, CoverThumb, type CoverThumbProps, coverTone } from './CoverThumb';
+import { COVER_TONES, CoverThumb, type CoverThumbProps, coverStyle, coverTone } from './CoverThumb';
 import type { DashboardT } from './format';
 
 // format.ts reaches the app's module registry for tab labels; a thumbnail never names a module.
@@ -12,8 +12,8 @@ vi.mock('@/lib/registry', () => ({ moduleLabelResolver: () => () => undefined })
 
 /**
  * The publication thumbnail of the lists (quick 261013-orf D-02/D-04) on the REAL pt-BR catalog:
- * decorative, the brand gradient at one of five tones per publication, the kind's icon, a video's
- * length and a story's ring.
+ * decorative, the brand pair at one of five angles per publication, the kind's icon, a video's
+ * length and a story's ring (quick 261013-uoi F-5/F-6).
  */
 
 afterEach(cleanup);
@@ -50,6 +50,26 @@ describe('coverTone', () => {
   });
 });
 
+describe('coverStyle (quick 261013-uoi F-6)', () => {
+  it('turns the brand pair by one of five angles, with brand tokens only', () => {
+    const images = ['p01', 'p02', 'p03', 'p04', 'p05'].map(
+      (seed) => coverStyle(seed).backgroundImage,
+    );
+    for (const image of images) {
+      expect(image).toMatch(
+        /^linear-gradient\(\d+deg, var\(--brand-primary\), var\(--brand-secondary\)\)$/,
+      );
+    }
+    expect(new Set(images).size).toBe(5);
+    const angles = new Set(COVER_TONES);
+    expect(angles.size).toBe(5);
+    const style = coverStyle('p01');
+    expect(style.color).toBe('var(--brand-on-primary)');
+    expect(style.backgroundSize).toBeUndefined();
+    expect(style.backgroundPosition).toBeUndefined();
+  });
+});
+
 describe('CoverThumb (row)', () => {
   it('a video is a decorative 56 px square with its icon, its length and a brand tone', () => {
     const el = thumb({ kind: 'video', seed: 'p01', durationSeconds: 612 });
@@ -59,8 +79,9 @@ describe('CoverThumb (row)', () => {
     expect(el.textContent).toBe('10:12');
     expect(el.querySelectorAll('svg')).toHaveLength(1);
     const style = el.getAttribute('style') ?? '';
-    expect(style).toContain('var(--brand-gradient)');
-    expect(style).toContain('300% 300%');
+    expect(style).toContain('var(--brand-primary)');
+    expect(style).toContain('var(--brand-secondary)');
+    expect(el.querySelector('svg')?.getAttribute('class')).toContain('lucide-play');
   });
 
   it('a text post has the text icon, no badge and no ring', () => {
@@ -76,30 +97,63 @@ describe('CoverThumb (row)', () => {
     expect(el.querySelectorAll('svg')).toHaveLength(1);
   });
 
-  it('a story has the brand ring and no badge', () => {
-    const el = thumb({ kind: 'story', seed: 's01' });
-    expect(el.className).toContain('ring-2');
-    expect(el.textContent).toBe('');
+  it('a story is a circle with the brand ring and its own icon, no badge (quick 261013-uoi F-5)', () => {
+    for (const variant of ['row', 'card'] as const) {
+      const el = thumb({ kind: 'story', seed: 's01', variant, ratio: 9 / 16 });
+      expect(el.className, variant).toContain('ring-2');
+      expect(el.classList, variant).toContain('rounded-full');
+      expect(el.classList, variant).not.toContain('rounded-lg');
+      expect(el.querySelector('svg')?.getAttribute('class'), variant).toContain(
+        'lucide-circle-dashed',
+      );
+      expect(el.textContent, variant).toBe('');
+      if (variant === 'card') expect(el.dataset.ratio).toBe('1');
+      cleanup();
+    }
   });
 
-  it('a card-sized vertical video keeps its ratio, 7rem high and at most 8rem wide', () => {
-    const el = thumb({
-      kind: 'video',
-      seed: 'op-41',
-      durationSeconds: 41,
-      variant: 'card',
-      ratio: 9 / 16,
-    });
-    expect(el.dataset.ratio).toBe('0.5625');
-    expect(el.classList).not.toContain('size-14');
-    const style = el.getAttribute('style') ?? '';
-    // 7rem × 9/16 = 3.938rem wide; the ratio then gives the 7rem height.
-    expect(el.style.width).toBe('3.938rem');
-    expect(el.style.maxWidth).toBe('8rem');
-    expect(style).toContain('aspect-ratio: 0.5625');
-    const badge = el.querySelector('span');
-    expect(badge?.textContent).toBe('0:41');
-    expect(badge?.classList).toContain('text-xs');
+  it('a video stays a rounded square with the play icon', () => {
+    const el = thumb({ kind: 'video', seed: 'op-41', variant: 'card', ratio: 9 / 16 });
+    expect(el.classList).toContain('rounded-lg');
+    expect(el.classList).not.toContain('rounded-full');
+    expect(el.querySelector('svg')?.getAttribute('class')).toContain('lucide-play');
+  });
+});
+
+describe('CoverThumb (card, quick 261013-uoi F-3)', () => {
+  function column(el: HTMLElement): HTMLElement {
+    const parent = el.parentElement;
+    if (!parent) throw new Error('no column');
+    return parent;
+  }
+
+  it('sits in a fixed 4.5rem column, min(4.5, 7 × ratio) rem wide at its ratio', () => {
+    const cases: [number | null, string, string][] = [
+      [9 / 16, '3.938rem', '0.5625'],
+      [16 / 9, '4.500rem', String(16 / 9)],
+      [null, '4.500rem', '1'],
+    ];
+    for (const [ratio, width, dataRatio] of cases) {
+      const el = thumb({
+        kind: 'video',
+        seed: 'op-41',
+        variant: 'card',
+        ratio,
+        durationSeconds: 41,
+      });
+      for (const name of ['w-[4.5rem]', 'shrink-0', 'flex', 'justify-center']) {
+        expect(column(el).classList, `${ratio} ${name}`).toContain(name);
+      }
+      expect(el.dataset.ratio, String(ratio)).toBe(dataRatio);
+      expect(el.style.width, String(ratio)).toBe(width);
+      expect(el.style.maxWidth, String(ratio)).toBe('');
+      expect(el.getAttribute('style') ?? '', String(ratio)).toContain(`aspect-ratio: ${dataRatio}`);
+      expect(el.classList).not.toContain('size-14');
+      const badge = el.querySelector('span');
+      expect(badge?.textContent).toBe('0:41');
+      expect(badge?.classList).toContain('text-xs');
+      cleanup();
+    }
   });
 
   it('a card-sized text post is a square with its icon', () => {

@@ -1863,6 +1863,44 @@ test.describe('dono-do-cliente conteudo', () => {
     }
   });
 
+  for (const width of PHONE_WIDTHS) {
+    test(`a landscape video card never breaks at ${width}px (quick 261013-uoi F-3)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`${CONTENT_AREA}&vista=tipos&tipo=video`);
+      const cards = postCards(ownerArea(page));
+      await expect(cards).toHaveCount(10);
+      const metrics = await cards.evaluateAll((els) =>
+        els.map((el) => {
+          const title = el.querySelector('.line-clamp-2');
+          const text = title?.parentElement;
+          const lineHeight = title ? Number.parseFloat(getComputedStyle(title).lineHeight) : 0;
+          return {
+            ratio: el.querySelector('[data-testid="cover-thumb"]')?.getAttribute('data-ratio'),
+            titleHeight: title?.getBoundingClientRect().height ?? 0,
+            lineHeight,
+            textWidth: text?.getBoundingClientRect().width ?? 0,
+            countTops: [...el.querySelectorAll('[data-count]')].map(
+              (count) => count.getBoundingClientRect().top,
+            ),
+          };
+        }),
+      );
+      expect(metrics.some((card) => Number(card.ratio) > 1)).toBe(true);
+      const widths = metrics.map((card) => card.textWidth);
+      for (const [i, card] of metrics.entries()) {
+        expect(card.titleHeight, `card ${i}`).toBeLessThanOrEqual(2 * card.lineHeight + 1);
+        expect(card.countTops, `card ${i}`).toHaveLength(4);
+        const tops = card.countTops;
+        expect(Math.max(...tops) - Math.min(...tops), `card ${i}`).toBeLessThanOrEqual(2);
+      }
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+      const { scrollWidth, clientWidth } = await horizontalOverflow(page);
+      expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+    });
+  }
+
   test('the detail cover has no grey band and a disabled Assistir on videos', async ({ page }) => {
     // Quick 261013-orf E-01: the sides are the brand gradient darkened; ▶ is a preview action.
     for (const [query, playable] of [
@@ -2859,6 +2897,51 @@ test("dono-da-plataforma: engagement, store sales, module usage and the clients'
   expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
 });
 
+/** A line chart's x labels, left to right: apart by 2 px or more and inside the chart. */
+async function expectXLabelsApart(chart: Locator, expected: readonly string[]) {
+  const { box, labels } = await chart.evaluate((svg) => {
+    const rect = svg.getBoundingClientRect();
+    return {
+      box: { left: rect.left, right: rect.right },
+      labels: [...svg.querySelectorAll('[data-x-label]')]
+        .map((el) => {
+          const r = el.getBoundingClientRect();
+          return { text: el.textContent ?? '', left: r.left, right: r.right };
+        })
+        .sort((a, b) => a.left - b.left),
+    };
+  });
+  for (const text of expected) expect(labels.map((label) => label.text)).toContain(text);
+  for (const [i, label] of labels.entries()) {
+    expect(label.left, label.text).toBeGreaterThanOrEqual(box.left);
+    expect(label.right, label.text).toBeLessThanOrEqual(box.right);
+    const before = labels[i - 1];
+    if (before)
+      expect(label.left - before.right, `${before.text}|${label.text}`).toBeGreaterThanOrEqual(2);
+  }
+}
+
+test('dono-da-plataforma: the x labels of the monthly chart never touch at 360 px (quick 261013-uoi C-2)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.goto('/painel-preview/dono-da-plataforma');
+  const chart = page.getByRole('img', { name: 'Clientes ativos por mês' });
+  await expect(chart).toBeVisible();
+  await expectXLabelsApart(chart, ['out']);
+  await expect(chart.locator('[data-x-label]').last()).toHaveText('out');
+});
+
+test('dono-do-cliente: the weekly chart keeps S4, S8 and S12 apart at 360 px (quick 261013-uoi C-2)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente');
+  const chart = page.getByRole('img', { name: /^Membros que interagiram por semana/ });
+  await expect(chart).toBeVisible();
+  await expectXLabelsApart(chart, ['S4', 'S8', 'S12']);
+});
+
 test('admin-da-plataforma: push reach, the active-members step and stalled videos', async ({
   page,
 }) => {
@@ -3234,7 +3317,12 @@ for (const list of MEMBER_LIST_CASES) {
       for (const label of await thumbs.allTextContents()) expect(label).toMatch(/^\d+:\d\d$/);
     }
     if (list.slug === 'stories') {
-      await expect(thumbs.and(page.locator('[data-kind="story"]'))).toHaveCount(list.rows);
+      const stories = thumbs.and(page.locator('[data-kind="story"]'));
+      await expect(stories).toHaveCount(list.rows);
+      // Quick 261013-uoi F-5: a story is a circle, as on Instagram.
+      for (const classes of await stories.evaluateAll((els) => els.map((el) => el.className))) {
+        expect(classes).toContain('rounded-full');
+      }
     }
     await expect(page.getByText('exemplo', { exact: true })).toHaveCount(
       (list.listExample ? 1 : 0) + list.rowExamples,
