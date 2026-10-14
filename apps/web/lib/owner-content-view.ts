@@ -6,6 +6,7 @@ import {
   ownerContent,
   ownerContentIncludes,
   ownerContentInteractorIncludes,
+  ownerContentItem,
   ownerContentItems,
 } from '@rede-social/module-dashboard/fixtures';
 import { ENGAGEMENT_BAND_ORDER } from '@rede-social/module-dashboard/ui';
@@ -262,7 +263,18 @@ export function contentBackHref(view: OwnerContentView): string | null {
     return `${ownerContentHref({ ...view, who: null })}#${contentWhoAnchor(view.who)}`;
   }
   if (view.postId) {
-    return `${ownerContentHref({ ...view, postId: null })}#${contentPostAnchor(view.postId)}`;
+    // Visão geral has no `post-` card for a post that needs attention (only its attention row):
+    // its detail, opened from the unanswered comments screen, goes back to that row (quick
+    // 261013-uoi F-7).
+    const fromAttention =
+      view.tab === 'overview' &&
+      view.number === null &&
+      view.band === null &&
+      needsAttention(ownerContentItem(view.postId));
+    const anchor = fromAttention
+      ? contentAttentionAnchor(view.postId)
+      : contentPostAnchor(view.postId);
+    return `${ownerContentHref({ ...view, postId: null })}#${anchor}`;
   }
   if (view.kind) {
     return `${ownerContentHref({ ...view, kind: null })}#${contentKindAnchor(view.kind)}`;

@@ -237,9 +237,16 @@ export function initials(name: string): string {
   return `${first}${last}`.toUpperCase();
 }
 
-/** `{ daysAgo: 0, time: '09:12' }` -> `hoje 09:12`; 1 -> `ontem …`; more -> `há 14 dias`. */
+/**
+ * `{ daysAgo: 0, time: '09:12' }` -> `hoje às 09:12`; 1 -> `ontem às …` (or `ontem` without a
+ * time); more -> `há 14 dias`. The one "when" format of the panels (quick 261013-uoi F-4).
+ */
 export function momentText(t: DashboardT, moment: RelativeMoment): string {
-  return t('moment', { days: moment.daysAgo, time: moment.time ?? '' });
+  return t('moment', {
+    days: moment.daysAgo,
+    timed: moment.time ? 'yes' : 'no',
+    time: moment.time ?? '',
+  });
 }
 
 /**

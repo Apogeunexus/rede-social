@@ -2229,7 +2229,13 @@ test.describe('dono-do-cliente conteudo: Visão geral', () => {
     await header.click();
     await expect(page).toHaveURL(/\?area=conteudo&post=op-19$/);
     await expect(
-      area.getByRole('heading', { level: 3, name: 'Interações', exact: true }),
+      area.getByRole('heading', {
+        level: 3,
+        name: 'Um lembrete gentil: constância não é perfeição',
+      }),
+    ).toBeVisible();
+    await expect(
+      area.getByRole('heading', { level: 4, name: 'Interações', exact: true }),
     ).toBeVisible();
     expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#atencao-op-19$/);
     await backLink(page).click();

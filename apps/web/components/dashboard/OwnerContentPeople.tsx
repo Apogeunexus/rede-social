@@ -1,4 +1,3 @@
-import type { RelativeMoment } from '@rede-social/module-dashboard/fixtures';
 import {
   type ContentPerson,
   type ContentWho,
@@ -35,20 +34,12 @@ import { PanelSection, PreviewAction } from './PanelSection';
 
 const KEY = 'tenantOwner.content.people';
 
-/** When a person did it: "hoje às 22:40", "ontem", "há 3 dias" (quick 261013-orf E-03.2). */
-export function personMoment(t: DashboardT, moment: RelativeMoment): string {
-  return t(`${KEY}.moment`, {
-    days: moment.daysAgo,
-    timed: moment.time ? 'yes' : 'no',
-    time: moment.time ?? '',
-  });
-}
-
 /**
  * Member cards, the first OWNER_BAND_LIST_LIMIT of `people`, each saying when the person did it and
- * (outside a band) their band; then how many more the number holds, in the list's own unit, with a
- * disabled "Ver todos" (the Membros pattern). When a listed daily time is an example, one line on
- * top says so. Each card opens the member one level down.
+ * (outside a band) their band; then, when the list is shorter than its number, that it shows the
+ * members' sample (quick 261013-uoi) and how many more the number holds, in the list's own unit,
+ * with a disabled "Ver todos" (the Membros pattern). When a listed daily time is an example, one
+ * line on top says so. Each card opens the member one level down.
  */
 function PeopleCards({
   t,
@@ -101,10 +92,13 @@ function PeopleCards({
         </ul>
       ) : null}
       {more > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs text-text-secondary">{moreText(more)}</p>
-          <PreviewAction>{t('tenantOwner.bandMembers.seeAll')}</PreviewAction>
-        </div>
+        <>
+          <p className="text-xs text-text-secondary">{t(`${KEY}.sample`)}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-text-secondary">{moreText(more)}</p>
+            <PreviewAction>{t('tenantOwner.bandMembers.seeAll')}</PreviewAction>
+          </div>
+        </>
       ) : null}
     </>
   );
@@ -142,7 +136,7 @@ export function OwnerContentPeople({ t, view }: { t: DashboardT; view: OwnerCont
             people={people}
             total={total}
             hrefOf={(memberId) => ownerContentHref({ ...view, memberId, list: null })}
-            leadOf={(person) => t(`${KEY}.when.${who}`, { when: personMoment(t, person.when) })}
+            leadOf={(person) => t(`${KEY}.when.${who}`, { when: momentText(t, person.when) })}
             showBand
             moreText={(more) => t(`${KEY}.more.${who}`, { count: more })}
             statusOf={(person) =>
@@ -178,7 +172,7 @@ export function InteractorList({
       people={people}
       total={total}
       hrefOf={(memberId) => ownerContentHref({ ...view, band, memberId, list: null })}
-      leadOf={(person) => t(`${KEY}.when.interacted`, { when: personMoment(t, person.when) })}
+      leadOf={(person) => t(`${KEY}.when.interacted`, { when: momentText(t, person.when) })}
       showBand={band === null}
       moreText={(more) => t('tenantOwner.bandMembers.more', { count: more })}
     />
