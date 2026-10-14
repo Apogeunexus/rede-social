@@ -158,6 +158,31 @@ describe('CoverThumb (card, quick 261013-uoi F-3)', () => {
     }
   });
 
+  it('a landscape card keeps its icon left of the length badge, never under it', () => {
+    const wide = thumb({
+      kind: 'video',
+      seed: 'op-37',
+      variant: 'card',
+      ratio: 16 / 9,
+      durationSeconds: 1620,
+    });
+    expect(wide.classList).toContain('justify-start');
+    expect(wide.querySelector('svg')?.getAttribute('width')).toBe('18');
+    const badge = wide.querySelector('span');
+    for (const name of ['right-1', 'bottom-1', 'leading-4'])
+      expect(badge?.classList).toContain(name);
+    cleanup();
+    const tall = thumb({
+      kind: 'video',
+      seed: 'op-41',
+      variant: 'card',
+      ratio: 9 / 16,
+      durationSeconds: 41,
+    });
+    expect(tall.classList).toContain('justify-center');
+    expect(tall.querySelector('svg')?.getAttribute('width')).toBe('28');
+  });
+
   it('a card-sized text post is a square with its icon', () => {
     const el = thumb({ kind: 'text', seed: 'op-19', variant: 'card', ratio: null });
     expect(el.dataset.ratio).toBe('1');

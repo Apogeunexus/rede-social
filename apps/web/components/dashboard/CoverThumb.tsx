@@ -93,6 +93,8 @@ export function CoverThumb({
   const card = variant === 'card';
   const story = kind === 'story';
   const aspect = story ? 1 : (ratio ?? 1);
+  // A landscape card cover is only ~2.5rem high: the icon moves left of the length badge, smaller.
+  const wide = card && aspect > 1;
   const cover = (
     <span
       aria-hidden="true"
@@ -100,7 +102,8 @@ export function CoverThumb({
       data-kind={kind}
       data-ratio={card ? String(aspect) : undefined}
       className={cn(
-        'relative flex shrink-0 items-center justify-center overflow-hidden',
+        'relative flex shrink-0 items-center overflow-hidden',
+        wide ? 'justify-start pl-1.5' : 'justify-center',
         story ? 'rounded-full ring-2 ring-brand ring-offset-2 ring-offset-card' : 'rounded-lg',
         !card && 'size-14',
       )}
@@ -115,14 +118,14 @@ export function CoverThumb({
           : coverStyle(seed)
       }
     >
-      <Icon size={card ? 28 : 24} className="opacity-90" />
+      <Icon size={wide ? 18 : card ? 28 : 24} className="opacity-90" />
       {durationSeconds !== null ? (
         <span
           className={cn(
             'absolute rounded bg-black/50 font-bold tabular-nums text-white',
-            card
-              ? 'right-1.5 bottom-1.5 px-1.5 py-0.5 text-xs'
-              : 'right-1 bottom-1 px-1 text-[10px] leading-4',
+            wide && 'right-1 bottom-1 px-1 text-xs leading-4',
+            card && !wide && 'right-1.5 bottom-1.5 px-1.5 py-0.5 text-xs',
+            !card && 'right-1 bottom-1 px-1 text-[10px] leading-4',
           )}
         >
           {formatClock(t, durationSeconds)}
