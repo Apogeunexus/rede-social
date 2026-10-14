@@ -1,6 +1,7 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import {
   type EngagementBand,
+  financeOffer,
   type OwnerBandScope,
   type OwnerMemberInsights,
   ownerMemberInsights,
@@ -324,22 +325,33 @@ function Purchases({ t, insights }: { t: DashboardT; insights: OwnerMemberInsigh
             (row) => row.id === purchase.productId,
           );
           if (!product) throw new Error(`no product ${purchase.productId}`);
+          const { expiresAt } = purchase;
+          // Primary revenue is the entry (it gave the app), secondary any later purchase (D-02).
+          const entry = purchase.kind === 'primary';
           return (
             <Card
               key={`${purchase.productId}-${purchase.date}`}
-              className="flex flex-col gap-1 p-4 [overflow-wrap:anywhere]"
+              className="flex flex-col gap-1.5 p-4 [overflow-wrap:anywhere]"
             >
               <span className="text-sm font-bold text-text">{product.product}</span>
+              <span className="flex flex-wrap items-center gap-2 text-xs text-text">
+                {financeOffer(purchase.offerId).composition}
+                <StatusPill tone={entry ? 'brand' : 'neutral'} className="px-2 py-0.5">
+                  {t(`${key}.${entry ? 'entry' : 'addon'}`)}
+                </StatusPill>
+              </span>
               <span className="text-xs text-text-secondary">
                 {t(`${key}.bought`, {
                   date: formatDate(purchase.date),
                   value: formatBrl(purchase.cents),
                 })}
               </span>
-              <span className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-                {t(`${key}.expires`, { date: formatDate(purchase.expiresAt.value) })}
-                <ExamplePill text={exampleBadge(t, purchase.expiresAt)} />
-              </span>
+              {expiresAt ? (
+                <span className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+                  {t(`${key}.expires`, { date: formatDate(expiresAt.value) })}
+                  <ExamplePill text={exampleBadge(t, expiresAt)} />
+                </span>
+              ) : null}
             </Card>
           );
         })

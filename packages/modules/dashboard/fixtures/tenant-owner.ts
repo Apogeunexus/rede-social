@@ -185,8 +185,6 @@ export interface TenantOwnerPanel {
     byWeekday: { weekday: Weekday; posts: number; interactions: number }[];
     bySlot: { fromHour: number; toHour: number; posts: number; interactions: number }[];
   };
-  /** Orders of the last 30 days by the band the buyer was in the day before the order. */
-  ordersByBand: Record<EngagementBand, number>;
   /** Members who interacted per week, oldest first, and the 12 weeks before them. */
   weeklyInteracting: { current: number[]; previous: number[] };
   /** Interactions by channel in the period. */
@@ -206,7 +204,11 @@ export interface TenantOwnerPanel {
   };
   /** Paid store orders of the last 30 days (`store` orders); money in integer cents. */
   store: {
-    /** Orders and their registered value per product, level 5's ids. */
+    /**
+     * Orders and their registered value per product, level 5's ids: entries and add-ons together.
+     * Literals (this file cannot import the ledger), proved equal to `owner-finance.ts`'s single
+     * order list by `tests/owner-finance.test.ts` (quick 261014-dwc D-02).
+     */
     products: { id: string; product: string; orders: number; cents: number }[];
     /** Orders against the month before. */
     ordersDelta: Delta;
@@ -477,7 +479,6 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       { fromHour: 20, toHour: 22, posts: 18, interactions: 1420 },
     ],
   },
-  ordersByBand: { new: 9, superfan: 31, engaged: 38, occasional: 14, at_risk: 3, inactive: 1 },
   weeklyInteracting: {
     current: [310, 330, 360, 352, 391, 410, 402, 425, 418, 396, 372, 380],
     previous: [280, 290, 300, 310, 305, 330, 340, 335, 350, 345, 360, 355],
@@ -486,7 +487,7 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     { channel: 'likes', count: 3100 },
     { channel: 'comments', count: 840 },
     { channel: 'attendance', count: 236 },
-    { channel: 'orders', count: 96 },
+    { channel: 'orders', count: 126 },
     { channel: 'support', count: 74 },
   ],
   events: {
@@ -609,9 +610,9 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
   },
   store: {
     products: [
-      { id: 's2', product: 'Comunidade VIP', orders: 21, cents: 413700 },
+      { id: 's2', product: 'Comunidade VIP', orders: 18, cents: 409600 },
       { id: 's1', product: 'Mentoria em grupo', orders: 6, cents: 294000 },
-      { id: 's3', product: 'E-book', orders: 69, cents: 186300 },
+      { id: 's3', product: 'E-book', orders: 102, cents: 190400 },
       { id: 's4', product: 'Workshop gravado', orders: 0, cents: 0 },
     ],
     ordersDelta: { amount: 9, kind: 'count', direction: 'up', good: true, basis: 'previous_month' },
@@ -625,9 +626,9 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       example: true,
       reason: 'needs_product_page_views',
       value: [
-        { id: 's2', product: 'Comunidade VIP', visits: 610, orders: 21 },
+        { id: 's2', product: 'Comunidade VIP', visits: 610, orders: 18 },
         { id: 's1', product: 'Mentoria em grupo', visits: 420, orders: 6 },
-        { id: 's3', product: 'E-book', visits: 1150, orders: 69 },
+        { id: 's3', product: 'E-book', visits: 1150, orders: 102 },
         { id: 's4', product: 'Workshop gravado', visits: 140, orders: 0 },
       ],
     },

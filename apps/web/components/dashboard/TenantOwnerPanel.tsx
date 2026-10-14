@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-preview';
 import type { OwnerMembersView } from '@/lib/owner-band-scope';
 import type { OwnerContentView } from '@/lib/owner-content-view';
+import type { OwnerFinanceView } from '@/lib/owner-finance-view';
 import { type DashboardT, formatCount } from './format';
 import { OwnerContent } from './OwnerContent';
 import { OwnerEvents } from './OwnerEvents';
@@ -64,10 +65,14 @@ const AREAS = {
   atendimento: { labelKey: 'tenantOwner.areas.support', Area: OwnerSupport },
 } satisfies Record<OwnerArea, { labelKey: string; Area: AreaComponent }>;
 
-/** An area component: Membros reads the members view, Conteúdo the content view, the others neither. */
+/**
+ * An area component: Membros reads the members view, Conteúdo the content view, Financeiro the
+ * finance view, the others none.
+ */
 type AreaComponent = (props: {
   members: OwnerMembersView;
   content: OwnerContentView;
+  finance: OwnerFinanceView;
 }) => Promise<ReactNode>;
 
 export interface TenantOwnerPanelProps {
@@ -77,6 +82,8 @@ export interface TenantOwnerPanelProps {
   members: OwnerMembersView;
   /** The Conteúdo area's view (allow-listed by `parseOwnerContentView`). */
   content: OwnerContentView;
+  /** The Financeiro area's view (allow-listed by `parseOwnerFinanceView`). */
+  finance: OwnerFinanceView;
 }
 
 /**
@@ -86,7 +93,7 @@ export interface TenantOwnerPanelProps {
  * server component. The Membros band lists name members to the client's own team (261012-pkd D-03);
  * the bell and every other block stay counts only.
  */
-export async function TenantOwnerPanel({ area, members, content }: TenantOwnerPanelProps) {
+export async function TenantOwnerPanel({ area, members, content, finance }: TenantOwnerPanelProps) {
   const t = await getTranslations('dashboard');
   const Area: AreaComponent = AREAS[area].Area;
 
@@ -117,7 +124,7 @@ export async function TenantOwnerPanel({ area, members, content }: TenantOwnerPa
       </nav>
 
       <div data-owner-area={area} className="flex flex-col gap-6">
-        <Area members={members} content={content} />
+        <Area members={members} content={content} finance={finance} />
       </div>
     </TenantColumn>
   );

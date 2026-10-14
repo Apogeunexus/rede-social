@@ -2776,36 +2776,250 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   }
 });
 
-test('dono-do-cliente ?area=financeiro', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/painel-preview/dono-do-cliente?area=financeiro');
-  const area = ownerArea(page);
+/* ------------------------------------------------- Financeiro in three tabs (quick 261014-dwc) */
 
-  const value = kpiCard(area, 'Valor registrado');
-  await expect(value).toContainText(/R\$\s8\.940,00/);
-  await expect(value).toContainText('12% vs. mês anterior');
-  await expect(kpiCard(area, 'Pedidos')).toContainText('96');
-  await expect(
-    area.getByText(
-      'Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.',
-      { exact: true },
-    ),
-  ).toBeVisible();
+const FINANCE_AREA = '/painel-preview/dono-do-cliente?area=financeiro';
+const FINANCE_TABS = ['Visão geral', 'Produtos', 'Quem compra'];
+const PRODUCT_NAMES = ['Comunidade VIP', 'Mentoria em grupo', 'E-book', 'Workshop gravado'];
+/** The English words the screen must never show (CONTEXT): their pt-BR words are used instead. */
+const ENGLISH_WORDS = /\b(upsell|ticket|churn|mrr|insights?)\b/i;
 
-  const revenue = areaDetails(page, 'Receita por produto');
-  await expect(revenue).not.toHaveAttribute('open');
-  await expect(revenue.locator('summary')).toContainText(/Comunidade VIP lidera: R\$\s4\.137,00/);
-  const buyers = areaDetails(page, 'Quem compra');
-  await expect(buyers).not.toHaveAttribute('open');
-  await expect(buyers.locator('summary')).toContainText('72% das compras vêm de 22% dos membros');
+/** The finance tabs (D-01): Visão geral | Produtos | Quem compra. */
+function financeTabs(page: Page) {
+  return page.getByRole('navigation', { name: 'Vistas do financeiro' });
+}
 
-  for (const label of ['Acessos que vencem em 7 dias', 'Taxa de renovação']) {
-    await expect(kpiCard(area, label).getByText('exemplo', { exact: true })).toHaveCount(1);
+/** The product cards of Produtos (each `li` carries `produto-<id>`). */
+function productCards(area: Locator) {
+  return area.locator('li[id^="produto-"]');
+}
+
+async function expectNoEnglish(page: Page, where: string) {
+  expect(await ownerArea(page).innerText(), where).not.toMatch(ENGLISH_WORDS);
+}
+
+test.describe('dono-do-cliente financeiro', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('one row of three equal tabs on the tab screens, none deeper, no period choice', async ({
+    page,
+  }) => {
+    const hrefs = [
+      FINANCE_AREA,
+      `${FINANCE_AREA}&vista=produtos`,
+      `${FINANCE_AREA}&vista=quem-compra`,
+    ];
+    for (const [i, href] of hrefs.entries()) {
+      await page.goto(href);
+      const nav = financeTabs(page);
+      await expect(nav).toHaveCount(1);
+      expect(await linkTexts(nav)).toEqual(FINANCE_TABS);
+      const links = nav.getByRole('link');
+      const widths: number[] = [];
+      for (let k = 0; k < 3; k += 1) {
+        expect(await links.nth(k).getAttribute('href')).toBe(hrefs[k]);
+        widths.push((await links.nth(k).boundingBox())?.width ?? Number.NaN);
+      }
+      expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(1);
+      await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+      await expect(links.nth(i)).toHaveAttribute('aria-current', 'page');
+      await expect(ownerArea(page).getByRole('navigation')).toHaveCount(1);
+      // The bell's hidden "7 dias" alert tag is the header's, not a period choice of the area.
+      await expect(ownerArea(page).getByText('7 dias', { exact: true })).toHaveCount(0);
+      await expect(page.getByText('90 dias', { exact: true })).toHaveCount(0);
+      await expectNoEnglish(page, href);
+    }
+    for (const deeper of [
+      '&vista=produtos&produto=s2',
+      '&vista=produtos&produto=s2&oferta=vip-entrada',
+    ]) {
+      await page.goto(`${FINANCE_AREA}${deeper}`);
+      await expect(backLink(page)).toBeVisible();
+      await expect(financeTabs(page)).toHaveCount(0);
+      await expect(ownerArea(page).getByRole('navigation')).toHaveCount(0);
+      await expectNoEnglish(page, deeper);
+    }
+  });
+
+  test('Produtos: four cards by revenue, a 16:7 cover, entries and add-ons, Parado once', async ({
+    page,
+  }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos`);
+    const cards = productCards(ownerArea(page));
+    await expect(cards).toHaveCount(4);
+    const names: string[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const card = cards.nth(i);
+      names.push((await card.locator('.text-xl').innerText()).trim());
+      const cover = card.locator('[data-testid="community-cover-fallback"]');
+      await expect(cover).toHaveCount(1);
+      expect(Math.abs((await boxRatio(cover)) - 16 / 7)).toBeLessThanOrEqual(0.02);
+    }
+    expect(names).toEqual(PRODUCT_NAMES);
+    const vip = cards.first();
+    await expect(cardCell(vip, 'Preço')).toHaveText(/R\$\s197,00/);
+    await expect(cardCell(vip, 'Entrada')).toHaveText('11');
+    await expect(cardCell(vip, 'Adicional')).toHaveText('7');
+    await expect(cardCell(vip, 'Receita')).toHaveText(/R\$\s4,1\smil/);
+    await expect(vip).toContainText('6% vs. 30 dias antes');
+    await expect(ownerArea(page).getByText('Parado', { exact: true })).toHaveCount(1);
+    await expect(cards.nth(3).getByText('Parado', { exact: true })).toBeVisible();
+    await expect(cards.nth(3)).toContainText('Sem venda nos últimos 30 dias nem nos 30 anteriores');
+  });
+
+  test('the tracer: product, offer, buyer, list and back one step at a time', async ({ page }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos`);
+    const area = ownerArea(page);
+    await area.locator('#produto-s2').getByRole('link').click();
+    await expect(page).toHaveURL(/\?area=financeiro&vista=produtos&produto=s2$/);
+    await expect(area.getByRole('heading', { level: 3, name: 'Comunidade VIP' })).toBeVisible();
+    await expect(area.locator('li[id^="oferta-"]')).toHaveCount(2);
+    const entry = area.locator('#oferta-vip-entrada');
+    await expect(entry).toContainText('Comunidade VIP + 1 ano de acesso ao app');
+    await expect(entry.getByText('Entrada', { exact: true })).toBeVisible();
+    await expect(entry).toContainText(/R\$\s247,00/);
+    await expect(entry).toContainText(/11 pedidos · R\$\s2\.717,00/);
+    const addon = area.locator('#oferta-vip-adicional');
+    await expect(addon).toContainText('Comunidade VIP por 1 ano');
+    await expect(addon.getByText('Adicional', { exact: true })).toBeVisible();
+    await expect(addon).toContainText(/R\$\s197,00/);
+    await expect(addon).toContainText(/7 pedidos · R\$\s1\.379,00/);
+
+    await entry.getByRole('link').click();
+    await expect(page).toHaveURL(/&produto=s2&oferta=vip-entrada$/);
+    await expect(
+      area.getByRole('heading', { name: 'Comunidade VIP + 1 ano de acesso ao app' }),
+    ).toBeVisible();
+    await expect(area.getByText(/^11 compras nos últimos 30 dias/)).toBeVisible();
+    const rows = area.getByRole('listitem');
+    await expect(rows).toHaveCount(10);
+    await expect(area.getByText('e mais 1 compra', { exact: true })).toBeVisible();
+    await expect(rows.first()).toContainText(/Comprou há \d+ dias · R\$\s247,00/);
+
+    const card = rows.first().getByRole('link');
+    const name = (await card.locator('.text-lg').innerText()).trim();
+    const member = /membro=(om-\d\d)$/.exec((await card.getAttribute('href')) ?? '')?.[1];
+    expect(member).toBeDefined();
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`&oferta=vip-entrada&membro=${member}$`));
+    await expect(area.getByRole('heading', { level: 3, name, exact: true })).toBeVisible();
+    const purchases = sectionTitled(area, 'Compras');
+    await expect(purchases).toContainText('Comunidade VIP + 1 ano de acesso ao app');
+    await expect(purchases.getByText('Entrada', { exact: true })).toBeVisible();
+    await expect(purchases).toContainText(/R\$\s247,00/);
+    await expectNoEnglish(page, 'member');
+
+    await area.locator('#insight-curtidas').click();
+    await expect(page).toHaveURL(new RegExp(`&membro=${member}&lista=curtidas$`));
+    await expect(
+      area.getByRole('heading', { level: 3, name: 'Curtidas', exact: true }),
+    ).toBeVisible();
+
+    const steps = [
+      new RegExp(`&oferta=vip-entrada&membro=${member}#insight-curtidas$`),
+      new RegExp(`&produto=s2&oferta=vip-entrada#membro-${member}$`),
+      /&vista=produtos&produto=s2#oferta-vip-entrada$/,
+      /\?area=financeiro&vista=produtos#produto-s2$/,
+    ];
+    for (const step of steps) {
+      expect(await backLink(page).getAttribute('href')).toMatch(step);
+      await backLink(page).click();
+      await expect(page).toHaveURL(step);
+    }
+    await expect(financeTabs(page).getByRole('link', { name: 'Produtos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  test('an offer with no order in the month opens nothing', async ({ page }) => {
+    await page.goto(`${FINANCE_AREA}&vista=produtos&produto=s4`);
+    const offer = ownerArea(page).locator('#oferta-workshop-adicional');
+    await expect(offer).toContainText('Nenhum pedido nos últimos 30 dias');
+    await expect(offer.getByRole('link')).toHaveCount(0);
+  });
+
+  test('a forged URL falls one level up', async ({ page }) => {
+    const cases: [string, RegExp][] = [
+      ['&vista=produtos&produto=xyz', /^Produtos da loja$/],
+      ['&vista=produtos&produto=s2&oferta=ebook-entrada', /^Ofertas$/],
+      ['&vista=produtos&produto=s4&oferta=workshop-adicional', /^Ofertas$/],
+      // om-13 bought no VIP entry: the offer's buyers stay open.
+      ['&vista=produtos&produto=s2&oferta=vip-entrada&membro=om-13', /^Comunidade VIP \+ 1 ano/],
+    ];
+    for (const [query, heading] of cases) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(
+        ownerArea(page).getByRole('heading', { level: 3, name: heading }),
+        query,
+      ).toBeVisible();
+    }
+    await page.goto(
+      `${FINANCE_AREA}&vista=produtos&produto=s2&oferta=vip-entrada&membro=om-03&lista=xyz`,
+    );
+    await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    await expect(backLink(page)).toHaveAttribute('href', /&oferta=vip-entrada#membro-om-03$/);
+  });
+});
+
+const FINANCE_VIEWS = [
+  '&vista=produtos',
+  '&vista=produtos&produto=s2',
+  '&vista=produtos&produto=s2&oferta=vip-entrada',
+];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente financeiro: products and buyers at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const query of FINANCE_VIEWS) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(ownerArea(page), query).toBeVisible();
+      await openAllDetails(page);
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+      // A card's columns never run past the card ("R$ 4,1 mil" cut at 360 px before the 2×2 rows).
+      const clipped = await ownerArea(page)
+        .locator('dl')
+        .evaluateAll((lists) => lists.filter((el) => el.scrollWidth > el.clientWidth + 1).length);
+      expect(clipped, query).toBe(0);
+    }
+  });
+}
+
+test('dono-do-cliente financeiro: products and buyers at 1440x900, inside the phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const query of FINANCE_VIEWS) {
+    await page.goto(`${FINANCE_AREA}${query}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    await openAllDetails(page);
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, query).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, query).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible'), query).toHaveCount(
+      0,
+    );
   }
-  await expect(kpiCard(area, 'Taxa de renovação')).toContainText('73%');
-  const conversion = areaDetails(page, 'Conversão por produto');
-  await expect(conversion).not.toHaveAttribute('open');
-  await expect(conversion.locator('summary').getByText('exemplo', { exact: true })).toHaveCount(1);
+});
+
+test.describe('dono-do-cliente financeiro without JavaScript', () => {
+  test.use({ javaScriptEnabled: false });
+
+  test('the tabs and a product card are plain links', async ({ page }) => {
+    await page.goto(FINANCE_AREA);
+    await financeTabs(page).getByRole('link', { name: 'Produtos' }).click();
+    await expect(page).toHaveURL(/\?area=financeiro&vista=produtos$/);
+    await ownerArea(page).locator('#produto-s2').getByRole('link').click();
+    await expect(page).toHaveURL(/&vista=produtos&produto=s2$/);
+    await expect(ownerArea(page).locator('#oferta-vip-entrada')).toBeVisible();
+  });
 });
 
 test('dono-do-cliente ?area=atendimento', async ({ page }) => {

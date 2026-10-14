@@ -1,152 +1,101 @@
-import { formatBrl } from '@rede-social/contracts/money';
-import { tenantOwnerPanel } from '@rede-social/module-dashboard/fixtures';
-import {
-  BarList,
-  Collapsible,
-  ENGAGEMENT_BAND_ORDER,
-  engagedPercent,
-  KpiCard,
-  KpiGrid,
-  percentOf,
-  sumOf,
-} from '@rede-social/module-dashboard/ui';
+import { ownerBandRoster } from '@rede-social/module-dashboard/fixtures';
+import { Chip } from '@rede-social/ui';
 import { getTranslations } from 'next-intl/server';
-import { ExamplePill } from './ExamplePill';
 import {
-  bandLabel,
-  exampleBadge,
-  formatCount,
-  formatList,
-  formatPercent,
-  formatRatio,
-  kpiDelta,
-} from './format';
-import { PanelSection } from './PanelSection';
+  type FinanceTab,
+  financeBackHref,
+  financeTabView,
+  type OwnerFinanceView,
+  ownerFinanceHref,
+} from '@/lib/owner-finance-view';
+import type { DashboardT } from './format';
+import { OwnerFinanceBuyers } from './OwnerFinanceBuyers';
+import { OwnerFinanceOverview } from './OwnerFinanceOverview';
+import { OwnerFinancePeople } from './OwnerFinancePeople';
+import { OwnerFinanceProductDetail } from './OwnerFinanceProductDetail';
+import { OwnerFinanceProducts } from './OwnerFinanceProducts';
+import { OwnerMemberDetail } from './OwnerMemberDetail';
+import { OwnerMemberList } from './OwnerMemberList';
+
+const KEY = 'tenantOwner.finance';
+
+const TABS = [
+  { tab: 'overview', labelKey: `${KEY}.tabs.overview` },
+  { tab: 'products', labelKey: `${KEY}.tabs.products` },
+  { tab: 'buyers', labelKey: `${KEY}.tabs.buyers` },
+] as const satisfies readonly { tab: FinanceTab; labelKey: string }[];
+
+/** The one row of choices of the area (D-01): three equal tabs, as Conteúdo's. */
+function FinanceTabs({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
+  return (
+    <nav aria-label={t(`${KEY}.tabs.label`)}>
+      <ul className="grid grid-cols-3 gap-2">
+        {TABS.map((row) => (
+          <li key={row.tab} className="min-w-0">
+            <Chip
+              href={ownerFinanceHref(financeTabView(row.tab))}
+              active={row.tab === view.tab}
+              className="w-full justify-center text-center"
+            >
+              {t(row.labelKey)}
+            </Chip>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
 
 /**
- * Level 4, "Financeiro": the month's sales (value registered and orders, with the fixed notice that
- * a registered value is not money received), then closed: revenue per product and who buys; the
- * accesses that expire and the renewal rate, open; and conversion per product, closed. Expiring
- * accesses, renewal and conversion are examples (no data yet), marked next to their values (D-03).
+ * The member opened from a Financeiro list (D-08): their insights, or the list behind one of their
+ * numbers, with the same components as Membros. Their band is today's whole-base band.
  */
-export async function OwnerFinance() {
-  const t = await getTranslations('dashboard');
-  const { kpis, store, ordersByBand, engagement } = tenantOwnerPanel;
-  const products = [...store.products].sort((a, b) => b.cents - a.cents);
-  const top = products[0];
-  const totalOrders = ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + ordersByBand[band], 0);
-  const { expiringAccess7d, renewal, conversion } = store;
-  const conversionRate = (row: { visits: number; orders: number }) =>
-    row.visits > 0 ? row.orders / row.visits : 0;
-  const conversionRows = [...conversion.value].sort(
-    (a, b) => conversionRate(b) - conversionRate(a),
+function FinanceMember({
+  t,
+  view,
+  memberId,
+}: {
+  t: DashboardT;
+  view: OwnerFinanceView;
+  memberId: string;
+}) {
+  const back = financeBackHref(view);
+  if (back === null) throw new Error('a member with no way back');
+  if (view.list) {
+    return <OwnerMemberList t={t} memberId={memberId} list={view.list} backHref={back} />;
+  }
+  const person = ownerBandRoster.find((row) => row.id === memberId);
+  if (!person) throw new Error(`no roster member ${memberId}`);
+  return (
+    <OwnerMemberDetail
+      t={t}
+      memberId={memberId}
+      band={person.band}
+      scope={{ kind: 'member' }}
+      backHref={back}
+      listHref={(slug) => ownerFinanceHref({ ...view, list: slug })}
+    />
   );
+}
 
+/**
+ * Level 4, "Financeiro" (quick 261014-dwc): one cascade of plain links, as Membros and Conteúdo
+ * (D-01). The tab screens — Visão geral, Produtos and Quem compra — carry the one row of three tabs;
+ * every deeper step (a product, an offer's buyers, a member's insights, the list behind one of them)
+ * replaces the area under its "Voltar". The period is the panel's fixed 30 days against the 30
+ * before: there is no period selector.
+ */
+export async function OwnerFinance({ finance: view }: { finance: OwnerFinanceView }) {
+  const t = await getTranslations('dashboard');
+  if (view.memberId) return <FinanceMember t={t} view={view} memberId={view.memberId} />;
+  if (view.offerId) return <OwnerFinancePeople t={t} view={view} />;
+  if (view.productId) return <OwnerFinanceProductDetail t={t} view={view} />;
   return (
     <>
-      <PanelSection title={t('tenantOwner.sales.title')}>
-        <KpiGrid>
-          <KpiCard
-            label={t('tenantOwner.sales.value')}
-            value={formatBrl(kpis.orderValue.cents)}
-            delta={kpiDelta(t, kpis.orderValue.delta)}
-          />
-          <KpiCard
-            label={t('tenantOwner.sales.orders')}
-            value={formatCount(sumOf(store.products, (row) => row.orders))}
-            delta={kpiDelta(t, store.ordersDelta)}
-          />
-        </KpiGrid>
-        <p className="text-xs text-text-secondary">{t('tenantOwner.sales.notice')}</p>
-      </PanelSection>
-
-      {top ? (
-        <Collapsible
-          title={t('tenantOwner.revenue.title')}
-          summary={t('tenantOwner.revenue.summary', {
-            product: top.product,
-            value: formatBrl(top.cents),
-          })}
-        >
-          <BarList
-            rows={products.map((row, i) => ({
-              id: row.id,
-              label: row.product,
-              value: row.cents,
-              display: formatBrl(row.cents),
-              rate: t('tenantOwner.revenue.orders', { count: row.orders }),
-              highlight: i === 0,
-            }))}
-          />
-        </Collapsible>
-      ) : null}
-
-      <Collapsible
-        title={t('tenantOwner.buyers.title')}
-        summary={t('tenantOwner.buyers.sentence', {
-          orders: formatPercent(
-            percentOf(ordersByBand.superfan + ordersByBand.engaged, totalOrders),
-          ),
-          members: formatPercent(engagedPercent(engagement)),
-        })}
-      >
-        <BarList
-          max={totalOrders}
-          rows={ENGAGEMENT_BAND_ORDER.map((band) => ({
-            id: band,
-            label: bandLabel(t, band),
-            value: ordersByBand[band],
-            display: formatCount(ordersByBand[band]),
-            rate: formatPercent(percentOf(ordersByBand[band], totalOrders)),
-            highlight: band === 'superfan' || band === 'engaged',
-          }))}
-        />
-        <p className="text-xs text-text-secondary">{t('tenantOwner.buyers.footnote')}</p>
-      </Collapsible>
-
-      <PanelSection title={t('tenantOwner.access.title')}>
-        <KpiGrid>
-          <KpiCard
-            label={t('tenantOwner.access.expiring')}
-            value={formatCount(expiringAccess7d.value.count)}
-            note={formatList(expiringAccess7d.value.products)}
-            badge={exampleBadge(t, expiringAccess7d)}
-          />
-          <KpiCard
-            label={t('tenantOwner.access.renewal')}
-            value={formatPercent(percentOf(renewal.value.renewed, renewal.value.expired))}
-            note={t('tenantOwner.access.renewalNote', {
-              renewed: formatCount(renewal.value.renewed),
-              expired: formatCount(renewal.value.expired),
-            })}
-            badge={exampleBadge(t, renewal)}
-          />
-        </KpiGrid>
-      </PanelSection>
-
-      <Collapsible
-        title={t('tenantOwner.conversion.title')}
-        summary={
-          <span className="inline-flex flex-wrap items-center gap-2">
-            {t('tenantOwner.conversion.summary')}
-            <ExamplePill text={exampleBadge(t, conversion)} />
-          </span>
-        }
-      >
-        <BarList
-          rows={conversionRows.map((row, i) => ({
-            id: row.id,
-            label: row.product,
-            value: percentOf(row.orders, row.visits),
-            display: formatRatio(conversionRate(row)),
-            rate: t('tenantOwner.conversion.rate', {
-              orders: formatCount(row.orders),
-              visits: formatCount(row.visits),
-            }),
-            highlight: i === 0,
-          }))}
-        />
-      </Collapsible>
+      <FinanceTabs t={t} view={view} />
+      {view.tab === 'overview' ? <OwnerFinanceOverview t={t} /> : null}
+      {view.tab === 'products' ? <OwnerFinanceProducts t={t} view={view} /> : null}
+      {view.tab === 'buyers' ? <OwnerFinanceBuyers t={t} /> : null}
     </>
   );
 }

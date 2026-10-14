@@ -1,4 +1,13 @@
 import {
+  FINANCE_ACCESS_DAYS,
+  type FinanceOfferId,
+  type FinanceOrder,
+  financeOffer,
+  financeRevenueKind,
+  ownerFinanceOrders,
+  type RevenueKind,
+} from './owner-finance';
+import {
   assignRosterInteractions,
   buildOwnerMemberLists,
   type OwnerMemberLists,
@@ -23,13 +32,15 @@ import type { PostType } from './tenant-panels';
  * Every number comes from one set of active days per member (days ago, never after the last action
  * nor before joining), so the 30-day counts, the weekly chart and the band history agree with each
  * other and with the band rules (shared.ts): superfã 12+ active days and 3+ strong actions, engajado
- * 4-11, ocasional 1-3, em risco and inativo none in 30 days. An attended event is an active day; the
- * VIP purchase (exactly the members with VIP access) is one too. Across the roster, the attendees of
- * each event stay within its check-ins, the 30-day VIP purchases within the store's VIP orders and the
- * support conversations within the 8 weeks' total (`tests/owner-member-insights.test.ts`).
+ * 4-11, ocasional 1-3, em risco and inativo none in 30 days. An attended event is an active day; so
+ * is every purchase. The purchases are the member's paid orders in the Financeiro's single order list
+ * (`owner-finance.ts`, quick 261014-dwc D-02): the entry on the joining day, then any add-on, each
+ * with its offer and whether it is primary or secondary revenue; at most one falls in the last 30
+ * days. Across the roster, the attendees of each event stay within its check-ins and the support
+ * conversations within the 8 weeks' total (`tests/owner-member-insights.test.ts`).
  *
  * The lists behind the numbers (quick 261012-tru D-07, `owner-member-lists.ts`) are built from the
- * same active days, attended events and VIP order, and `build` throws when a list's length differs
+ * same active days, attended events and 30-day order, and `build` throws when a list's length differs
  * from its 30-day count. "Posts vistos" is the number of distinct posts in the seen list (still an
  * example: no post views are recorded yet). Which posts each member liked and commented on is
  * assigned once for the whole roster (`assignRosterInteractions`): the likes KPI stays active days +
@@ -73,12 +84,18 @@ export interface OwnerMemberInsights {
   postTypes: { type: PostType; interactions: number }[];
   /** The member's RSVPs "vou", oldest first; `attended` is null for an event still to come. */
   events: { id: string; attended: boolean | null }[];
-  /** Store purchases; the access expiry is an example (`expires_at` is never filled yet). */
+  /**
+   * Store purchases, oldest first: the member's paid orders in the single order list. An entry or a
+   * VIP purchase gives a year of access, whose end is an example (`expires_at` is never filled yet);
+   * any other purchase has none (null).
+   */
   purchases: {
     productId: string;
+    offerId: FinanceOfferId;
+    kind: RevenueKind;
     date: string;
     cents: number;
-    expiresAt: ReportValue<string>;
+    expiresAt: ReportValue<string> | null;
   }[];
   /** Support conversations of the last 8 weeks: counts and dates only, never message text. */
   support: {
@@ -90,9 +107,16 @@ export interface OwnerMemberInsights {
   suggestion: { kind: EngagementBand; days: number };
 }
 
-const { events, store, support, byCommunity } = tenantOwnerPanel;
-const VIP_ID = 'c-vip';
+const { events, support, byCommunity } = tenantOwnerPanel;
 const VIP_PRODUCT = 's2';
+const MONTH_DAYS = 30;
+
+/** Each roster member's paid orders, oldest first (the ledger's order). */
+const ORDERS_BY_MEMBER = new Map<string, FinanceOrder[]>();
+for (const order of ownerFinanceOrders) {
+  if (order.status !== 'paid') continue;
+  ORDERS_BY_MEMBER.set(order.memberId, [...(ORDERS_BY_MEMBER.get(order.memberId) ?? []), order]);
+}
 const SUPPORT_WEEKS = support.weeklyConversations.length;
 
 /** 30-day active days by band and slot. */
@@ -191,22 +215,16 @@ function bandAt(days: ReadonlySet<number>, joined: number, daysAgo: number): Eng
   return countIn(days, daysAgo + 30, daysAgo + 59) > 0 ? 'at_risk' : 'inactive';
 }
 
-function vipUnitCents(): number {
-  const vip = store.products.find((row) => row.id === VIP_PRODUCT);
-  if (!vip || vip.orders === 0 || vip.cents % vip.orders !== 0) {
-    throw new Error('the VIP product has no whole unit price');
-  }
-  return vip.cents / vip.orders;
-}
-
-/** A member's days, events and order: everything but which posts they liked and commented on. */
+/** A member's days, events and orders: everything but which posts they liked and commented on. */
 interface MemberBase {
   j: number;
   joined: number;
   days: Set<number>;
   attended: Set<string>;
   pastByRecency: { id: string; daysAgo: number }[];
-  purchaseDay: number | null;
+  orders: readonly FinanceOrder[];
+  /** The one paid order of the last 30 days, or null. */
+  monthOrder: FinanceOrder | null;
   activeDays: number;
   likes: number;
   comments: number;
@@ -219,11 +237,14 @@ function baseOf(row: OwnerRosterMember): MemberBase {
   const joined = daysSince(row.memberSince);
   const target = ACTIVE_DAYS[band](j);
 
-  // The VIP purchase, a day after joining: an order is a counted action, so it is an active day.
-  const purchaseDay = row.communities[VIP_ID] ? joined - 1 : null;
+  // Every purchase is a counted action, so its day is an active day.
+  const orders = ORDERS_BY_MEMBER.get(row.id) ?? [];
+  const month = orders.filter((order) => order.daysAgo < MONTH_DAYS);
+  if (month.length > 1) throw new Error(`${row.id} buys more than once in the month`);
+  const monthOrder = month[0] ?? null;
   const recent = new Set<number>();
   if (target > 0) recent.add(last);
-  if (purchaseDay !== null && purchaseDay < 30) recent.add(purchaseDay);
+  if (monthOrder) recent.add(monthOrder.daysAgo);
 
   // Past events, most recent first: attended only when active since, and within the band's days.
   const attended = new Set<string>();
@@ -257,7 +278,7 @@ function baseOf(row: OwnerRosterMember): MemberBase {
     for (const day of spread(from60, Math.min(89, joined), between60and89)) days.add(day);
   }
   days.add(last);
-  if (purchaseDay !== null) days.add(purchaseDay);
+  for (const order of orders) days.add(order.daysAgo);
 
   const today = bandAt(days, joined, 0);
   if (today !== band || Math.min(...days) !== last) {
@@ -267,7 +288,18 @@ function baseOf(row: OwnerRosterMember): MemberBase {
   const activeDays = countIn(days, 0, 29);
   const likes = activeDays === 0 ? 0 : activeDays + EXTRA_LIKES[band](j);
   const comments = activeDays === 0 ? 0 : COMMENTS[band](j);
-  return { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes, comments };
+  return {
+    j,
+    joined,
+    days,
+    attended,
+    pastByRecency,
+    orders,
+    monthOrder,
+    activeDays,
+    likes,
+    comments,
+  };
 }
 
 let assignment: RosterInteractions | null = null;
@@ -297,10 +329,11 @@ function rosterInteractions(): RosterInteractions {
 
 function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
   const { band } = row;
-  const { j, joined, days, attended, pastByRecency, purchaseDay, activeDays, likes } = baseOf(row);
+  const base = baseOf(row);
+  const { j, joined, days, attended, pastByRecency, monthOrder, activeDays, likes } = base;
   const last = row.lastActive.daysAgo;
   const checkIns = attended.size;
-  const orders = purchaseDay !== null && purchaseDay < 30 ? 1 : 0;
+  const orders = monthOrder ? 1 : 0;
   const assigned = rosterInteractions().get(row.id) ?? { likes: [], comments: [] };
   // The assignment places the whole budget; the length check below catches any drift.
   const comments = assigned.comments.length;
@@ -313,10 +346,9 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
     attended: pastByRecency
       .filter((event) => attended.has(event.id))
       .map((event) => ({ eventId: event.id, daysAgo: event.daysAgo })),
-    order:
-      purchaseDay !== null && purchaseDay < 30
-        ? { productId: VIP_PRODUCT, cents: vipUnitCents(), daysAgo: purchaseDay }
-        : null,
+    order: monthOrder
+      ? { productId: monthOrder.productId, cents: monthOrder.cents, daysAgo: monthOrder.daysAgo }
+      : null,
   });
   const lengths: [string, number, number][] = [
     ['active days', lists.activeDays.length, activeDays],
@@ -351,21 +383,25 @@ function build(row: OwnerRosterMember, index: number): OwnerMemberInsights {
     interactions: Math.floor((interactions * (4 - ((k + j) % 4))) / 10),
   })).sort((a, b) => b.interactions - a.interactions);
 
-  const purchases =
-    purchaseDay === null
-      ? []
-      : [
-          {
-            productId: VIP_PRODUCT,
-            date: daysBefore(PREVIEW_TODAY, purchaseDay),
-            cents: vipUnitCents(),
-            expiresAt: {
-              example: true as const,
-              reason: 'needs_access_expiry' as const,
-              value: daysBefore(PREVIEW_TODAY, purchaseDay - 365),
-            },
-          },
-        ];
+  const purchases = base.orders.map((order) => {
+    const kind = financeRevenueKind(order);
+    // An entry and a VIP purchase give a year of access (D-03); the end is an example.
+    const yearly = kind === 'primary' || financeOffer(order.offerId).productId === VIP_PRODUCT;
+    return {
+      productId: order.productId,
+      offerId: order.offerId,
+      kind,
+      date: daysBefore(PREVIEW_TODAY, order.daysAgo),
+      cents: order.cents,
+      expiresAt: yearly
+        ? {
+            example: true as const,
+            reason: 'needs_access_expiry' as const,
+            value: daysBefore(PREVIEW_TODAY, order.daysAgo - FINANCE_ACCESS_DAYS),
+          }
+        : null,
+    };
+  });
 
   const conversations = index % 5 === 1 ? 1 + (j % 2) : 0;
   const lastDaysAgo = conversations === 0 ? null : Math.min(2 + 3 * j, joined);

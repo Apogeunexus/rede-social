@@ -1,3 +1,4 @@
+import { financeProductOffers } from './owner-finance';
 import { ownerMemberInsights } from './owner-member-insights';
 import {
   daysBefore,
@@ -767,12 +768,14 @@ export interface ContentDetail {
   vitrine: { subscriptions: number } | null;
 }
 
+/**
+ * A buyer tied to a publication was already a member, so the purchase is secondary: the product's
+ * add-on offer price (quick 261014-dwc D-02).
+ */
 function unitCents(productId: string): number {
-  const product = tenantOwnerPanel.store.products.find((row) => row.id === productId);
-  if (!product || product.orders === 0 || product.cents % product.orders !== 0) {
-    throw new Error(`no whole unit price for ${productId}`);
-  }
-  return product.cents / product.orders;
+  const addon = financeProductOffers(productId).find((offer) => offer.kind === 'addon');
+  if (!addon) throw new Error(`no add-on offer for ${productId}`);
+  return addon.priceCents;
 }
 
 /**

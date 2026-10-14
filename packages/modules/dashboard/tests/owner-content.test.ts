@@ -266,7 +266,8 @@ describe('the people behind each number (P1)', () => {
         }
       }
     }
-    expect(likes).toBe(663);
+    // Quick 261014-dwc: om-01's e-book entry on its joining day is one more active day, one more like.
+    expect(likes).toBe(664);
     // Quick 261013-uoi C-1: each member comments within their band's realistic range.
     expect(comments).toBe(168);
   });
@@ -457,8 +458,8 @@ describe('who interacts and the interactions (D-02, PD-5, PD-7)', () => {
   it('the interactions are every roster like and comment, the same fact as the people', () => {
     const { rows, total } = ownerContentInteractions();
     expect(total).toBe(3940);
-    expect(rows).toHaveLength(831);
-    expect(rows.filter((row) => row.action === 'like')).toHaveLength(663);
+    expect(rows).toHaveLength(832);
+    expect(rows.filter((row) => row.action === 'like')).toHaveLength(664);
     for (const [i, row] of rows.entries()) {
       const who = row.action === 'like' ? 'likes' : 'comments';
       const person = ownerContentPeople(row.itemId, who).people.find((p) => p.id === row.person.id);

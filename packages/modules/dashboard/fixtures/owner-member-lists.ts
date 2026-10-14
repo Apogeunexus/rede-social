@@ -43,7 +43,7 @@ export interface OwnerMemberLists {
   likes: OwnerLikedPost[];
   /** Most recent first; one comment per post, each on an active day after the post was published. */
   comments: OwnerLikedPost[];
-  /** Comments, check-ins and the VIP order, most recent first. */
+  /** Comments, check-ins and the 30-day order, most recent first. */
   strongActions: OwnerStrongAction[];
   /** Example: no post views are recorded yet. Distinct posts, most viewed first. */
   postsSeen: ReportValue<OwnerSeenPost[]>;

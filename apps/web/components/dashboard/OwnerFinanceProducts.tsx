@@ -1,0 +1,160 @@
+import { formatBrlCompact } from '@rede-social/contracts/money';
+import { CommunityCover } from '@rede-social/module-communities/ui';
+import {
+  FINANCE_STALLED_DAYS,
+  type FinanceProductSummary,
+  ownerFinanceProduct,
+  tenantOwnerPanel,
+} from '@rede-social/module-dashboard/fixtures';
+import type { KpiDelta } from '@rede-social/module-dashboard/ui';
+import { Card, cn, StatusPill } from '@rede-social/ui';
+import { ArrowDown, ArrowUp, ChevronRight, Minus } from 'lucide-react';
+import {
+  financeProductAnchor,
+  financeTabView,
+  type OwnerFinanceView,
+  ownerFinanceHref,
+} from '@/lib/owner-finance-view';
+import { Cell, Linked } from './BandScopeCards';
+import { changeDelta, type DashboardT, formatCount, kpiDelta } from './format';
+import { PanelSection } from './PanelSection';
+
+const KEY = 'tenantOwner.finance.products';
+
+/** Every store product's card numbers, best revenue of the month first. */
+export function financeProducts(): FinanceProductSummary[] {
+  return tenantOwnerPanel.store.products
+    .map((row) => ownerFinanceProduct(row.id))
+    .sort((a, b) => b.month.cents - a.month.cents || a.name.localeCompare(b.name));
+}
+
+/** Stalled: no paid order for over 60 days (PD-9). */
+export function isStalled(product: FinanceProductSummary): boolean {
+  return product.lastSaleDaysAgo === null || product.lastSaleDaysAgo > FINANCE_STALLED_DAYS;
+}
+
+const ARROW = { up: ArrowUp, down: ArrowDown, flat: Minus } as const;
+const TONE = { success: 'text-success', danger: 'text-danger', neutral: 'text-text-tertiary' };
+
+/** A change line as the KPI cards draw it: the arrow, the text, the screen-reader sentiment. */
+export function DeltaLine({ delta }: { delta: KpiDelta }) {
+  const Arrow = ARROW[delta.direction];
+  return (
+    <span className={cn('flex items-center gap-1 text-xs font-semibold', TONE[delta.tone])}>
+      <Arrow aria-hidden size={14} className="shrink-0" />
+      <span>{delta.text}</span>
+      {delta.sentiment ? <span className="sr-only">{delta.sentiment}</span> : null}
+    </span>
+  );
+}
+
+/** The revenue against the 30 days before; a product that sold in neither says so, with no arrow. */
+export function ProductChange({ t, product }: { t: DashboardT; product: FinanceProductSummary }) {
+  const delta = changeDelta(product.month.cents, product.before.cents);
+  if (delta) return <DeltaLine delta={kpiDelta(t, delta)} />;
+  return (
+    <span className="text-xs text-text-secondary">
+      {t(product.month.cents === 0 ? `${KEY}.noSales` : `${KEY}.newSales`)}
+    </span>
+  );
+}
+
+/** The product's name (the detail's heading), with the "Parado" pill when it stalled. */
+export function ProductName({
+  t,
+  product,
+  as: Name = 'span',
+}: {
+  t: DashboardT;
+  product: FinanceProductSummary;
+  as?: 'span' | 'h3';
+}) {
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <Name className="text-xl font-bold leading-tight text-text">{product.name}</Name>
+      {isStalled(product) ? <StatusPill tone="warning">{t(`${KEY}.stalled`)}</StatusPill> : null}
+    </span>
+  );
+}
+
+/** Thin lines between the columns: between each pair in two rows, between all four in one. */
+const CELL_EDGES = [
+  'pr-2',
+  'border-l border-border px-2 @xs:pr-2',
+  'pr-2 @xs:border-l @xs:border-border @xs:px-2',
+  'border-l border-border px-2 @xs:pr-0',
+] as const;
+
+/**
+ * One product as a card (D-08, PD-9): the cover, the name, four columns split by thin lines (the
+ * store price, the month's sales as an entry and as an add-on, the revenue), the change against the
+ * 30 days before and a chevron: the whole card opens the product.
+ */
+function ProductCard({
+  t,
+  product,
+  href,
+}: {
+  t: DashboardT;
+  product: FinanceProductSummary;
+  href: string;
+}) {
+  return (
+    <Linked href={href}>
+      <Card className="flex flex-col transition-colors hover:bg-card-hover">
+        {/* The communities module's own 16:7 box with its gradient fallback (PD-8). */}
+        <CommunityCover
+          geometry="card"
+          coverAssetId={null}
+          coverVariantWidths={[]}
+          coverAlt={product.name}
+        />
+        {/* A container: the four columns become two rows of two when the card is narrower than
+            20rem (a 360 px phone), so "R$ 4,1 mil" never gets cut. */}
+        <div className="@container flex flex-col gap-3 p-4 [overflow-wrap:anywhere]">
+          <ProductName t={t} product={product} />
+          <dl className="grid grid-cols-2 gap-y-3 border-t border-border pt-3 @xs:grid-cols-[repeat(4,minmax(max-content,1fr))] @xs:gap-y-0">
+            {[
+              { label: t(`${KEY}.price`), value: formatBrlCompact(product.priceCents) },
+              { label: t(`${KEY}.entry`), value: formatCount(product.month.entry) },
+              { label: t(`${KEY}.addon`), value: formatCount(product.month.addon) },
+              { label: t(`${KEY}.revenue`), value: formatBrlCompact(product.month.cents) },
+            ].map((cell, i) => (
+              <Cell
+                key={cell.label}
+                label={cell.label}
+                value={cell.value}
+                className={CELL_EDGES[i]}
+              />
+            ))}
+          </dl>
+          <span className="flex items-center justify-between gap-2">
+            <ProductChange t={t} product={product} />
+            <ChevronRight aria-hidden size={18} className="shrink-0 text-brand" />
+          </span>
+        </div>
+      </Card>
+    </Linked>
+  );
+}
+
+/** Produtos (D-08): the store's products by the month's revenue, each opening its detail. */
+export function OwnerFinanceProducts({ t }: { t: DashboardT; view: OwnerFinanceView }) {
+  const products = financeProducts();
+  return (
+    <PanelSection title={t(`${KEY}.title`)}>
+      <p className="text-sm text-text-secondary">{t(`${KEY}.order`)}</p>
+      <ul className="flex flex-col gap-3">
+        {products.map((product) => (
+          <li key={product.id} id={financeProductAnchor(product.id)} className="scroll-mt-20">
+            <ProductCard
+              t={t}
+              product={product}
+              href={ownerFinanceHref({ ...financeTabView('products'), productId: product.id })}
+            />
+          </li>
+        ))}
+      </ul>
+    </PanelSection>
+  );
+}

@@ -143,6 +143,23 @@ export function kpiDelta(t: DashboardT, delta: Delta): KpiDelta {
   };
 }
 
+/**
+ * A value against the same value 30 days before, as a percent change (quick 261014-dwc D-10): null
+ * when there was nothing before to compare with. `higherIsGood: false` for a number that should fall.
+ */
+export function changeDelta(now: number, before: number, higherIsGood = true): Delta | null {
+  if (before === 0) return null;
+  const amount = Math.round((100 * Math.abs(now - before)) / before);
+  const direction = amount === 0 ? 'flat' : now > before ? 'up' : 'down';
+  return {
+    amount,
+    kind: 'percent',
+    direction,
+    good: direction === 'flat' ? null : (direction === 'up') === higherIsGood,
+    basis: 'previous_30_days',
+  };
+}
+
 /** A KPI with no comparison (or a should-stay-zero target): the hint, with the flat dash. */
 export function hintDelta(t: DashboardT, hint: KpiHint): KpiDelta {
   return { text: t(`hint.${hint}`), direction: 'flat', tone: 'neutral' };

@@ -41,7 +41,7 @@ const KEY = 'tenantOwner.content.people';
  * with a disabled "Ver todos" (the Membros pattern). When a listed daily time is an example, one
  * line on top says so. Each card opens the member one level down.
  */
-function PeopleCards({
+export function PeopleCards<P extends ContentPerson>({
   t,
   people,
   total,
@@ -52,16 +52,16 @@ function PeopleCards({
   statusOf,
 }: {
   t: DashboardT;
-  people: readonly ContentPerson[];
+  people: readonly P[];
   total: number;
   hrefOf: (memberId: string) => string;
   /** The line under the name: when the person did it ("Curtiu há 3 dias"). */
-  leadOf: (person: ContentPerson) => string;
+  leadOf: (person: P) => string;
   /** False inside a band, where every card would repeat the same "Faixa:". */
   showBand: boolean;
   /** "e mais N …" in the list's unit. */
   moreText: (more: number) => string;
-  statusOf?: (person: ContentPerson) => ReactNode;
+  statusOf?: (person: P) => ReactNode;
 }) {
   const shown = people.slice(0, OWNER_BAND_LIST_LIMIT);
   const more = total - shown.length;

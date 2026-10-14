@@ -22,6 +22,7 @@ import {
 } from '@/lib/dashboard-preview';
 import { parseOwnerMembersView } from '@/lib/owner-band-scope';
 import { parseOwnerContentView } from '@/lib/owner-content-view';
+import { parseOwnerFinanceView } from '@/lib/owner-finance-view';
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -49,6 +50,7 @@ const PANELS: Record<PreviewSlug, (query: SearchParams) => ReactNode> = {
       area={parseOwnerArea(query)}
       members={parseOwnerMembersView(query)}
       content={parseOwnerContentView(query)}
+      finance={parseOwnerFinanceView(query)}
     />
   ),
   'admin-do-cliente': () => <TenantAdminPanel />,

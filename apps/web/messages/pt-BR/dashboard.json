@@ -624,7 +624,9 @@
           "title": "Compras",
           "bought": "Comprado em {date} · {value}",
           "expires": "Vence em {date}",
-          "empty": "Nenhuma compra."
+          "empty": "Nenhuma compra.",
+          "entry": "Entrada",
+          "addon": "Adicional"
         },
         "support": {
           "title": "Atendimento",
@@ -662,7 +664,7 @@
       "buyers": {
         "title": "Quem compra",
         "sentence": "{orders} das compras vêm de {members} dos membros (superfãs e engajados).",
-        "footnote": "Cada pedido conta na faixa de quem comprou no dia anterior à compra."
+        "footnote": "Cada pedido conta na faixa de hoje de quem comprou. Comprar é uma ação, então ninguém em risco ou inativo comprou nos últimos 30 dias."
       },
       "recover": {
         "title": "Recuperar quem está em risco",
@@ -980,6 +982,39 @@
           "line": "{band} · {action} {when}",
           "more": "e mais {count, plural, one {# interação} other {# interações}}",
           "seeAll": "Ver todas"
+        }
+      },
+      "finance": {
+        "tabs": {
+          "label": "Vistas do financeiro",
+          "overview": "Visão geral",
+          "products": "Produtos",
+          "buyers": "Quem compra"
+        },
+        "products": {
+          "title": "Produtos da loja",
+          "order": "Da maior para a menor receita nos últimos 30 dias. Toque em um produto para ver as ofertas.",
+          "price": "Preço",
+          "entry": "Entrada",
+          "addon": "Adicional",
+          "revenue": "Receita",
+          "stalled": "Parado",
+          "noSales": "Sem venda nos últimos 30 dias nem nos 30 anteriores",
+          "newSales": "Sem venda nos 30 dias anteriores para comparar",
+          "priceLine": "Preço na loja: {value}"
+        },
+        "offers": {
+          "title": "Ofertas",
+          "note": "A mesma oferta vende como entrada (a primeira compra, que dá acesso ao app) ou como adicional (para quem já é membro).",
+          "entry": "Entrada",
+          "addon": "Adicional",
+          "orders": "{count, plural, one {# pedido} other {# pedidos}} · {value} nos últimos 30 dias",
+          "none": "Nenhum pedido nos últimos 30 dias"
+        },
+        "people": {
+          "count": "{count, plural, =0 {nenhuma compra} one {# compra} other {# compras}} nos últimos 30 dias · mais recentes primeiro",
+          "bought": "Comprou {when} · {value}",
+          "more": "e mais {count, plural, one {# compra} other {# compras}}"
         }
       }
     },
