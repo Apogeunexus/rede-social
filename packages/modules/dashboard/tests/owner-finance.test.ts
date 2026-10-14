@@ -6,14 +6,24 @@ import {
   FINANCE_OFFERS,
   type FinanceOfferId,
   type FinanceOrder,
+  type FinancePeopleList,
   financeOffer,
   financeProductOffers,
+  ownerContentDetail,
+  ownerFinanceAttention,
+  ownerFinanceContentSales,
+  ownerFinanceEventSales,
   ownerFinanceIncludes,
   ownerFinanceMembers,
   ownerFinanceOrders,
   ownerFinancePeople,
+  ownerFinanceSummary,
+  ownerFinanceVipUsage,
+  ownerFinanceWeekly,
   ownerFinanceWindow,
+  tenantAdminPanel,
   tenantOwnerPanel,
+  tenantStaffPanel,
 } from '../fixtures';
 import { daysSince, ownerBandRoster } from '../fixtures/owner-members';
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
@@ -450,5 +460,224 @@ describe('ownerFinancePeople (D-11: the one web file that reads it lists names)'
 
   it('throws on an offer the fixture does not have', () => {
     expect(() => ownerFinancePeople({ kind: 'offer', offerId: 'xyz' as FinanceOfferId })).toThrow();
+  });
+});
+
+describe('the overview numbers (quick 261014-dwc D-07, D-10)', () => {
+  const today = ownerFinanceSummary(0);
+  const before = ownerFinanceSummary(30);
+  const change = (now: number, then: number) => Math.round((100 * (now - then)) / then);
+
+  it('gives the six numbers of today', () => {
+    expect(today.primary).toEqual({ orders: 96, cents: 416200 });
+    expect(Math.round(today.primary.cents / today.primary.orders)).toBe(4335);
+    expect(today.secondary).toEqual({ orders: 30, cents: 477800 });
+    expect(today.total).toEqual({ orders: 126, cents: 894000 });
+    expect(Math.round((100 * today.secondary.cents) / today.total.cents)).toBe(53);
+    expect(today.base).toBe(1240);
+    const again = ownerFinanceMembers.filter((member) => paidOf(member.id).length >= 2);
+    expect(today.rebought).toBe(again.length);
+    expect(today.timeToSecondDays).toBeGreaterThanOrEqual(20);
+    expect(today.timeToSecondDays).toBeLessThanOrEqual(60);
+    expect(today.lifetimeCents).toBe(PAID.reduce((sum, order) => sum + order.cents, 0));
+  });
+
+  it('computes the same numbers as if today were 30 days ago', () => {
+    const then = (order: FinanceOrder) => order.daysAgo >= 30;
+    const base = ownerFinanceMembers.filter((member) => member.joinedDaysAgo >= 30);
+    const window = PAID.filter((order) => inWindow(order, 30, 59));
+    expect(before.base).toBe(base.length);
+    expect(before.total).toEqual({
+      orders: window.length,
+      cents: window.reduce((sum, order) => sum + order.cents, 0),
+    });
+    expect(before.rebought).toBe(
+      base.filter((member) => paidOf(member.id).filter(then).length >= 2).length,
+    );
+    expect(before.lifetimeCents).toBe(
+      PAID.filter(then).reduce((sum, order) => sum + order.cents, 0),
+    );
+    for (const summary of [today, before]) {
+      expect(summary.primary.orders + summary.secondary.orders).toBe(summary.total.orders);
+      expect(summary.primary.cents + summary.secondary.cents).toBe(summary.total.cents);
+    }
+  });
+
+  it('moves the total +12%, the panel’s order value change, against the 30 days before', () => {
+    expect(change(today.total.cents, before.total.cents)).toBe(12);
+    expect(kpis.orderValue.delta).toEqual({
+      amount: 12,
+      kind: 'percent',
+      direction: 'up',
+      good: true,
+      basis: 'previous_30_days',
+    });
+  });
+
+  it('splits 12 weeks of primary and secondary revenue, and the 12 before', () => {
+    const weekly = ownerFinanceWeekly();
+    for (const series of [weekly.primary, weekly.secondary]) {
+      expect(series.current).toHaveLength(12);
+      expect(series.previous).toHaveLength(12);
+    }
+    const sumIn = (kind: 'primary' | 'secondary', weeksBack: number) =>
+      PAID.filter(
+        (order) =>
+          KINDS.get(order.id) === kind && inWindow(order, 7 * weeksBack, 7 * weeksBack + 6),
+      ).reduce((sum, order) => sum + order.cents, 0);
+    for (let i = 0; i < 12; i += 1) {
+      expect(weekly.primary.current[i], `primary ${i}`).toBe(sumIn('primary', 11 - i));
+      expect(weekly.primary.previous[i], `primary before ${i}`).toBe(sumIn('primary', 23 - i));
+      expect(weekly.secondary.current[i], `secondary ${i}`).toBe(sumIn('secondary', 11 - i));
+      expect(weekly.secondary.previous[i], `secondary before ${i}`).toBe(
+        sumIn('secondary', 23 - i),
+      );
+    }
+    // An entry's week is its joining week: the weekly entries × their offers' prices.
+    const entries = PAID.filter((order) => KINDS.get(order.id) === 'primary' && order.daysAgo < 84);
+    expect(weekly.primary.current.reduce((sum, value) => sum + value, 0)).toBe(
+      entries.reduce((sum, order) => sum + financeOffer(order.offerId).priceCents, 0),
+    );
+  });
+});
+
+describe('Precisa de atenção (D-07)', () => {
+  const attention = ownerFinanceAttention();
+
+  it('counts the VIP payers fading: 22 em risco + 18 inativos, 11 with push', () => {
+    expect(attention.vipFading).toEqual({ atRisk: 22, inactive: 18, withPush: 11 });
+  });
+
+  it('ends 6 VIP accesses in 7 days, an example', () => {
+    expect(attention.expiring).toEqual({
+      example: true,
+      reason: 'needs_access_expiry',
+      value: { count: 6, productId: 's2' },
+    });
+    expect(tenantStaffPanel.store.expiringAccess7d.count).toBe(6);
+  });
+
+  it('flags the Workshop gravado, unsold for over 60 days', () => {
+    const workshop = PAID.filter((order) => order.productId === 's4');
+    const days = Math.min(...workshop.map((order) => order.daysAgo));
+    expect(days).toBeGreaterThan(60);
+    expect(attention.stalled).toEqual([{ productId: 's4', days }]);
+  });
+
+  it('points at the full Imersão with 17 waiting, from the waiting list example', () => {
+    expect(attention.fullEvents).toEqual({
+      example: true,
+      reason: 'needs_waitlist',
+      value: [{ eventId: 'u3', waiting: 17 }],
+    });
+  });
+});
+
+describe('what only the app knows (D-07)', () => {
+  it('ties sales to publications as Conteúdo shows them: 12 distinct orders, R$ 1.807,00', () => {
+    const sales = ownerFinanceContentSales();
+    expect(sales.total).toEqual({ orders: 12, cents: 180700 });
+    const counts = Object.fromEntries(sales.posts.map((post) => [post.postId, post.orders]));
+    expect(counts).toEqual({ 'op-11': 6, 'op-15': 6, 'op-19': 3, 'op-41': 9, 'op-55': 2 });
+    for (const post of sales.posts) {
+      expect(ownerContentDetail(post.postId).orders, post.postId).toEqual({
+        count: post.orders,
+        cents: post.cents,
+        products: post.products,
+      });
+      expect(post.orderIds, post.postId).toHaveLength(post.orders);
+      for (const id of post.orderIds) {
+        const order = ownerFinanceOrders.find((row) => row.id === id);
+        expect(order?.status, id).toBe('paid');
+        expect(order && KINDS.get(order.id), id).toBe('secondary');
+        expect(order?.daysAgo ?? 99, id).toBeLessThan(30);
+      }
+    }
+    expect(ownerContentDetail('op-22').orders.count).toBe(0);
+  });
+
+  it('ties sales to events: within 7 days after, never more than the check-ins', () => {
+    const sales = ownerFinanceEventSales();
+    const past = tenantOwnerPanel.events.past;
+    expect(sales.events.map((row) => row.eventId).sort()).toEqual(
+      past.map((event) => event.id).sort(),
+    );
+    const distinct = new Set<string>();
+    let cents = 0;
+    for (const row of sales.events) {
+      const event = past.find((entry) => entry.id === row.eventId);
+      const age = daysSince(event?.date ?? '');
+      expect(row.orders, row.eventId).toBeLessThanOrEqual(event?.checkIns ?? 0);
+      expect(row.orderIds, row.eventId).toHaveLength(row.orders);
+      for (const id of row.orderIds) {
+        const order = ownerFinanceOrders.find((entry) => entry.id === id);
+        expect(order && KINDS.get(order.id), id).toBe('secondary');
+        expect(order?.daysAgo ?? -1, id).toBeLessThanOrEqual(age);
+        expect(order?.daysAgo ?? 99, id).toBeGreaterThanOrEqual(age - 7);
+        if (!distinct.has(id)) cents += order?.cents ?? 0;
+        distinct.add(id);
+      }
+    }
+    expect(sales.total).toEqual({ orders: distinct.size, cents });
+    expect(sales.total.orders).toBeGreaterThanOrEqual(5);
+  });
+
+  it('puts the VIP revenue next to the VIP’s use', () => {
+    expect(ownerFinanceVipUsage()).toEqual({ cents: 409600, activeWeek: 104, holders: 186 });
+  });
+});
+
+describe('the lists behind the numbers (D-07, PD-11, PD-17)', () => {
+  const today = ownerFinanceSummary(0);
+  const lists: [FinancePeopleList, number][] = [
+    [{ kind: 'primary' }, 96],
+    [{ kind: 'secondary' }, 30],
+    [{ kind: 'rebought' }, today.rebought],
+    [{ kind: 'timeToSecond' }, today.rebought],
+    [{ kind: 'lifetime' }, 1240],
+    [{ kind: 'vipFading' }, 40],
+    [{ kind: 'expiring' }, 6],
+  ];
+
+  it('total the number they open; ownerFinanceIncludes agrees with each list', () => {
+    for (const [list, total] of lists) {
+      const people = ownerFinancePeople(list);
+      expect(people.total, list.kind).toBe(total);
+      expect(people.people.length, list.kind).toBeLessThanOrEqual(total);
+      const ids = new Set(people.people.map((person) => person.id));
+      for (const row of ownerBandRoster) {
+        expect(ownerFinanceIncludes(list, row.id), `${list.kind} ${row.id}`).toBe(ids.has(row.id));
+      }
+    }
+  });
+
+  it('names the month’s roster buyers, the fading VIP payers and nobody whose access ends', () => {
+    expect(ownerFinancePeople({ kind: 'primary' }).people).toHaveLength(12);
+    expect(ownerFinancePeople({ kind: 'secondary' }).people).toHaveLength(5);
+    const fading = ownerFinancePeople({ kind: 'vipFading' }).people;
+    expect(fading).toHaveLength(20);
+    for (const person of fading) expect(['at_risk', 'inactive']).toContain(person.band);
+    expect(ownerFinancePeople({ kind: 'expiring' }).people).toHaveLength(0);
+    for (const person of ownerFinancePeople({ kind: 'timeToSecond' }).people) {
+      const [first, second] = [...paidOf(person.id)].sort((a, b) => b.daysAgo - a.daysAgo);
+      expect(person.days, person.id).toBe((first?.daysAgo ?? 0) - (second?.daysAgo ?? 0));
+    }
+    for (const person of ownerFinancePeople({ kind: 'lifetime' }).people) {
+      expect(person.cents, person.id).toBe(
+        paidOf(person.id).reduce((sum, order) => sum + order.cents, 0),
+      );
+    }
+  });
+});
+
+describe('levels 5 and 6 read the same list (PD-7)', () => {
+  const week = ownerFinanceWindow(0, 6);
+
+  it('gives level 5 each product’s 7-day orders and level 6 their sum', () => {
+    for (const row of tenantAdminPanel.store) {
+      expect(row.orders, row.id).toBe(week.byProduct[row.id]?.orders);
+    }
+    expect(tenantStaffPanel.store.orders7d.count).toBe(week.total.orders);
+    expect(tenantAdminPanel.kpis.orders.count).toBe(week.total.orders);
   });
 });

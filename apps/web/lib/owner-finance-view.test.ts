@@ -10,6 +10,8 @@ import {
 import { describe, expect, it } from 'vitest';
 import { OWNER_MEMBER_LISTS } from './owner-band-scope';
 import {
+  FINANCE_ATTENTION_SLUGS,
+  FINANCE_NUMBER_SLUGS,
   financeBackHref,
   financeTabView,
   type OwnerFinanceView,
@@ -56,6 +58,8 @@ describe('parseOwnerFinanceView: the tabs (D-01)', () => {
     expect(parseOwnerFinanceView({ area: 'financeiro' })).toEqual(EMPTY);
     expect(EMPTY).toMatchObject({
       tab: 'overview',
+      number: null,
+      attention: null,
       productId: null,
       offerId: null,
       memberId: null,
@@ -192,6 +196,136 @@ describe('ownerFinanceHref and financeBackHref', () => {
       }
     }
     expect(views.length).toBeGreaterThan(FINANCE_OFFERS.length);
+    for (const item of views) {
+      expect(
+        parseOwnerFinanceView(paramsOf(ownerFinanceHref(item))),
+        ownerFinanceHref(item),
+      ).toEqual(item);
+    }
+  });
+});
+
+/** The first roster member in a Financeiro list (the names stay with the web file). */
+function memberIn(list: Parameters<typeof ownerFinanceIncludes>[0]): string {
+  const id = ownerBandRoster.find((row) => ownerFinanceIncludes(list, row.id))?.id;
+  if (!id) throw new Error(`no roster member in ${list.kind}`);
+  return id;
+}
+
+describe('parseOwnerFinanceView: Visão geral (D-07, PD-10, PD-11)', () => {
+  it('opens a number of the overview only, by its exact slug', () => {
+    expect(FINANCE_NUMBER_SLUGS).toEqual({
+      primary: 'primaria',
+      secondary: 'secundaria',
+      share: 'parte-secundaria',
+      rebought: 'recompra',
+      timeToSecond: 'tempo-recompra',
+      lifetime: 'por-membro',
+    });
+    for (const [number, numero] of Object.entries(FINANCE_NUMBER_SLUGS)) {
+      expect(parseOwnerFinanceView({ numero })).toEqual(
+        view({ number: number as OwnerFinanceView['number'] }),
+      );
+      expect(parseOwnerFinanceView({ vista: 'produtos', numero }).number).toBeNull();
+    }
+    for (const numero of ['xyz', 'PRIMARIA', '', ['primaria', 'primaria']]) {
+      expect(parseOwnerFinanceView({ numero } as Params), String(numero)).toEqual(EMPTY);
+    }
+  });
+
+  it('opens an attention row only with no number', () => {
+    expect(FINANCE_ATTENTION_SLUGS).toEqual({
+      vipFading: 'pagantes-sumindo',
+      expiring: 'vencendo',
+    });
+    expect(parseOwnerFinanceView({ atencao: 'pagantes-sumindo' })).toEqual(
+      view({ attention: 'vipFading' }),
+    );
+    expect(parseOwnerFinanceView({ atencao: 'vencendo' })).toEqual(view({ attention: 'expiring' }));
+    expect(parseOwnerFinanceView({ numero: 'recompra', atencao: 'vencendo' })).toEqual(
+      view({ number: 'rebought' }),
+    );
+    expect(parseOwnerFinanceView({ atencao: 'xyz' })).toEqual(EMPTY);
+  });
+
+  it('opens a product from the overview (the stalled row, the VIP line), with its cascade', () => {
+    expect(parseOwnerFinanceView({ produto: 's4' })).toEqual(view({ productId: 's4' }));
+    const buyer = buyerOf('vip-entrada');
+    expect(parseOwnerFinanceView({ produto: 's2', oferta: 'vip-entrada', membro: buyer })).toEqual(
+      view({ productId: 's2', offerId: 'vip-entrada', memberId: buyer }),
+    );
+    expect(parseOwnerFinanceView({ numero: 'recompra', produto: 's2' }).productId).toBeNull();
+    expect(parseOwnerFinanceView({ atencao: 'vencendo', produto: 's2' }).productId).toBeNull();
+    expect(parseOwnerFinanceView({ produto: 'xyz' })).toEqual(EMPTY);
+  });
+
+  it('opens a member only from the list it names; the share of add-ons lists none', () => {
+    const rebought = memberIn({ kind: 'rebought' });
+    expect(parseOwnerFinanceView({ numero: 'recompra', membro: rebought })).toEqual(
+      view({ number: 'rebought', memberId: rebought }),
+    );
+    const outsider = ownerBandRoster.find(
+      (row) => !ownerFinanceIncludes({ kind: 'rebought' }, row.id),
+    )?.id;
+    expect(outsider).toBeDefined();
+    expect(parseOwnerFinanceView({ numero: 'recompra', membro: outsider }).memberId).toBeNull();
+    expect(
+      parseOwnerFinanceView({ numero: 'parte-secundaria', membro: rebought }).memberId,
+    ).toBeNull();
+    const fading = memberIn({ kind: 'vipFading' });
+    expect(parseOwnerFinanceView({ atencao: 'pagantes-sumindo', membro: fading })).toEqual(
+      view({ attention: 'vipFading', memberId: fading }),
+    );
+    expect(parseOwnerFinanceView({ atencao: 'vencendo', membro: fading }).memberId).toBeNull();
+    expect(parseOwnerFinanceView({ membro: fading }).memberId).toBeNull();
+    expect(
+      parseOwnerFinanceView({ numero: 'recompra', membro: rebought, lista: 'curtidas' }).list,
+    ).toBe('curtidas');
+  });
+
+  it('goes back to the number, the attention row or the product row it came from', () => {
+    expect(financeBackHref(view({ number: 'rebought' }))).toBe(`${AREA}#numero-recompra`);
+    expect(financeBackHref(view({ attention: 'vipFading' }))).toBe(
+      `${AREA}#atencao-pagantes-sumindo`,
+    );
+    expect(financeBackHref(view({ productId: 's4' }))).toBe(`${AREA}#produto-s4`);
+    const member = memberIn({ kind: 'rebought' });
+    expect(financeBackHref(view({ number: 'rebought', memberId: member }))).toBe(
+      `${AREA}&numero=recompra#membro-${member}`,
+    );
+    expect(
+      ownerFinanceHref(view({ attention: 'vipFading', memberId: member, list: 'curtidas' })),
+    ).toBe(`${AREA}&atencao=pagantes-sumindo&membro=${member}&lista=curtidas`);
+  });
+
+  it('round-trips every valid overview view', () => {
+    const views: OwnerFinanceView[] = [];
+    const lists = {
+      primary: { kind: 'primary' },
+      secondary: { kind: 'secondary' },
+      rebought: { kind: 'rebought' },
+      timeToSecond: { kind: 'timeToSecond' },
+      lifetime: { kind: 'lifetime' },
+    } as const;
+    for (const number of Object.keys(FINANCE_NUMBER_SLUGS) as NonNullable<
+      OwnerFinanceView['number']
+    >[]) {
+      views.push(view({ number }));
+      if (number === 'share') continue;
+      for (const row of ownerBandRoster) {
+        if (!ownerFinanceIncludes(lists[number], row.id)) continue;
+        views.push(view({ number, memberId: row.id }));
+        views.push(view({ number, memberId: row.id, list: 'dias-ativos' }));
+      }
+    }
+    for (const attention of ['vipFading', 'expiring'] as const) {
+      views.push(view({ attention }));
+      for (const row of ownerBandRoster) {
+        if (!ownerFinanceIncludes({ kind: attention }, row.id)) continue;
+        views.push(view({ attention, memberId: row.id }));
+      }
+    }
+    for (const productId of PRODUCT_IDS) views.push(view({ productId }));
     for (const item of views) {
       expect(
         parseOwnerFinanceView(paramsOf(ownerFinanceHref(item))),

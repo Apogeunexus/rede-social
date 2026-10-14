@@ -334,9 +334,6 @@ describe('D-03: the example values of level 4', () => {
         'videoPlayback.watchedPercent',
         'videoPlayback.completionPercent',
         'events.waitlist',
-        'store.expiringAccess7d',
-        'store.renewal',
-        'store.conversion',
         'support.bySubject',
         ...[0, 1, 2, 3].map((i) => `events.past.${i}.ticketCents`),
         ...[0, 1, 2].map((i) => `events.upcoming.${i}.ticketCents`),
@@ -364,13 +361,15 @@ describe('store (Financeiro)', () => {
     }
   });
 
-  it('uses level 5’s products, each with at least level 5’s 7-day orders', () => {
+  it('uses level 5’s products, whose 7-day orders are the same list’s (PD-7)', () => {
     expect(store.products.map((row) => row.id).sort()).toEqual(
       tenantAdminPanel.store.map((row) => row.id).sort(),
     );
+    const week = ownerFinanceWindow(0, 6);
     for (const row of store.products) {
       const admin = tenantAdminPanel.store.find((other) => other.id === row.id);
       expect(row.product).toBe(admin?.product);
+      expect(admin?.orders, row.id).toBe(week.byProduct[row.id]?.orders);
       expect(row.orders).toBeGreaterThanOrEqual(admin?.orders ?? Number.POSITIVE_INFINITY);
     }
   });
@@ -392,23 +391,8 @@ describe('store (Financeiro)', () => {
     }
   });
 
-  it('keeps expiring access, renewal and conversion as examples that agree with the rest', () => {
-    expect(store.expiringAccess7d).toMatchObject({
-      example: true,
-      reason: 'needs_access_expiry',
-      value: tenantStaffPanel.store.expiringAccess7d,
-    });
-    expect(store.renewal).toMatchObject({ example: true, reason: 'needs_access_expiry' });
-    expect(store.renewal.value.renewed).toBeLessThanOrEqual(store.renewal.value.expired);
-    expect(Math.round(percentOf(store.renewal.value.renewed, store.renewal.value.expired))).toBe(
-      73,
-    );
-    expect(store.conversion).toMatchObject({ example: true, reason: 'needs_product_page_views' });
-    for (const row of store.conversion.value) {
-      expect(row.orders).toBe(store.products.find((other) => other.id === row.id)?.orders);
-      expect(row.visits).toBeGreaterThanOrEqual(row.orders);
-    }
-    expect(store.conversion.value).toHaveLength(store.products.length);
+  it('keeps only the month’s products: expiry, renewal and conversion left with the old screen', () => {
+    expect(Object.keys(store)).toEqual(['products']);
   });
 });
 
