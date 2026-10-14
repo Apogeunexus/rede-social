@@ -12,9 +12,11 @@ import {
   CONTENT_KIND_SLUGS,
   CONTENT_NUMBER_SLUGS,
   CONTENT_WHO_SLUGS,
+  contentAttentionAnchor,
   contentBackHref,
   contentCoverRatio,
   contentRecommendation,
+  needsAttention,
   type OwnerContentView,
   ownerContentHref,
   parseOwnerContentView,
@@ -33,6 +35,7 @@ const EMPTY: OwnerContentView = {
   who: null,
   memberId: null,
   list: null,
+  reply: null,
 };
 
 function view(patch: Partial<OwnerContentView>): OwnerContentView {
@@ -396,6 +399,43 @@ describe('ownerContentHref and contentBackHref', () => {
       const back = contentBackHref(expected);
       if (back !== null) expect(back.startsWith(AREA)).toBe(true);
     }
+  });
+});
+
+describe('the unanswered comments screen (quick 261013-orf E-02, E-03.10)', () => {
+  it('needs attention only past 24 hours without an answer', () => {
+    expect(
+      ownerContentItems
+        .filter(needsAttention)
+        .map((item) => item.id)
+        .sort(),
+    ).toEqual(['op-08', 'op-12', 'op-19', 'op-24']);
+  });
+
+  it('opens `responder` alone on Visão geral, for a post that needs attention', () => {
+    expect(parseOwnerContentView({ responder: 'op-24' })).toEqual(view({ reply: 'op-24' }));
+    for (const params of [
+      { responder: 'op-11' },
+      { responder: 'xyz' },
+      { responder: ['op-24', 'op-24'] },
+      { numero: 'interacoes', responder: 'op-24' },
+      { faixa: 'superfas', responder: 'op-24' },
+      { vista: 'tipos', responder: 'op-24' },
+      { vista: 'publicacoes', responder: 'op-24' },
+    ]) {
+      expect(parseOwnerContentView(params).reply, JSON.stringify(params)).toBeNull();
+    }
+    expect(parseOwnerContentView({ responder: 'op-24', post: 'op-11', quem: 'curtidas' })).toEqual(
+      view({ reply: 'op-24' }),
+    );
+  });
+
+  it('builds its link, goes back to the attention row and round-trips', () => {
+    const reply = view({ reply: 'op-24' });
+    expect(ownerContentHref(reply)).toBe(`${AREA}&responder=op-24`);
+    expect(contentBackHref(reply)).toBe(`${AREA}#atencao-op-24`);
+    expect(contentAttentionAnchor('op-24')).toBe('atencao-op-24');
+    expect(parseOwnerContentView(paramsOf(ownerContentHref(reply)))).toEqual(reply);
   });
 });
 
