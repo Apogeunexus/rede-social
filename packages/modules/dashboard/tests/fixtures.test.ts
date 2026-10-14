@@ -2,6 +2,7 @@ import { resolveBranding, tenantBrandingSchema } from '@rede-social/contracts/br
 import { describe, expect, it } from 'vitest';
 import {
   memberPanel,
+  ownerFinanceWindow,
   platformAdminPanel,
   platformOwnerPanel,
   platformSupportPanel,
@@ -99,17 +100,19 @@ describe('D-05: the levels agree on the same numbers', () => {
 });
 
 describe('tenantOwnerPanel engagement (level 4)', () => {
-  const { engagement, kpis, ordersByBand, channels, byFormat, movement } = tenantOwnerPanel;
+  const { engagement, kpis, channels, byFormat, movement } = tenantOwnerPanel;
 
   it('sums the bands to the member KPI, and the novos to the new members', () => {
     expect(bandTotal(engagement)).toBe(kpis.members.count);
     expect(engagement.counts.new).toBe(kpis.members.newMembers);
   });
 
-  it('counts every order in exactly one band', () => {
-    const orders = Object.values(ordersByBand).reduce((sum, n) => sum + n, 0);
+  it('counts every order of the single ledger in exactly one band of today', () => {
+    const { byBand, total } = ownerFinanceWindow(0, 29);
+    const orders = Object.values(byBand).reduce((sum, row) => sum + row.orders, 0);
+    expect(orders).toBe(total.orders);
     expect(orders).toBe(channels.find((row) => row.channel === 'orders')?.count);
-    expect(orders).toBe(96);
+    expect(orders).toBe(126);
   });
 
   it("splits the platform's 61 posts of the client by format", () => {

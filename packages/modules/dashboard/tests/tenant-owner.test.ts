@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { tenantAdminPanel, tenantOwnerPanel, tenantStaffPanel } from '../fixtures';
+import {
+  financeProductOffers,
+  ownerFinanceWindow,
+  tenantAdminPanel,
+  tenantOwnerPanel,
+  tenantStaffPanel,
+} from '../fixtures';
 import { attendancePercent, bandTotal, percentOf, perItem, sumOf, topBy } from '../ui/metrics';
 
 /**
@@ -22,7 +28,6 @@ const {
   publishing,
   store,
   moderation,
-  ordersByBand,
   account,
 } = tenantOwnerPanel;
 
@@ -342,12 +347,21 @@ describe('D-03: the example values of level 4', () => {
 });
 
 describe('store (Financeiro)', () => {
-  it('splits the 96 orders and R$ 8.940,00 across the products', () => {
+  const month = ownerFinanceWindow(0, 29);
+
+  it('splits the 126 orders and R$ 8.940,00 of the single ledger across the products', () => {
     const orders = sumOf(store.products, (row) => row.orders);
-    expect(orders).toBe(96);
-    expect(orders).toBe(Object.values(ordersByBand).reduce((total, n) => total + n, 0));
+    expect(orders).toBe(126);
+    expect(orders).toBe(month.total.orders);
     expect(orders).toBe(channel('orders'));
     expect(sumOf(store.products, (row) => row.cents)).toBe(kpis.orderValue.cents);
+    expect(kpis.orderValue.cents).toBe(month.total.cents);
+    for (const row of store.products) {
+      expect([row.orders, row.cents], row.id).toEqual([
+        month.byProduct[row.id]?.orders,
+        month.byProduct[row.id]?.cents,
+      ]);
+    }
   });
 
   it('uses level 5’s products, each with at least level 5’s 7-day orders', () => {
@@ -367,11 +381,14 @@ describe('store (Financeiro)', () => {
     expect(tenantStaffPanel.store.productsWithoutOrder30d.names).toContain('Workshop gravado');
   });
 
-  it('prices each product as level 6’s recent purchases', () => {
+  it('prices level 6’s recent purchases at one of the product’s offers', () => {
     for (const purchase of tenantStaffPanel.store.recentPurchases) {
       if (purchase.amountCents === null) continue;
       const row = store.products.find((other) => other.product === purchase.product);
-      expect((row?.cents ?? 0) / (row?.orders ?? 1)).toBe(purchase.amountCents);
+      expect(
+        financeProductOffers(row?.id ?? '').map((offer) => offer.priceCents),
+        purchase.id,
+      ).toContain(purchase.amountCents);
     }
   });
 

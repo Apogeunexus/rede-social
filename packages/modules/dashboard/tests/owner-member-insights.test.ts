@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { EngagementBand, OwnerMemberInsights } from '../fixtures';
-import { ownerMemberInsights, tenantOwnerPanel } from '../fixtures';
+import {
+  classifyOrders,
+  ownerFinanceOrders,
+  ownerMemberInsights,
+  tenantOwnerPanel,
+} from '../fixtures';
 import { ownerBandRoster, PREVIEW_TODAY } from '../fixtures/owner-members';
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 
@@ -10,7 +15,7 @@ import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
  * (event check-ins, VIP orders, support conversations).
  */
 
-const { events, store, support, byCommunity } = tenantOwnerPanel;
+const { events, support, byCommunity } = tenantOwnerPanel;
 const DAY_MS = 86_400_000;
 
 function daysSince(isoDate: string): number {
@@ -313,39 +318,75 @@ describe('events', () => {
   });
 });
 
-describe('purchases', () => {
-  const vip = store.products.find((row) => row.id === 's2');
-  if (!vip) throw new Error('no VIP product');
-  const unitCents = vip.cents / vip.orders;
+describe('purchases (quick 261014-dwc D-02, D-03)', () => {
+  const kinds = classifyOrders(ownerFinanceOrders);
 
-  it('hold the VIP exactly when the member has VIP access', () => {
-    expect(unitCents).toBe(19700);
+  it('are the member’s paid orders of the single ledger, oldest first', () => {
     for (const { row, insights } of ALL) {
-      const hasVip = row.communities['c-vip'] !== undefined;
-      expect(insights.purchases, row.id).toHaveLength(hasVip ? 1 : 0);
-      const purchase = insights.purchases[0];
-      if (!purchase) continue;
-      expect(purchase.productId).toBe('s2');
-      expect(purchase.cents).toBe(unitCents);
-      expect(purchase.date, row.id).toBe(plusDays(row.memberSince, 1));
-      expect(purchase.expiresAt).toEqual({
-        example: true,
-        reason: 'needs_access_expiry',
-        value: plusDays(purchase.date, 365),
-      });
-      expect(daysSince(purchase.date), row.id).toBeGreaterThanOrEqual(row.lastActive.daysAgo);
+      const ledger = ownerFinanceOrders
+        .filter((order) => order.memberId === row.id && order.status === 'paid')
+        .sort((a, b) => b.daysAgo - a.daysAgo);
+      expect(
+        insights.purchases.map((purchase) => [
+          purchase.productId,
+          purchase.offerId,
+          purchase.kind,
+          purchase.date,
+          purchase.cents,
+        ]),
+        row.id,
+      ).toEqual(
+        ledger.map((order) => [
+          order.productId,
+          order.offerId,
+          kinds.get(order.id),
+          plusDays(PREVIEW_TODAY, -order.daysAgo),
+          order.cents,
+        ]),
+      );
     }
   });
 
-  it('count the 30-day orders and stay within the VIP orders', () => {
+  it('start with the entry, on the joining day, and hold the VIP exactly with VIP access', () => {
+    for (const { row, insights } of ALL) {
+      const [entry] = insights.purchases;
+      expect(entry?.kind, row.id).toBe('primary');
+      expect(entry?.date, row.id).toBe(row.memberSince);
+      const vip = insights.purchases.filter((purchase) => purchase.productId === 's2');
+      expect(vip, row.id).toHaveLength(row.communities['c-vip'] ? 1 : 0);
+      for (const purchase of insights.purchases) {
+        expect(daysSince(purchase.date), row.id).toBeGreaterThanOrEqual(row.lastActive.daysAgo);
+      }
+    }
+  });
+
+  it('end the access a year after an entry or a VIP purchase, as an example; never otherwise', () => {
+    for (const { row, insights } of ALL) {
+      for (const purchase of insights.purchases) {
+        const yearly = purchase.kind === 'primary' || purchase.productId === 's2';
+        expect(purchase.expiresAt, row.id).toEqual(
+          yearly
+            ? {
+                example: true,
+                reason: 'needs_access_expiry',
+                value: plusDays(purchase.date, 365),
+              }
+            : null,
+        );
+      }
+    }
+  });
+
+  it('count the 30-day orders: at most one per member', () => {
     let recent = 0;
     for (const { row, insights } of ALL) {
       const within = insights.purchases.filter((purchase) => daysSince(purchase.date) < 30);
       expect(insights.last30.orders, row.id).toBe(within.length);
+      expect(within.length, row.id).toBeLessThanOrEqual(1);
       recent += within.length;
     }
     expect(recent).toBeGreaterThan(0);
-    expect(recent).toBeLessThanOrEqual(vip.orders);
+    expect(recent).toBeLessThanOrEqual(126);
   });
 });
 

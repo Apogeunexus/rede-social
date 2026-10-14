@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { OwnerMemberInsights } from '../fixtures';
 import {
+  financeOffer,
   ownerContentItem,
   ownerContentUnanswered,
   ownerMemberInsights,
@@ -21,7 +22,7 @@ import { OWNER_POST_UNANSWERED, ownerPostTable } from '../fixtures/owner-posts';
  * actions).
  */
 
-const { byCommunity, byFormat, topPosts, events, store } = tenantOwnerPanel;
+const { byCommunity, byFormat, topPosts, events } = tenantOwnerPanel;
 const ALL_EVENTS = [...events.past, ...events.upcoming];
 
 function insightsOf(id: string): OwnerMemberInsights {
@@ -196,9 +197,7 @@ describe('each member’s lists (D-07)', () => {
     }
   });
 
-  it('count as strong actions the comments, the check-ins and the 30-day VIP order', () => {
-    const vip = store.products.find((product) => product.id === 's2');
-    if (!vip) throw new Error('no VIP product');
+  it('count as strong actions the comments, the check-ins and the 30-day order', () => {
     for (const { row, insights } of ALL) {
       const { strongActions, comments } = insights.lists;
       const { last30, events: registrations, purchases } = insights;
@@ -217,9 +216,10 @@ describe('each member’s lists (D-07)', () => {
           ).toBe(true);
         }
         if (action.kind === 'order') {
-          expect(action.productId, row.id).toBe('s2');
-          expect(action.cents, row.id).toBe(vip.cents / vip.orders);
-          expect(action.when.daysAgo, row.id).toBe(daysSince(purchases[0]?.date ?? ''));
+          const order = purchases.find((purchase) => daysSince(purchase.date) < 30);
+          expect(action.productId, row.id).toBe(order?.productId);
+          expect(action.cents, row.id).toBe(financeOffer(order?.offerId ?? '').priceCents);
+          expect(action.when.daysAgo, row.id).toBe(daysSince(order?.date ?? ''));
         }
       }
       expect(isRecentFirst(strongActions.map((action) => action.when)), row.id).toBe(true);

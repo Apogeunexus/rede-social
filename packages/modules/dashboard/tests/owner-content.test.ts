@@ -3,6 +3,7 @@ import {
   CONTENT_KIND_ORDER,
   type ContentItem,
   type ContentKind,
+  financeProductOffers,
   ownerContent,
   ownerContentDetail,
   ownerContentIncludes,
@@ -16,6 +17,7 @@ import {
   ownerContentKindVelocity,
   ownerContentPeople,
   ownerContentUnanswered,
+  ownerFinanceWindow,
   ownerMemberInsights,
   tenantOwnerPanel,
 } from '../fixtures';
@@ -472,13 +474,16 @@ function sumOf<T extends Record<K, number>, K extends string>(rows: readonly T[]
 }
 
 describe("each publication's detail (D-06, D-08)", () => {
-  const { engagement, store, events } = tenantOwnerPanel;
+  const { engagement, events } = tenantOwnerPanel;
   const ALL_EVENTS = [...events.past, ...events.upcoming];
+  // A buyer tied to a publication was already a member: the order is the product's add-on offer
+  // (quick 261014-dwc D-02).
   const unit = (id: string) => {
-    const product = store.products.find((row) => row.id === id);
-    if (!product || product.orders === 0) throw new Error(`no unit price for ${id}`);
-    return product.cents / product.orders;
+    const addon = financeProductOffers(id).find((offer) => offer.kind === 'addon');
+    if (!addon) throw new Error(`no add-on offer for ${id}`);
+    return addon.priceCents;
   };
+  const month = ownerFinanceWindow(0, 29);
 
   it("has a non-decreasing 48-hour curve under its interactions, and its kind's", () => {
     for (const item of ownerContentItems) {
@@ -550,7 +555,7 @@ describe("each publication's detail (D-06, D-08)", () => {
         expect(event, `${item.id} ${row.eventId}`).toBeDefined();
         expect(row.members, item.id).toBeLessThanOrEqual(event?.confirmed ?? 0);
       }
-      expect(detail.orders.count, item.id).toBeLessThanOrEqual(96);
+      expect(detail.orders.count, item.id).toBeLessThanOrEqual(month.secondary.orders);
       const cents = detail.orders.products.reduce(
         (sum, row) => sum + row.count * unit(row.productId),
         0,
@@ -565,7 +570,8 @@ describe("each publication's detail (D-06, D-08)", () => {
         vitrine += detail.vitrine.subscriptions;
       }
     }
-    expect(vitrine).toBeLessThanOrEqual(21);
+    expect(vitrine).toBeLessThanOrEqual(month.byProduct.s2?.orders ?? 0);
+    expect(month.byProduct.s2?.orders).toBe(18);
   });
 
   it('pins the publications the screens quote', () => {
