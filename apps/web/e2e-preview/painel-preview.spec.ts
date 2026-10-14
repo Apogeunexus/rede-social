@@ -243,6 +243,47 @@ test('the clients list: a table on an unframed 900 px window, cards on a phone',
   await expect(cardOfClient(page)).toBeVisible();
 });
 
+test('the preview selector and the header period speak pt-BR (quick 261014-ia8 E-1, E-3)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/painel-preview/dono-do-cliente');
+  const nav = page.getByRole('navigation', { name: 'Níveis de acesso' });
+  await expect(nav.getByText('Plataforma (marca branca)', { exact: true })).toHaveCount(1);
+  await expect(nav.getByText('Cliente', { exact: true })).toHaveCount(1);
+  const period = page.locator('[data-panel-period]');
+  await expect(period).toHaveText('30 dias');
+  const look = await period.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { background: style.backgroundColor, border: style.borderTopWidth };
+  });
+  expect(look).toEqual({ background: 'rgba(0, 0, 0, 0)', border: '0px' });
+});
+
+const OWNER_AREA_SLUGS = [
+  'visao-geral',
+  'membros',
+  'conteudo',
+  'eventos',
+  'financeiro',
+  'atendimento',
+];
+
+test('no English word on any level nor any area of level 4 (quick 261014-ia8 E-2)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const paths = [
+    ...LEVELS.map((level) => `/painel-preview/${level}`),
+    ...OWNER_AREA_SLUGS.map((area) => `/painel-preview/dono-do-cliente?area=${area}`),
+  ];
+  for (const path of paths) {
+    await page.goto(path);
+    await openAllDetails(page);
+    expect(await page.locator('body').innerText(), path).not.toMatch(ENGLISH_WORDS);
+  }
+});
+
 test('the level navigation marks the current level', async ({ page }) => {
   await page.goto('/painel-preview/admin-da-plataforma');
   const current = page.getByRole('link', { name: /Admin da plataforma/ });
@@ -1169,7 +1210,7 @@ test('dono-do-cliente membros: a member card opens their insights and Voltar ret
   await expect(area.getByRole('heading', { name: 'Faixas de engajamento' })).toHaveCount(0);
   await expect(area.getByText('Em risco', { exact: true })).toBeVisible();
   await expect(kpiCard(area, 'Dias ativos').locator('span.text-2xl')).toHaveText('0');
-  for (const label of ['Tempo médio diário', 'Posts vistos']) {
+  for (const label of ['Tempo médio diário', 'Publicações vistas']) {
     await expect(kpiCard(area, label), label).toContainText('exemplo');
   }
 
@@ -1460,8 +1501,8 @@ const OWNER_LIST_CASES: { slug: string; card: string; title: string; order: stri
   },
   {
     slug: 'posts-vistos',
-    card: 'Posts vistos',
-    title: 'Posts vistos',
+    card: 'Publicações vistas',
+    title: 'Publicações vistas',
     order: 'mais vistos primeiro',
   },
 ];
@@ -1703,7 +1744,7 @@ test.describe('dono-do-cliente conteudo', () => {
       ['foto', 'Foto', '6', '62'],
       ['carrossel', 'Carrossel', '9', '77'],
       ['texto', 'Texto', '20', '48'],
-      ['link', 'Link', '8', '23'],
+      ['link', 'Página externa', '8', '23'],
       ['story', 'Story', '16', '30'],
     ];
     const ids = await area.locator('[id^="tipo-"]').evaluateAll((els) => els.map((el) => el.id));
@@ -2800,11 +2841,28 @@ const FINANCE_AREA = '/painel-preview/dono-do-cliente?area=financeiro';
 const FINANCE_TABS = ['Visão geral', 'Produtos', 'Quem compra'];
 const PRODUCT_NAMES = ['Comunidade VIP', 'Mentoria em grupo', 'E-book', 'Workshop gravado'];
 /** The English words the screen must never show (CONTEXT): their pt-BR words are used instead. */
-const ENGLISH_WORDS = /\b(upsell|ticket|churn|mrr|insights?)\b/i;
+const ENGLISH_WORDS =
+  /\b(upsell|ticket|churn|mrr|insights?|posts?|links?|feed|tenant|white label)\b/i;
 
 /** The finance tabs (D-01): Visão geral | Produtos | Quem compra. */
 function financeTabs(page: Page) {
   return page.getByRole('navigation', { name: 'Vistas do financeiro' });
+}
+
+/** Each card's one cover: its kind, its tone and the share of the card's height it takes. */
+async function coversOf(cards: Locator) {
+  return cards.evaluateAll((items) =>
+    items.map((item) => {
+      const covers = item.querySelectorAll<HTMLElement>('[data-testid="cover-thumb"]');
+      const cover = covers[0];
+      const card = item.getBoundingClientRect().height;
+      return {
+        kind: covers.length === 1 ? (cover?.dataset.kind ?? '') : `${covers.length} covers`,
+        tone: cover?.dataset.tone ?? '',
+        share: (cover?.getBoundingClientRect().height ?? card) / card,
+      };
+    }),
+  );
 }
 
 /** The product cards of Produtos (each `li` carries `produto-<id>`). */
@@ -2864,21 +2922,30 @@ test.describe('dono-do-cliente financeiro', () => {
     }
   });
 
-  test('Produtos: four cards by revenue, a 16:7 cover, entries and add-ons, Parado once', async ({
+  test('Produtos: four cards by revenue, a low cover of their own, entries and add-ons, Parado once', async ({
     page,
   }) => {
     await page.goto(`${FINANCE_AREA}&vista=produtos`);
-    const cards = productCards(ownerArea(page));
+    const area = ownerArea(page);
+    const cards = productCards(area);
     await expect(cards).toHaveCount(4);
     const names: string[] = [];
     for (let i = 0; i < 4; i += 1) {
-      const card = cards.nth(i);
-      names.push((await card.locator('.text-xl').innerText()).trim());
-      const cover = card.locator('[data-testid="community-cover-fallback"]');
-      await expect(cover).toHaveCount(1);
-      expect(Math.abs((await boxRatio(cover)) - 16 / 7)).toBeLessThanOrEqual(0.02);
+      names.push((await cards.nth(i).locator('.text-xl').innerText()).trim());
     }
     expect(names).toEqual(PRODUCT_NAMES);
+    // Quick 261014-ia8 F-7: each product has its own icon and tone, in a low band of the card.
+    const covers = await coversOf(cards);
+    expect(covers.map((cover) => cover.kind)).toEqual([
+      'community',
+      'mentoring',
+      'ebook',
+      'recorded',
+    ]);
+    expect(new Set(covers.map((cover) => cover.tone)).size).toBe(4);
+    for (const cover of covers) expect(cover.share, cover.kind).toBeLessThanOrEqual(0.3);
+    await expect(area.locator('[data-testid="community-cover-fallback"]')).toHaveCount(0);
+    await expect(area.locator('[data-testid="event-cover-fallback"]')).toHaveCount(0);
     const vip = cards.first();
     await expect(cardCell(vip, 'Preço')).toHaveText(/R\$\s197,00/);
     await expect(cardCell(vip, 'Entrada')).toHaveText('11');
@@ -2901,12 +2968,12 @@ test.describe('dono-do-cliente financeiro', () => {
     await expect(entry).toContainText('Comunidade VIP + 1 ano de acesso ao app');
     await expect(entry.getByText('Entrada', { exact: true })).toBeVisible();
     await expect(entry).toContainText(/R\$\s247,00/);
-    await expect(entry).toContainText(/11 pedidos · R\$\s2\.717,00/);
+    await expect(entry).toContainText(/11 pedidos · R\$\s2\.717 /);
     const addon = area.locator('#oferta-vip-adicional');
     await expect(addon).toContainText('Comunidade VIP por 1 ano');
     await expect(addon.getByText('Adicional', { exact: true })).toBeVisible();
     await expect(addon).toContainText(/R\$\s197,00/);
-    await expect(addon).toContainText(/7 pedidos · R\$\s1\.379,00/);
+    await expect(addon).toContainText(/7 pedidos · R\$\s1\.379 /);
 
     await entry.getByRole('link').click();
     await expect(page).toHaveURL(/&produto=s2&oferta=vip-entrada$/);
@@ -3331,10 +3398,10 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
   }) => {
     await page.goto(BUYERS_AREA);
     const cases: [string, RegExp][] = [
-      ['Novos', /R\$\s4\.753,00 · 99 pedidos · 96 compradores/],
-      ['Superfãs', /R\$\s2\.122,00 · 10 pedidos/],
-      ['Engajados', /R\$\s1\.733,00 · 11 pedidos/],
-      ['Ocasionais', /R\$\s332,00 · 6 pedidos/],
+      ['Novos', /R\$\s4\.753 · 99 pedidos · 96 compradores/],
+      ['Superfãs', /R\$\s2\.122 · 10 pedidos/],
+      ['Engajados', /R\$\s1\.733 · 11 pedidos/],
+      ['Ocasionais', /R\$\s332 · 6 pedidos/],
       ['Em risco', /nenhum pedido nos últimos 30 dias/],
       ['Inativos', /nenhum pedido nos últimos 30 dias/],
     ];
@@ -3346,7 +3413,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     }
     await expect(
       sectionTitled(ownerArea(page), 'Receita por faixa').getByText(
-        /^43% da receita do mês \(R\$\s3\.855,00\) vem de superfãs e engajados/,
+        /^43% da receita do mês \(R\$\s3\.855\) vem de superfãs e engajados/,
       ),
     ).toBeVisible();
     await expectNoEnglish(page, 'quem compra');
@@ -3419,6 +3486,15 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
   }) => {
     await page.goto(`${FINANCE_AREA}&vista=produtos&produto=s2`);
     const area = ownerArea(page);
+    const banner = area.locator('[data-testid="cover-thumb"]').first();
+    await expect(banner).toHaveAttribute('data-kind', 'community');
+    expect(Math.abs((await boxRatio(banner)) - 16 / 7)).toBeLessThanOrEqual(0.02);
+    await expect(
+      sectionTitled(area, 'Ofertas').getByText(
+        'O mesmo produto é vendido em ofertas diferentes: como entrada (a primeira compra, que dá acesso ao app) ou como adicional (para quem já é membro).',
+        { exact: true },
+      ),
+    ).toBeVisible();
     for (const label of ['Receita', 'Pedidos', 'Compradores', 'Cancelamentos']) {
       await expect(kpiCard(sectionTitled(area, 'Números do mês'), label), label).toBeVisible();
     }
@@ -3434,9 +3510,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
       if (text.includes('menos de 5')) expect(text).not.toContain('R$');
     }
     const posts = sectionTitled(area, 'Publicações que venderam');
-    await expect(posts.locator('a[href$="post=op-15"]')).toContainText(
-      /6 pedidos · R\$\s1\.182,00/,
-    );
+    await expect(posts.locator('a[href$="post=op-15"]')).toContainText(/6 pedidos · R\$\s1\.182$/);
     for (const post of ['op-41', 'op-11']) {
       await expect(posts.locator(`a[href$="post=${post}"]`), post).toContainText(
         'menos de 5 pedidos',
@@ -3453,6 +3527,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     const area = ownerArea(page);
     await expect(area.getByText('Nenhuma venda há 74 dias.', { exact: true })).toBeVisible();
     await expect(kpiCard(area, 'Pedidos')).toContainText('0');
+    await expect(kpiCard(area, 'Pedidos')).toContainText('nenhuma entrada · nenhum adicional');
     await expect(sectionTitled(area, 'Publicações que venderam')).toContainText(
       'Nenhuma venda de quem interagiu',
     );
@@ -3474,9 +3549,17 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     for (const [i, [name, date]] of expected.entries()) {
       await expect(cards.nth(i).locator('.text-xl'), name).toHaveText(name);
       await expect(cardCell(cards.nth(i), 'Data'), name).toHaveText(date);
-      const cover = cards.nth(i).locator('[data-testid="event-cover-fallback"]');
-      expect(Math.abs((await boxRatio(cover)) - 16 / 10), name).toBeLessThanOrEqual(0.02);
     }
+    // Quick 261014-ia8 F-7: the event's format icon, a tone per event, a low band of the card.
+    const covers = await coversOf(cards);
+    expect(covers.map((cover) => cover.kind)).toEqual([
+      'in_person',
+      'in_person',
+      'in_person',
+      'in_person',
+    ]);
+    expect(new Set(covers.map((cover) => cover.tone)).size).toBe(4);
+    for (const cover of covers) expect(cover.share, cover.kind).toBeLessThanOrEqual(0.3);
     await expect(section.getByText('exemplo', { exact: true })).toHaveCount(1);
     await expect(section.getByText('3 eventos gratuitos ficaram de fora.')).toBeVisible();
     // A full paid event with a waiting list says so and opens it in Eventos (quick 261014-ia8 F-1).
@@ -3689,9 +3772,9 @@ test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, a
   await expect(notCollected.locator('summary')).toContainText('6 métricas');
   await notCollected.locator('summary').click();
   await expect(notCollected.getByRole('listitem')).toHaveCount(6);
-  await expect(notCollected.getByText('Precisa registrar as visualizações dos posts')).toHaveCount(
-    2,
-  );
+  await expect(
+    notCollected.getByText('Precisa registrar as visualizações das publicações'),
+  ).toHaveCount(2);
   await expect(notCollected.getByText('Precisa registrar a reprodução dos vídeos')).toHaveCount(2);
 
   const atRisk = kpiCard(page, 'Entraram em risco nesta semana');
@@ -3703,7 +3786,7 @@ test('admin-do-cliente: unmeasured metrics grouped, videos, reels and stories, a
 
   const titles = await h3Texts(page);
   expect(titles.indexOf('Vídeos, reels e stories')).toBe(
-    titles.indexOf('Posts que mais renderam (14 dias)') + 1,
+    titles.indexOf('Publicações que mais renderam (14 dias)') + 1,
   );
   const videos = sectionTitled(page, 'Vídeos, reels e stories');
   for (const clock of ['4:12', '0:41', '0:38']) {
@@ -4064,7 +4147,7 @@ test('membro: Sua atividade report', async ({ page }) => {
     'Média por dia',
     'Salvamentos',
     'Compartilhamentos',
-    'Posts vistos',
+    'Publicações vistas',
     'Vídeos e reels',
     'Tempo em vídeos e reels',
   ]) {
@@ -4082,8 +4165,10 @@ test('membro: Sua atividade report', async ({ page }) => {
   const communities = sectionTitled(page, 'Onde você mais participa');
   await expect(communities.getByText('exemplo', { exact: true })).toHaveCount(0);
 
-  const posts = kpiCard(page, 'Posts vistos');
-  for (const text of ['60', 'posts', '128 visualizações']) await expect(posts).toContainText(text);
+  const posts = kpiCard(page, 'Publicações vistas');
+  for (const text of ['60', 'publicações', '128 visualizações']) {
+    await expect(posts).toContainText(text);
+  }
   const seenValues: [string, string][] = [
     ['Stories vistos', '23'],
     ['Vídeos e reels', '41'],
@@ -4118,7 +4203,7 @@ const MEMBER_LIST_CASES: MemberListCase[] = [
   {
     slug: 'curtidas',
     card: 'Curtidas',
-    title: 'Posts que você curtiu',
+    title: 'Publicações que você curtiu',
     rows: 46,
     count: '46 curtidas',
     listExample: false,
@@ -4136,7 +4221,7 @@ const MEMBER_LIST_CASES: MemberListCase[] = [
   {
     slug: 'salvamentos',
     card: 'Salvamentos',
-    title: 'Posts que você salvou',
+    title: 'Publicações que você salvou',
     rows: 9,
     count: '9 salvamentos',
     listExample: true,
@@ -4145,19 +4230,19 @@ const MEMBER_LIST_CASES: MemberListCase[] = [
   {
     slug: 'compartilhamentos',
     card: 'Compartilhamentos',
-    title: 'Posts que você compartilhou',
+    title: 'Publicações que você compartilhou',
     rows: 3,
     count: '3 compartilhamentos',
     listExample: true,
     rowExamples: 0,
-    sample: 'Link copiado',
+    sample: 'Endereço copiado',
   },
   {
     slug: 'posts-vistos',
-    card: 'Posts vistos',
-    title: 'Posts que você viu',
+    card: 'Publicações vistas',
+    title: 'Publicações que você viu',
     rows: 60,
-    count: '60 posts · 128 visualizações · mais vistos primeiro',
+    count: '60 publicações · 128 visualizações · mais vistas primeiro',
     listExample: true,
     rowExamples: 0,
     sample: 'visto 6×',
@@ -4190,7 +4275,7 @@ const MEMBER_LIST_LABELS = [
   'Comentários',
   'Salvamentos',
   'Compartilhamentos',
-  'Posts vistos',
+  'Publicações vistas',
   'Stories vistos',
   'Vídeos e reels',
   'Tempo em vídeos e reels',
@@ -4326,7 +4411,7 @@ test('membro: a list scrolls inside the phone at 1440x900', async ({ page }) => 
   await memberCardLink(page, 'Curtidas').click();
   await expect(page).toHaveURL(/\?lista=curtidas#lista$/);
   await expect(
-    screen.getByRole('heading', { level: 3, name: 'Posts que você curtiu', exact: true }),
+    screen.getByRole('heading', { level: 3, name: 'Publicações que você curtiu', exact: true }),
   ).toBeInViewport();
 
   const metrics = await screenMetrics(page);

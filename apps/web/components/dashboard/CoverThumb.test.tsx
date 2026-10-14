@@ -4,7 +4,15 @@ import { fileURLToPath } from 'node:url';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMessages } from '@/i18n/messages';
-import { COVER_TONES, CoverThumb, type CoverThumbProps, coverStyle, coverTone } from './CoverThumb';
+import {
+  COVER_ICON,
+  COVER_TONES,
+  type CoverKind,
+  CoverThumb,
+  type CoverThumbProps,
+  coverStyle,
+  coverTone,
+} from './CoverThumb';
 import type { DashboardT } from './format';
 
 // format.ts reaches the app's module registry for tab labels; a thumbnail never names a module.
@@ -193,5 +201,48 @@ describe('CoverThumb (card, quick 261013-uoi F-3)', () => {
       expect(el.querySelectorAll('svg')).toHaveLength(1);
       cleanup();
     }
+  });
+});
+
+describe('CoverThumb (strip and banner, quick 261014-ia8 F-7)', () => {
+  it('a strip is a low full-width band, a banner a full-width 16:7, both decorative brand covers', () => {
+    const cases = [
+      ['strip', 'h-16'],
+      ['banner', 'aspect-[16/7]'],
+    ] as const;
+    for (const [variant, shape] of cases) {
+      const el = thumb({ kind: 'community', seed: 's2', variant });
+      expect(el.getAttribute('aria-hidden'), variant).toBe('true');
+      expect(el.dataset.kind, variant).toBe('community');
+      expect(el.dataset.tone, variant).toBe(String(coverTone('s2')));
+      for (const name of ['w-full', shape]) {
+        expect(el.classList, `${variant} ${name}`).toContain(name);
+      }
+      // The Card clips its corners: the band has none of its own, nor the row's square.
+      for (const name of ['rounded-lg', 'size-14']) {
+        expect(el.classList, `${variant} ${name}`).not.toContain(name);
+      }
+      expect(el.querySelectorAll('svg'), variant).toHaveLength(1);
+      expect(el.style.color, variant).toBe('var(--brand-on-primary)');
+      cleanup();
+    }
+  });
+
+  it('gives each product and each event format its own icon, unlike every other kind', () => {
+    const icons: [CoverKind, string][] = [
+      ['community', 'lucide-users'],
+      ['mentoring', 'lucide-graduation-cap'],
+      ['ebook', 'lucide-book-open'],
+      ['recorded', 'lucide-monitor-play'],
+      ['in_person', 'lucide-map-pin'],
+      ['online', 'lucide-video'],
+    ];
+    for (const [kind, icon] of icons) {
+      const el = thumb({ kind, seed: 'e1', variant: 'strip' });
+      expect(el.querySelector('svg')?.getAttribute('class'), kind).toContain(icon);
+      cleanup();
+    }
+    const all = Object.values(COVER_ICON);
+    expect(new Set(all).size).toBe(all.length);
   });
 });
