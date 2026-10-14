@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { OwnerMemberInsights } from '../fixtures';
-import { ownerContentItem, ownerMemberInsights, tenantOwnerPanel } from '../fixtures';
-import { daysSince, ownerBandRoster, PREVIEW_TODAY } from '../fixtures/owner-members';
-import { ownerPostTable } from '../fixtures/owner-posts';
+import {
+  ownerContentItem,
+  ownerContentUnanswered,
+  ownerMemberInsights,
+  tenantOwnerPanel,
+} from '../fixtures';
+import {
+  daysSince,
+  momentHoursAgo,
+  ownerBandRoster,
+  PREVIEW_TODAY,
+} from '../fixtures/owner-members';
+import { OWNER_POST_UNANSWERED, ownerPostTable } from '../fixtures/owner-posts';
 
 /**
  * Quick 261012-tru D-07: the lists behind a member's insight numbers. Each list's length is its
@@ -229,6 +239,60 @@ describe('each member’s lists (D-07)', () => {
         activeDays.reduce((total, day) => total + day.actions, 0),
         row.id,
       ).toBe(likes + comments + checkIns + orders);
+    }
+  });
+
+  it('comment at most twice and like at most 6 times a day (quick 261013-uoi C-1, F-1)', () => {
+    for (const { row, insights } of ALL) {
+      const comments = countBy(insights.lists.comments, (entry) => String(entry.when.daysAgo));
+      for (const [day, count] of Object.entries(comments)) {
+        expect(count, `${row.id} comments ${day} days ago`).toBeLessThanOrEqual(2);
+      }
+      const likes = countBy(insights.lists.likes, (entry) => String(entry.when.daysAgo));
+      for (const [day, count] of Object.entries(likes)) {
+        expect(count, `${row.id} likes ${day} days ago`).toBeLessThanOrEqual(6);
+      }
+    }
+  });
+
+  it('time every action of the last day once, the latest at the last action (quick 261013-uoi F-1)', () => {
+    for (const { row, insights } of ALL) {
+      const { likes, comments, strongActions } = insights.lists;
+      const last = row.lastActive;
+      const actions = [...likes, ...strongActions];
+      const onLast = actions.filter((entry) => entry.when.daysAgo === last.daysAgo);
+      if (onLast.length === 0) continue;
+      const times = onLast.map((entry) => entry.when.time);
+      for (const time of times) {
+        expect(time, `${row.id} untimed on the last day`).toBeDefined();
+        expect((time ?? '') <= (last.time ?? ''), `${row.id} ${time} after ${last.time}`).toBe(
+          true,
+        );
+      }
+      expect(new Set(times).size, `${row.id} repeated times`).toBe(times.length);
+      expect(
+        times.filter((time) => time === last.time),
+        row.id,
+      ).toHaveLength(1);
+
+      // On the other days, only the oldest unanswered comment of a post carries a time.
+      const elsewhere = (entry: { when: { daysAgo: number; time?: string } }) =>
+        entry.when.daysAgo !== last.daysAgo && entry.when.time !== undefined;
+      expect(likes.filter(elsewhere), `${row.id} likes timed on another day`).toEqual([]);
+      for (const entry of strongActions.filter(elsewhere)) {
+        expect(entry.kind, `${row.id} timed on another day`).toBe('comment');
+        const post = entry.kind === 'comment' ? entry.post.id : '';
+        const wait = OWNER_POST_UNANSWERED[post]?.[1];
+        expect(wait, `${row.id} ${post} timed on another day`).toBeDefined();
+        expect(entry.when, `${row.id} ${post}`).toEqual(momentHoursAgo(wait ?? 0));
+        expect(ownerContentUnanswered(post)[0]?.person.id, `${row.id} ${post}`).toBe(row.id);
+      }
+      for (const comment of comments) {
+        const action = strongActions.find(
+          (entry) => entry.kind === 'comment' && entry.post.id === comment.post.id,
+        );
+        expect(action?.when, `${row.id} ${comment.post.id}`).toEqual(comment.when);
+      }
     }
   });
 

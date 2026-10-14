@@ -1504,6 +1504,23 @@ test("dono-do-cliente membros: the insights' numbers open their lists", async ({
   await expect(kpiCard(area, 'Tempo médio diário').locator('xpath=ancestor::a')).toHaveCount(0);
 });
 
+test("dono-do-cliente membros: a member's likes of today never repeat a time (quick 261013-uoi F-1)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${SUPERFAN_DETAIL}&lista=curtidas`);
+  const rows = await sectionTitled(ownerArea(page), 'Curtidas')
+    .getByRole('listitem')
+    .allInnerTexts();
+  const times = rows.flatMap((text) => {
+    const match = /hoje (às )?(\d{2}:\d{2})/.exec(text);
+    return match?.[2] ? [match[2]] : [];
+  });
+  expect(times.length).toBeGreaterThan(0);
+  expect(new Set(times).size).toBe(times.length);
+  expect(times.filter((time) => time === '22:40').length).toBeLessThanOrEqual(1);
+});
+
 test('dono-do-cliente membros: a list keeps the community it was opened from', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(DEMOTED_DETAIL);
@@ -2419,6 +2436,20 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
     await expect(area.getByRole('listitem').first()).toContainText(/Comentou (hoje|ontem|há)/);
     await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-57&quem=compartilhamentos`);
     await expect(area.getByText(/^nenhum compartilhamento · /)).toBeVisible();
+  });
+
+  test('the oldest unanswered comment sits exactly at its wait (quick 261013-uoi C-3)', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-04&quem=comentarios`);
+    const first = area.getByRole('listitem').first();
+    await expect(first).toContainText('Sem resposta');
+    await expect(first).toContainText('Comentou hoje às 14:00');
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-04`);
+    await expect(
+      area.getByText('1 sem resposta · o mais antigo há 9 h', { exact: true }),
+    ).toBeVisible();
   });
 
   test('the commenters put the unanswered first', async ({ page }) => {

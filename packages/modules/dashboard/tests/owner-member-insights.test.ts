@@ -99,6 +99,44 @@ describe('the last 30 days', () => {
     }
   });
 
+  it('hold a realistic number of comments per band (quick 261013-uoi C-1)', () => {
+    const range: Record<EngagementBand, readonly [number, number]> = {
+      superfan: [6, 12],
+      engaged: [3, 8],
+      occasional: [1, 3],
+      new: [0, 3],
+      at_risk: [0, 0],
+      inactive: [0, 0],
+    };
+    const formula: Record<EngagementBand, (j: number) => number> = {
+      new: (j) => j % 3,
+      superfan: (j) => 6 + (j % 4),
+      engaged: (j) => 3 + (j % 3),
+      occasional: (j) => 1 + (j % 2),
+      at_risk: () => 0,
+      inactive: () => 0,
+    };
+    const byBand: Partial<Record<EngagementBand, number>> = {};
+    for (const { row, insights } of ALL) {
+      const { comments } = insights.last30;
+      const [min, max] = range[row.band];
+      expect(comments, row.id).toBeGreaterThanOrEqual(min);
+      expect(comments, row.id).toBeLessThanOrEqual(max);
+      const j = ownerBandRoster.filter((other) => other.band === row.band).indexOf(row);
+      expect(comments, row.id).toBe(formula[row.band](j));
+      byBand[row.band] = (byBand[row.band] ?? 0) + comments;
+    }
+    expect(byBand).toEqual({
+      superfan: 90,
+      engaged: 48,
+      occasional: 18,
+      new: 12,
+      at_risk: 0,
+      inactive: 0,
+    });
+    expect(sum(ALL.map(({ insights }) => insights.last30.comments))).toBe(168);
+  });
+
   it('mark the daily time and the posts seen as examples', () => {
     for (const { row, insights } of ALL) {
       expect(insights.last30.dailyMinutes, row.id).toEqual(row.dailyMinutes);

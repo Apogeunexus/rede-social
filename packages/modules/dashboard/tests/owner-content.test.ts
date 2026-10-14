@@ -20,7 +20,12 @@ import {
   tenantOwnerPanel,
 } from '../fixtures';
 import { buildOwnerContentPeople } from '../fixtures/owner-content';
-import { daysSince, ownerBandRoster } from '../fixtures/owner-members';
+import {
+  daysSince,
+  momentHoursAgo,
+  ownerBandRoster,
+  PREVIEW_NOW_TIME,
+} from '../fixtures/owner-members';
 import { ownerPostTable } from '../fixtures/owner-posts';
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 
@@ -260,8 +265,8 @@ describe('the people behind each number (P1)', () => {
       }
     }
     expect(likes).toBe(663);
-    // Quick 261013-orf E-03.1: the roster's comments cover min(comments, 10) per post.
-    expect(comments).toBe(527);
+    // Quick 261013-uoi C-1: each member comments within their band's realistic range.
+    expect(comments).toBe(168);
   });
 
   it('carry their band and are listed most recent first', () => {
@@ -450,7 +455,7 @@ describe('who interacts and the interactions (D-02, PD-5, PD-7)', () => {
   it('the interactions are every roster like and comment, the same fact as the people', () => {
     const { rows, total } = ownerContentInteractions();
     expect(total).toBe(3940);
-    expect(rows).toHaveLength(1190);
+    expect(rows).toHaveLength(831);
     expect(rows.filter((row) => row.action === 'like')).toHaveLength(663);
     for (const [i, row] of rows.entries()) {
       const who = row.action === 'like' ? 'likes' : 'comments';
@@ -612,49 +617,47 @@ describe("each publication's detail (D-06, D-08)", () => {
   });
 });
 
-describe('every people list (quick 261013-orf E-03.1)', () => {
-  /**
-   * The items published today or yesterday reach fewer active roster members than 10: their lists
-   * hold every member who could act (the ceiling), proved below to be exactly that number.
-   */
-  const CEILING: Readonly<Record<string, number>> = {
-    'op-01/likes': 2,
-    'op-01/saves': 2,
-    'op-02/likes': 6,
-    'op-03/likes': 6,
-    'op-03/comments': 6,
-    'os-01/likes': 6,
-  };
-
-  /** Active roster members who reach the item's community with an active day by its age. */
-  function eligible(item: ContentItem): number {
-    const age = daysSince(item.date);
-    return ROSTER.filter(
-      ({ row, insights }) =>
-        (item.communityId === null || row.communities[item.communityId] !== undefined) &&
-        insights.lists.activeDays.some((day) => day.when.daysAgo <= age),
-    ).length;
-  }
-
-  it('hold at least min(total, 10) people, or every member who could act', () => {
+describe('every people list (quick 261013-uoi)', () => {
+  it('holds at least one person when its number is above 0', () => {
     for (const item of ownerContentItems) {
       for (const who of ['likes', 'comments', 'saves', 'shares'] as const) {
         if (who === 'saves' && item.saves === null) continue;
         const { people, total } = ownerContentPeople(item.id, who);
-        const ceiling = CEILING[`${item.id}/${who}`] ?? Number.POSITIVE_INFINITY;
-        expect(people.length, `${item.id} ${who}`).toBeGreaterThanOrEqual(
-          Math.min(total, 10, ceiling),
-        );
         if (total > 0) expect(people.length, `${item.id} ${who}`).toBeGreaterThanOrEqual(1);
       }
     }
   });
 
-  it('cap the recent items at the members who could act', () => {
-    for (const key of Object.keys(CEILING)) {
-      const [id = ''] = key.split('/');
-      expect(CEILING[key], key).toBe(eligible(ownerContentItem(id)));
+  it('never holds more roster commenters than min(comments, 10)', () => {
+    for (const item of posts) {
+      const { people } = ownerContentPeople(item.id, 'comments');
+      expect(people.length, item.id).toBeLessThanOrEqual(Math.min(item.comments, 10));
     }
+  });
+});
+
+describe('momentHoursAgo (quick 261013-uoi C-3)', () => {
+  it('turns a wait in hours into the day and clock reading counted from 23:00 of today', () => {
+    expect(PREVIEW_NOW_TIME).toBe('23:00');
+    expect(momentHoursAgo(3)).toEqual({ daysAgo: 0, time: '20:00' });
+    expect(momentHoursAgo(9)).toEqual({ daysAgo: 0, time: '14:00' });
+    expect(momentHoursAgo(18)).toEqual({ daysAgo: 0, time: '05:00' });
+    expect(momentHoursAgo(60)).toEqual({ daysAgo: 2, time: '11:00' });
+    expect(momentHoursAgo(110)).toEqual({ daysAgo: 4, time: '09:00' });
+    expect(momentHoursAgo(192)).toEqual({ daysAgo: 8, time: '23:00' });
+    expect(momentHoursAgo(250)).toEqual({ daysAgo: 10, time: '13:00' });
+  });
+
+  it('keeps "há N dias" in whole days', () => {
+    for (let hours = 0; hours <= 300; hours += 1) {
+      expect(momentHoursAgo(hours).daysAgo, String(hours)).toBe(Math.floor(hours / 24));
+    }
+  });
+
+  it('puts op-04, op-02 and op-03 today', () => {
+    expect(ownerContentUnanswered('op-04')[0]?.person.when).toEqual({ daysAgo: 0, time: '14:00' });
+    expect(ownerContentUnanswered('op-02')[0]?.person.when).toEqual({ daysAgo: 0, time: '20:00' });
+    expect(ownerContentUnanswered('op-03')[0]?.person.when).toEqual({ daysAgo: 0, time: '05:00' });
   });
 });
 
@@ -682,14 +685,16 @@ describe('unanswered comments (quick 261013-orf E-02)', () => {
         }
       }
       expect(new Set(rows.map((row) => row.text)).size, item.id).toBe(rows.length);
-      const hours = item.commentMeta.oldestUnansweredHours ?? 0;
-      if (hours >= 48) {
-        expect(rows[0]?.person.when.daysAgo, item.id).toBe(Math.floor(hours / 24));
-        for (const person of commenters) {
-          expect(person.when.daysAgo, `${item.id} ${person.id}`).toBeLessThanOrEqual(
-            Math.floor(hours / 24),
-          );
-        }
+      // Quick 261013-uoi C-3: the oldest one waited exactly the recorded hours, and no comment of
+      // the post is older.
+      const oldest = momentHoursAgo(item.commentMeta.oldestUnansweredHours ?? 0);
+      expect(rows[0]?.person.when, item.id).toEqual(oldest);
+      for (const person of commenters) {
+        const older =
+          person.when.daysAgo > oldest.daysAgo ||
+          (person.when.daysAgo === oldest.daysAgo &&
+            (person.when.time ?? '') < (oldest.time ?? ''));
+        expect(older, `${item.id} ${person.id}`).toBe(false);
       }
     }
   });
