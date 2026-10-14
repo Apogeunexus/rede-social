@@ -75,10 +75,11 @@ area with `?area=<slug>` on the level-4 page, where the slug is one of `visao-ge
 `apps/web/lib/dashboard-preview.ts`); anything else, or no `area`, renders `visao-geral`. The tabs are
 plain links, so they work without JavaScript, and the header keeps the period and the alerts bell in
 every area. The bell holds three items: conversations waiting for an answer (no member is named), the
-event happening today with its seats left, and the members who entered "em risco" this week.
+next event with few seats left (its day and hour, 261014-dwc PD-16), and the members who entered "em
+risco" this week.
 
 Level-4 numbers equal level 5's where they describe the same thing (the support queue, the first
-response, today's event, attendance, communities, top posts, moderation, store products), and
+response, the next event, attendance, communities, top posts, moderation, store products), and
 `tests/tenant-owner.test.ts` proves every sum. Percents and per-post figures are computed from the
 raw counts, never typed. The metrics the app does not collect yet are `ExampleValue`s with the
 "exemplo" pill next to the value they mark. The top posts are the exception: their saves and shares
@@ -95,8 +96,7 @@ one per row (261012-oxi C-3):
 | Cliques no link | none | Link clicks per post (`needs_link_clicks`) |
 | Toques no story (avançaram, voltaram, saíram) | none | Story taps per viewer (`needs_story_taps`) |
 | Lista de espera | only `events.capacity` (no waiting list) | A waiting list per full event: who joined it, who got a seat, who came (`needs_waitlist`) |
-| Acessos que vencem em 7 dias, taxa de renovação | the `store` access `expires_at` column, never set | Fill `expires_at` when a time-limited access is granted (`needs_access_expiry`) |
-| Conversão por produto | none | Product page visits (`needs_product_page_views`) |
+| Acessos que vencem em 7 dias | entry or VIP purchase + 365 days; the `store` access `expires_at` column is never set | Fill `expires_at` when a time-limited access is granted (`needs_access_expiry`) |
 | Atendimentos por assunto | none | A subject on each support conversation (`needs_support_subject`) |
 | Receita do cartão de evento | none (no ticket sale is recorded) | The ticket price and sales of each event (`needs_event_tickets`) |
 | Crescimento (entraram, saíram, novos por semana) | memberships (joined / left dates) | measured |
@@ -104,7 +104,11 @@ one per row (261012-oxi C-3):
 | Melhor dia e horário para publicar | likes + comments by the post's São Paulo publication weekday and hour | measured |
 | Visualizações por story | aggregate `story_views` (totals only, never who viewed) | measured |
 | Próximos eventos, comparecimento, presencial × online, quem vai | `events.capacity`, RSVPs "vou", check-ins and walk-ins | measured |
-| Receita por produto, quem compra | paid `store` orders by product, and by the buyer's band | measured |
+| Receita primária e secundária | the first paid `store_orders` row per `user_id` is primary, every later one secondary (computed, never stored) | measured |
+| Ofertas (composição e preço, entrada ou adicional) | none: no offer table, no `offer_id` on the order | An offer per product and the order's offer |
+| Receita por produto e por faixa, quem compra | paid `store` orders by product, and by the buyer's band of today | measured |
+| Escada de compra | each member's first and second paid orders | measured |
+| Vendas depois de publicação e de evento | paid orders within 7 days after interacting with a publication or checking in to an event | measured association, not cause |
 | Fila, 1ª resposta, atendimentos por semana, equipe | support chat conversations; staff answers from `chat_messages.author_user_id` | measured |
 | Moderação | removed comments, blocks and unblocks | measured |
 | Faixas por comunidade | the counted actions joined to the community, plus access for the base (paid access for the exclusive VIP, membership for the others) | measured |
@@ -332,6 +336,67 @@ Planner decisions:
 - PD-11 Canais left Conteúdo with nothing moved: the panel's Visão geral already has one number per area.
 - PD-12 Taxa de engajamento = likes + comments ÷ the reach of the 61 posts (an example, because the reach is).
 
+#### Financeiro (261014-dwc)
+
+The Financeiro area is one cascade of plain links in three equal tabs, as Membros and Conteúdo:
+**Visão geral**, **Produtos** and **Quem compra** (`?vista=` none, `produtos`, `quem-compra`), one
+row and no period selector (30 days against the 30 before). The params, in order: `vista`, `numero`
+(an overview number: `primaria`, `secundaria`, `parte-secundaria`, `recompra`, `tempo-recompra`,
+`por-membro`), `atencao` (`pagantes-sumindo`, `vencendo`), `produto` (a store product, under
+Produtos or opened from Visão geral), `oferta` (one of the product's offers with orders in the
+month), `faixa` (Quem compra: a band with buyers, still a tab screen), `nunca` (Quem compra: a band
+with someone who never bought again), `membro` and `lista`. `apps/web/lib/owner-finance-view.ts`
+reads them level by level from allow-lists; a member only counts when the open list holds them
+(`ownerFinanceIncludes`, it reads no names); anything else falls one level up, never to an error,
+and every deeper step has a "Voltar" to the exact previous URL, landing on the card or row it closed.
+
+Data: `fixtures/owner-finance.ts` is ONE list of store orders (`ownerFinanceOrders`) for the 1.240
+members of the base (`ownerFinanceMembers`, the 72 named roster members plus 1.168 anonymous ones).
+Every money total of the preview comes from it: the Financeiro tabs, the panel's month
+(`kpis.orderValue`, `store.products`, the orders channel), each member's purchases in the insights,
+the sales tied to a publication in Conteúdo and the 7-day orders of levels 5 and 6;
+`tests/owner-finance.test.ts` proves the sums.
+
+- **Primary revenue** is each member's first paid order, the one that gave access to the app, dated
+  the day they joined; **secondary revenue** is any paid order after it, a renewal included. The
+  classification is by ORDER, never by product, and is computed (`classifyOrders`), never stored.
+- **Offers**: the same product sells as an entry or as an add-on, with its own composition and price
+  (`FINANCE_OFFERS`: E-book + 1 ano de acesso R$ 17, Comunidade VIP + 1 ano R$ 247, E-book R$ 27,
+  Comunidade VIP por 1 ano R$ 197, Mentoria em grupo R$ 490, Workshop gravado R$ 97).
+- **Access by term**: an entry (and the VIP) gives one year; the end is purchase + 365, an example
+  (`needs_access_expiry`). No access has ended yet, so nobody renewed.
+- **Tickets out of the total**: the paid events sit in their own section of Produtos, with one
+  "exemplo" pill, never in the store's revenue.
+- **Cancelled = revoked** by the admin: never revenue, never an order, never primary.
+- **Floor of 5** on every group total (band, publication, event, cancellations, ladder path): under
+  5 it reads "menos de 5 pedidos" (or "pessoas") with no value; a product's buyers by band are merged
+  with `mergeBandsBelowFloor` so no small band is deduced from the total. Named buyer lists show name
+  and value, at level 4 only.
+
+Planner decisions:
+
+- PD-1 The month stays R$ 8.940,00; its orders go from 96 to 126 (96 entries + 30 add-ons).
+- PD-2 The six offers above; add-ons keep today's unit prices, so Conteúdo's sales and level 6's purchases keep their values.
+- PD-3 The month: VIP entry 11 / R$ 2.717, E-book entry 85 / R$ 1.445, Mentoria 6 / R$ 2.940, VIP add-on 7 / R$ 1.379, E-book add-on 17 / R$ 459, Workshop 0; 2 cancellations; the 30 days before at R$ 7.982 (+12%).
+- PD-4 The buyer's band is today's; em risco and inativos buy nothing in the month by definition.
+- PD-5 The community opened about a year ago: the 6 founders (358-364 days) are the 6 accesses ending this week.
+- PD-6 The roster enters on its `memberSince`; at most one roster order in the month, on the last active day; older roster add-ons 90+ days back.
+- PD-7 Level 5's store (Mentoria 3, VIP 7, E-book 35, Workshop 0) and level 6's `orders7d` (45) are the list's last 7 days.
+- PD-8 The product cover is the communities module's own 16:7 `CommunityCover` (gradient fallback), no new component.
+- PD-9 A product card shows Preço · Entrada · Adicional · Receita and the change vs. the 30 days before; "Parado" after 60 days unsold (two rows of two under 20rem).
+- PD-10 The stalled product and the VIP line open the product from Visão geral; Voltar lands on that row.
+- PD-11 "Parte da secundária no total" opens the split by product (entries × add-ons), with nothing below it.
+- PD-12 Paid events: next ones first, then past ones; event cards with no link; one pill; the free ones counted.
+- PD-13 Receita por semana: two line charts (primary, secondary), each against the 12 weeks before, the axis in thousands of reais.
+- PD-14 A product's buyers by band are merged below 5 orders.
+- PD-15 The ladder: entry offer to second purchase since joining, paths under 5 people grouped last; no row opens.
+- PD-16 The Encontro mensal moved to Saturday 17/10, 19h; the bell's `event_soon` alert says its day and hour.
+- PD-17 The accesses ending this week have nobody in the roster: the list shows the count, the sample line, "e mais 6 membros" and the disabled action.
+- PD-18 Primary and secondary are computed by `classifyOrders`, never stored on the order.
+- PD-19 The fields only the old screen read (`ordersByBand`, `store.ordersDelta`, `renewal`, `conversion`, the typed `expiringAccess7d`) left the fixture.
+
+Only `OwnerFinancePeople.tsx` reads `ownerFinancePeople`; no level 1-3 file imports `owner-finance`.
+
 #### Para quando os dados reais forem ligados
 
 **Privacy of Conteúdo (261013-h51 D-07, user decisions, next to the notice above).**
@@ -345,6 +410,24 @@ Planner decisions:
 - P4 (261013-orf E-02, user decision): the text of a comment the team has not answered yet is shown
   to the client's team at level 4, on the screen to answer it, with who wrote it and their band. The
   privacy notice must say that the client's team reads the comments waiting for an answer.
+
+**Privacy of Financeiro (261014-dwc D-06, D-11, user decisions).**
+
+- Who bought, what and for how much is shown at level 4 only, to the client's own team; platform
+  levels 1-3 keep aggregates (revenue per client). The privacy notice must say that the client's
+  team sees each member's purchases.
+- Every group total (band, publication, event, cancellations, ladder path) is shown only from 5
+  orders on; below that it reads "menos de 5", with no value.
+
+**What the real store schema still lacks (found in 261014-dwc).**
+
+- There is no offer table and no `offer_id` on `store_orders`: entry and add-on offers of one
+  product (composition and price) cannot be told apart yet.
+- `store_orders_live_uq` (one live order per member and product) blocks renewing the same product
+  without revoking the previous order first.
+- `expires_at` is never filled, so the end of an access is an example.
+- `store_orders` is read only by its own user or `admin_tenant`: decide whether the owner role reads it.
+- Decide whether an access that ends without renewal ends the membership.
 
 Notes from the 261012-oxi review, for the change that replaces the fixture with API answers.
 
@@ -363,8 +446,8 @@ says what will appear there and when. What each one renders today with no rows:
   keeps only the pill; opened, an empty bar card.
 - **Equipe** (`OwnerSupport`): "0 conversas respondidas por 0 pessoas em 30 dias" and, opened, an
   empty bar card.
-- **Conversão por produto** (`OwnerFinance`): the "visitas à página → compra" summary with its pill
-  and, opened, an empty bar card.
+- **Financeiro** (`OwnerFinance*`): the lists say how many and show the sample line; the charts, the
+  bars and the product cards still assume rows.
 - **Faixas de engajamento** (`BandMembers`): done in 261012-qer A-4. A band with 0 members reads
   "0 · 0%" and opens to "Nenhum membro nesta faixa.".
 
@@ -374,7 +457,8 @@ Level 5 (admin do cliente) has no member list, so it does not get the insights s
 Expiring access shown as measured (C-8, accepted, out of scope). Level 6 (`TenantStaffPanel`,
 `tenantStaffPanel.store.expiringAccess7d`) shows "Acessos que vencem em 7 dias: 6" as a measured
 value, but the `store` access `expires_at` column is never written, so nothing can be counted yet.
-Level 4 shows the same 6 with the "exemplo" pill. To close it, either level 6 adopts `ReportValue`
+Level 4 computes the same 6 from the order list (the entries + 365 days ending this week) and marks
+them "exemplo". To close it, either level 6 adopts `ReportValue`
 with the pill, or the app starts filling `expires_at` when it grants a time-limited access
 (`needs_access_expiry`).
 
