@@ -60,6 +60,8 @@ describe('parseOwnerFinanceView: the tabs (D-01)', () => {
       tab: 'overview',
       number: null,
       attention: null,
+      band: null,
+      neverBand: null,
       productId: null,
       offerId: null,
       memberId: null,
@@ -326,6 +328,99 @@ describe('parseOwnerFinanceView: Visão geral (D-07, PD-10, PD-11)', () => {
       }
     }
     for (const productId of PRODUCT_IDS) views.push(view({ productId }));
+    for (const item of views) {
+      expect(
+        parseOwnerFinanceView(paramsOf(ownerFinanceHref(item))),
+        ownerFinanceHref(item),
+      ).toEqual(item);
+    }
+  });
+});
+
+describe('parseOwnerFinanceView: Quem compra (D-09)', () => {
+  it('opens a band with buyers only; em risco and inativos fall to the tab', () => {
+    expect(parseOwnerFinanceView({ vista: 'quem-compra', faixa: 'engajados' })).toEqual(
+      view({ tab: 'buyers', band: 'engaged' }),
+    );
+    for (const faixa of ['em-risco', 'inativos', 'xyz', ['novos', 'novos']]) {
+      expect(
+        parseOwnerFinanceView({ vista: 'quem-compra', faixa } as Params),
+        String(faixa),
+      ).toEqual(view({ tab: 'buyers' }));
+    }
+    expect(parseOwnerFinanceView({ faixa: 'engajados' }).band).toBeNull();
+  });
+
+  it('opens the never-again list of a band with someone in it, only with no band open', () => {
+    expect(parseOwnerFinanceView({ vista: 'quem-compra', nunca: 'superfas' })).toEqual(
+      view({ tab: 'buyers', neverBand: 'superfan' }),
+    );
+    expect(parseOwnerFinanceView({ vista: 'quem-compra', nunca: 'xyz' })).toEqual(
+      view({ tab: 'buyers' }),
+    );
+    expect(
+      parseOwnerFinanceView({ vista: 'quem-compra', faixa: 'novos', nunca: 'superfas' }),
+    ).toEqual(view({ tab: 'buyers', band: 'new' }));
+  });
+
+  it('opens a member only from the band or the never-again list it names', () => {
+    const engaged = memberIn({ kind: 'band', band: 'engaged' });
+    expect(
+      parseOwnerFinanceView({ vista: 'quem-compra', faixa: 'engajados', membro: engaged }),
+    ).toEqual(view({ tab: 'buyers', band: 'engaged', memberId: engaged }));
+    const superfan = memberIn({ kind: 'band', band: 'superfan' });
+    expect(
+      parseOwnerFinanceView({ vista: 'quem-compra', faixa: 'superfas', membro: engaged }).memberId,
+    ).toBeNull();
+    expect(
+      parseOwnerFinanceView({ vista: 'quem-compra', faixa: 'superfas', membro: superfan }).memberId,
+    ).toBe(superfan);
+    const single = memberIn({ kind: 'never', band: 'occasional' });
+    expect(
+      parseOwnerFinanceView({ vista: 'quem-compra', nunca: 'ocasionais', membro: single }),
+    ).toEqual(view({ tab: 'buyers', neverBand: 'occasional', memberId: single }));
+  });
+
+  it('goes back to the band, reopened, or to the never-again row', () => {
+    const engaged = memberIn({ kind: 'band', band: 'engaged' });
+    expect(financeBackHref(view({ tab: 'buyers', band: 'engaged', memberId: engaged }))).toBe(
+      `${AREA}&vista=quem-compra&faixa=engajados#membro-${engaged}`,
+    );
+    expect(financeBackHref(view({ tab: 'buyers', band: 'engaged' }))).toBeNull();
+    expect(financeBackHref(view({ tab: 'buyers', neverBand: 'occasional' }))).toBe(
+      `${AREA}&vista=quem-compra#nunca-ocasionais`,
+    );
+    const single = memberIn({ kind: 'never', band: 'occasional' });
+    expect(
+      financeBackHref(view({ tab: 'buyers', neverBand: 'occasional', memberId: single })),
+    ).toBe(`${AREA}&vista=quem-compra&nunca=ocasionais#membro-${single}`);
+  });
+
+  it('round-trips every valid Quem compra view', () => {
+    const views: OwnerFinanceView[] = [];
+    for (const band of ['new', 'superfan', 'engaged', 'occasional'] as const) {
+      views.push(view({ tab: 'buyers', band }));
+      for (const row of ownerBandRoster) {
+        if (ownerFinanceIncludes({ kind: 'band', band }, row.id)) {
+          views.push(view({ tab: 'buyers', band, memberId: row.id, list: 'curtidas' }));
+        }
+      }
+    }
+    for (const neverBand of [
+      'new',
+      'superfan',
+      'engaged',
+      'occasional',
+      'at_risk',
+      'inactive',
+    ] as const) {
+      views.push(view({ tab: 'buyers', neverBand }));
+      for (const row of ownerBandRoster) {
+        if (ownerFinanceIncludes({ kind: 'never', band: neverBand }, row.id)) {
+          views.push(view({ tab: 'buyers', neverBand, memberId: row.id }));
+        }
+      }
+    }
     for (const item of views) {
       expect(
         parseOwnerFinanceView(paramsOf(ownerFinanceHref(item))),

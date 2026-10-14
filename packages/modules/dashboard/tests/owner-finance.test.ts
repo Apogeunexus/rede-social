@@ -11,12 +11,16 @@ import {
   financeProductOffers,
   ownerContentDetail,
   ownerFinanceAttention,
+  ownerFinanceBands,
   ownerFinanceContentSales,
   ownerFinanceEventSales,
   ownerFinanceIncludes,
   ownerFinanceMembers,
+  ownerFinanceNeverAgain,
   ownerFinanceOrders,
+  ownerFinancePaths,
   ownerFinancePeople,
+  ownerFinanceProductDetail,
   ownerFinanceSummary,
   ownerFinanceVipUsage,
   ownerFinanceWeekly,
@@ -680,5 +684,117 @@ describe('levels 5 and 6 read the same list (PD-7)', () => {
     }
     expect(tenantStaffPanel.store.orders7d.count).toBe(week.total.orders);
     expect(tenantAdminPanel.kpis.orders.count).toBe(week.total.orders);
+  });
+});
+
+describe('Quem compra (quick 261014-dwc D-09, PD-4, PD-15)', () => {
+  const bands = ownerFinanceBands();
+
+  it('splits the month by today’s band, with buyers and their share of the band', () => {
+    const rows = Object.fromEntries(
+      ENGAGEMENT_BAND_ORDER.map((band) => [
+        band,
+        [bands[band].orders, bands[band].cents, bands[band].buyers, bands[band].members],
+      ]),
+    );
+    expect(rows).toEqual({
+      new: [99, 475300, 96, 96],
+      superfan: [10, 212200, 10, 62],
+      engaged: [11, 173300, 11, 205],
+      occasional: [6, 33200, 6, 150],
+      at_risk: [0, 0, 0, 168],
+      inactive: [0, 0, 0, 559],
+    });
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      if (bands[band].orders > 0) expect(bands[band].orders, band).toBeGreaterThanOrEqual(5);
+    }
+  });
+
+  it('climbs the ladder: entry offer, second purchase, people and days, small paths last', () => {
+    const { paths, others } = ownerFinancePaths();
+    const again = ownerFinanceMembers.filter((member) => paidOf(member.id).length >= 2);
+    expect(paths.reduce((sum, path) => sum + path.people, 0) + (others?.people ?? 0)).toBe(
+      again.length,
+    );
+    expect(paths.length).toBeGreaterThanOrEqual(3);
+    for (const path of paths) {
+      expect(path.people, `${path.entry}>${path.next}`).toBeGreaterThanOrEqual(5);
+      expect(financeOffer(path.entry).kind).toBe('entry');
+      expect(financeOffer(path.next).kind).toBe('addon');
+      const members = again.filter((member) => {
+        const [first, second] = paidOf(member.id);
+        return first?.offerId === path.entry && second?.offerId === path.next;
+      });
+      expect(members.length).toBe(path.people);
+      const gaps = members.map((member) => {
+        const [first, second] = paidOf(member.id);
+        return (first?.daysAgo ?? 0) - (second?.daysAgo ?? 0);
+      });
+      expect(path.averageDays).toBeCloseTo(gaps.reduce((s, g) => s + g, 0) / gaps.length, 6);
+    }
+    for (let i = 1; i < paths.length; i += 1) {
+      expect(paths[i]?.people ?? 0).toBeLessThanOrEqual(paths[i - 1]?.people ?? 0);
+    }
+    expect(others).not.toBeNull();
+    expect(others?.paths).toBeGreaterThanOrEqual(1);
+  });
+
+  it('counts who entered and never bought again, by band: with who did, the whole base', () => {
+    const never = ownerFinanceNeverAgain();
+    const total = ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + never[band], 0);
+    expect(total + ownerFinanceSummary(0).rebought).toBe(1240);
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      expect(never[band], band).toBe(
+        ownerFinanceMembers.filter(
+          (member) => member.band === band && paidOf(member.id).length === 1,
+        ).length,
+      );
+    }
+  });
+
+  it('lists a band’s month buyers and a band’s single buyers, with predicates', () => {
+    for (const band of ENGAGEMENT_BAND_ORDER) {
+      const buyers = ownerFinancePeople({ kind: 'band', band });
+      expect(buyers.total, band).toBe(bands[band].buyers);
+      const never = ownerFinancePeople({ kind: 'never', band });
+      expect(never.total, band).toBe(ownerFinanceNeverAgain()[band]);
+      for (const row of ownerBandRoster) {
+        const inBand = buyers.people.some((person) => person.id === row.id);
+        expect(ownerFinanceIncludes({ kind: 'band', band }, row.id), row.id).toBe(inBand);
+        if (inBand) expect(row.band).toBe(band);
+        const single = never.people.some((person) => person.id === row.id);
+        expect(ownerFinanceIncludes({ kind: 'never', band }, row.id), row.id).toBe(single);
+        if (single) expect(paidOf(row.id)).toHaveLength(1);
+      }
+    }
+  });
+});
+
+describe('a product’s detail (D-08, PD-14)', () => {
+  it('gives the VIP’s month, the month before, weeks, bands and the publications that sold it', () => {
+    const vip = ownerFinanceProductDetail('s2');
+    expect(vip.month).toMatchObject({ orders: 18, cents: 409600 });
+    expect(vip.before.orders).toBe(ownerFinanceWindow(30, 59).byProduct.s2?.orders);
+    expect(vip.revoked).toEqual({ orders: 1, cents: 19700 });
+    expect(vip.weekly.current).toHaveLength(12);
+    expect(vip.weekly.previous).toHaveLength(12);
+    const sumBands = ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + vip.byBand[band].orders, 0);
+    expect(sumBands).toBe(18);
+    expect(ENGAGEMENT_BAND_ORDER.reduce((sum, band) => sum + vip.byBand[band].cents, 0)).toBe(
+      409600,
+    );
+    expect(vip.posts).toEqual([
+      { postId: 'op-15', orders: 6, cents: 118200 },
+      { postId: 'op-41', orders: 3, cents: 59100 },
+      { postId: 'op-11', orders: 2, cents: 39400 },
+    ]);
+  });
+
+  it('leaves the Workshop gravado at zero, with the days since its last sale', () => {
+    const workshop = ownerFinanceProductDetail('s4');
+    expect(workshop.month).toMatchObject({ orders: 0, cents: 0, buyers: 0 });
+    expect(workshop.posts).toEqual([]);
+    expect(workshop.lastSaleDaysAgo).toBe(74);
+    expect(() => ownerFinanceProductDetail('xyz')).toThrow();
   });
 });
