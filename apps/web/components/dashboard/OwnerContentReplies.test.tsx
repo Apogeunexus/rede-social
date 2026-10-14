@@ -39,6 +39,15 @@ describe('OwnerContentReplies (quick 261013-orf E-02)', () => {
     expect(container.querySelectorAll('[data-testid="cover-thumb"]')).toHaveLength(1);
     expect(container.textContent).toContain(ownerContentItem('op-19').excerpt);
     expect(container.textContent).toContain('9 comentários sem resposta · o mais antigo há 8 dias');
+    // Quick 261013-uoi F-7: thumbnail, caption and meta are one link to the publication's detail.
+    const links = container.querySelectorAll('a[href*="post="]');
+    expect(links).toHaveLength(1);
+    const header = links[0];
+    expect(header?.getAttribute('href')).toBe(
+      '/painel-preview/dono-do-cliente?area=conteudo&post=op-19',
+    );
+    expect(header?.querySelector('[data-testid="cover-thumb"]')).not.toBeNull();
+    expect(header?.textContent).toContain(ownerContentItem('op-19').excerpt);
     const rows = container.querySelectorAll('li');
     const comments = ownerContentUnanswered('op-19');
     expect(rows).toHaveLength(9);

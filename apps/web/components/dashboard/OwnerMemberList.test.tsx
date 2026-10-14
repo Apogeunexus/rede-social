@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ownerMemberInsights } from '@rede-social/module-dashboard/fixtures';
+import { ownerBandRoster, ownerMemberInsights } from '@rede-social/module-dashboard/fixtures';
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadMessages } from '@/i18n/messages';
@@ -84,5 +84,30 @@ describe('OwnerMemberList thumbnails (quick 261013-orf D-01)', () => {
     expect(insightsOf('om-03').last30.orders).toBe(1);
     const { thumbs } = renderList('om-03', 'acoes-fortes');
     expect([...thumbs].filter((thumb) => thumb.dataset.kind === 'order')).toHaveLength(1);
+  });
+});
+
+describe('OwnerMemberList moments (quick 261013-uoi F-4)', () => {
+  it('reads "hoje às HH:MM" with a time, and "ontem" without one', () => {
+    const { rows } = renderList('om-13', 'curtidas');
+    const texts = [...rows].map((row) => row.textContent ?? '');
+    const last = insightsOf('om-13').lastActive;
+    expect(last.daysAgo).toBe(0);
+    expect(texts[0]).toContain(`curtido hoje às ${last.time}`);
+    for (const text of texts) expect(text).not.toMatch(/(hoje|ontem) \d{2}:\d{2}/);
+    cleanup();
+
+    // A member with an untimed like yesterday (yesterday is not their last day).
+    const member = ownerBandRoster.find(
+      (row) =>
+        row.lastActive.daysAgo !== 1 &&
+        insightsOf(row.id).lists.likes.some((like) => like.when.daysAgo === 1),
+    );
+    if (!member) throw new Error('no member liked yesterday');
+    const yesterday = [...renderList(member.id, 'curtidas').rows].map((row) => row.textContent);
+    expect(
+      yesterday.some((text) => /curtido ontem$/.test(text ?? '')),
+      member.id,
+    ).toBe(true);
   });
 });

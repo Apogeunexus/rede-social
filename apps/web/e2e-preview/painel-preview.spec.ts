@@ -2217,6 +2217,26 @@ test.describe('dono-do-cliente conteudo: Visão geral', () => {
     ).toHaveCount(0);
   });
 
+  test('the unanswered screen header opens the publication, whose Voltar lands on its row (quick 261013-uoi F-7)', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&responder=op-19`);
+    expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#atencao-op-19$/);
+    const header = area.locator('a[href$="?area=conteudo&post=op-19"]');
+    await expect(header).toHaveCount(1);
+    await expect(header.locator('[data-testid="cover-thumb"]')).toHaveCount(1);
+    await header.click();
+    await expect(page).toHaveURL(/\?area=conteudo&post=op-19$/);
+    await expect(
+      area.getByRole('heading', { level: 3, name: 'Interações', exact: true }),
+    ).toBeVisible();
+    expect(await backLink(page).getAttribute('href')).toMatch(/\?area=conteudo#atencao-op-19$/);
+    await backLink(page).click();
+    await expect(page).toHaveURL(/\?area=conteudo#atencao-op-19$/);
+    await expect(area.locator('#atencao-op-19')).toBeInViewport();
+  });
+
   test('the overview never repeats an anchor id', async ({ page }) => {
     // Quick 261013-orf E-03.10: an attention row is `atencao-`, a card `post-`.
     await page.goto(CONTENT_AREA);
@@ -2474,6 +2494,24 @@ test.describe('dono-do-cliente conteudo: the publication detail', () => {
     await expect(area.getByRole('listitem').first()).toContainText(/Comentou (hoje|ontem|há)/);
     await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-57&quem=compartilhamentos`);
     await expect(area.getByText(/^nenhum compartilhamento · /)).toBeVisible();
+  });
+
+  test('a list shorter than its number says it shows the members sample (quick 261013-uoi)', async ({
+    page,
+  }) => {
+    const area = ownerArea(page);
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11&quem=comentarios`);
+    const cards = await area.getByRole('listitem').count();
+    expect(cards).toBeGreaterThanOrEqual(1);
+    expect(cards).toBeLessThanOrEqual(10);
+    await expect(
+      area.getByText('Mostrando quem está na amostra de membros.', { exact: true }),
+    ).toBeVisible();
+    await expect(area.getByText(`e mais ${31 - cards} comentários`, { exact: true })).toBeVisible();
+    await page.goto(`${CONTENT_AREA}&vista=publicacoes&post=op-11&quem=curtidas`);
+    await expect(area.getByRole('listitem').first()).toContainText(
+      /Curtiu (hoje às \d{2}:\d{2}|há )/,
+    );
   });
 
   test('the oldest unanswered comment sits exactly at its wait (quick 261013-uoi C-3)', async ({

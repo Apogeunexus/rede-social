@@ -299,7 +299,14 @@ describe('parseOwnerContentView: the overview numbers and bands (D-02)', () => {
     expect(contentBackHref(view({ number: 'members', memberId: member }))).toBe(
       `${AREA}&numero=membros#membro-${member}`,
     );
-    expect(contentBackHref(view({ postId: 'op-19' }))).toBe(`${AREA}#post-op-19`);
+    // Quick 261013-uoi F-7: on Visão geral, a post that needs attention has no `post-` card, so its
+    // detail goes back to its attention row; a top post keeps its card.
+    expect(contentBackHref(view({ postId: 'op-19' }))).toBe(`${AREA}#atencao-op-19`);
+    expect(contentBackHref(view({ postId: 'op-41' }))).toBe(`${AREA}#post-op-41`);
+    expect(contentBackHref(view({ tab: 'posts', postId: 'op-19' }))).toBe(
+      `${AREA}&vista=publicacoes#post-op-19`,
+    );
+    expect(contentBackHref(view({ reply: 'op-19' }))).toBe(`${AREA}#atencao-op-19`);
     expect(contentBackHref(view({ band: 'engaged' }))).toBeNull();
   });
 });
