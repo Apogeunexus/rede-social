@@ -307,7 +307,14 @@ test('an unknown level is a 404', async ({ page }) => {
  * Levels with alerts carry them behind a header bell (quick 261011-ndw): no inline list in the body,
  * the bell names the count, and its panel opens under the header inside the phone screen.
  */
-const ALERT_LEVELS = [
+const ALERT_LEVELS: {
+  level: string;
+  count: number;
+  name: string;
+  onlyOnce: string;
+  /** The next event's tag: its day and hour, never "Hoje" (quick 261014-dwc PD-16). */
+  when?: string;
+}[] = [
   {
     level: 'dono-da-plataforma',
     count: 2,
@@ -325,12 +332,14 @@ const ALERT_LEVELS = [
     count: 3,
     name: 'Alertas, 3, 1 urgente',
     onlyOnce: '8 vagas restantes',
+    when: '17/10, 19h',
   },
   {
     level: 'admin-do-cliente',
     count: 3,
     name: 'Alertas, 3, 1 urgente',
     onlyOnce: 'Fixe nos destaques se quiser manter',
+    when: '17/10, 19h',
   },
 ];
 const NO_ALERT_LEVELS = ['suporte-da-plataforma', 'equipe-do-cliente', 'membro'];
@@ -339,7 +348,7 @@ const ALERT_VIEWPORTS = [
   { name: '390px', width: 390, height: 844, framed: false },
 ];
 
-for (const { level, count, name, onlyOnce } of ALERT_LEVELS) {
+for (const { level, count, name, onlyOnce, when } of ALERT_LEVELS) {
   for (const viewport of ALERT_VIEWPORTS) {
     test(`alerts bell: ${level} at ${viewport.name}`, async ({ page }) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
@@ -364,6 +373,10 @@ for (const { level, count, name, onlyOnce } of ALERT_LEVELS) {
       await expect(panel.getByRole('heading', { name: `Alertas (${count})` })).toBeVisible();
       await expect(panel.getByRole('listitem')).toHaveCount(count);
       await expect(only).toBeVisible();
+      if (when) {
+        await expect(panel.getByText(when, { exact: true })).toBeVisible();
+        await expect(panel.getByText(/^Hoje/)).toHaveCount(0);
+      }
 
       const box = await panel.boundingBox();
       expect(box).not.toBeNull();
@@ -904,8 +917,8 @@ test('dono-do-cliente membros: Por comunidade cascade, down to the insights and 
 });
 
 const EVENT_NAMES = [
-  'Encontro mensal',
   'Live de dúvidas',
+  'Encontro mensal',
   'Imersão presencial',
   'Aula aberta',
   'Workshop',
@@ -927,14 +940,16 @@ test('dono-do-cliente membros: Por evento cascade, down to the insights and back
   await engaged.locator('summary').click();
   const cards = scopeCards(engaged, 'event');
   await expect(cards).toHaveCount(7);
-  for (const [i, count] of [34, 23, 16, 21, 18, 62, 45].entries()) {
+  for (const [i, count] of [23, 34, 16, 21, 18, 62, 45].entries()) {
     await expect(cards.nth(i).locator('.text-xl')).toHaveText(EVENT_NAMES[i] ?? '');
     await expect(cards.nth(i).getByText(`${count} nesta faixa`, { exact: true })).toBeVisible();
   }
-  const u1 = cards.first();
+  // The Encontro mensal by its name: since quick 261014-dwc it is the second next event (17/10).
+  const u1 = cards.filter({ hasText: 'Encontro mensal' });
+  await expect(u1).toHaveCount(1);
   await expect(u1.getByText('Presencial', { exact: true })).toBeVisible();
-  await expect(cards.nth(1).getByText('Online', { exact: true })).toBeVisible();
-  await expect(cardCell(u1, 'Data')).toHaveText('12/10');
+  await expect(cards.first().getByText('Online', { exact: true })).toBeVisible();
+  await expect(cardCell(u1, 'Data')).toHaveText('17/10');
   await expect(cardCell(u1, 'Duração')).toHaveText('3h00');
   await expect(cardCell(u1, 'Receita')).toHaveText(/^R\$\s?5,5\s?mil$/);
   const ratio = await boxRatio(u1.locator('[data-testid="event-cover-fallback"]'));
@@ -958,7 +973,7 @@ test('dono-do-cliente membros: Por evento cascade, down to the insights and back
     /\?area=membros&recorte=evento&faixa=engajados#faixas$/,
   );
   await expect(
-    opened.getByText('Engajados em Encontro mensal · 12/10', { exact: true }),
+    opened.getByText('Engajados em Encontro mensal · 17/10', { exact: true }),
   ).toBeVisible();
   await expect(opened.getByRole('listitem')).toHaveCount(10);
   await expect(opened.getByText('e mais 24 membros', { exact: true })).toBeVisible();
@@ -2703,7 +2718,7 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await expect(upcoming.filter({ hasText: 'Live de dúvidas' })).toContainText('Sem limite');
   // Each next event is the bands' event card (quick 261013-p31 D-02), with nowhere to go.
   expect((await upcoming.locator('.text-xl').allTextContents()).map((text) => text.trim())).toEqual(
-    ['Encontro mensal', 'Live de dúvidas', 'Imersão presencial'],
+    ['Live de dúvidas', 'Encontro mensal', 'Imersão presencial'],
   );
   for (let i = 0; i < 3; i++) {
     const cover = upcoming.nth(i).locator('[data-testid="event-cover-fallback"]');
@@ -2712,7 +2727,7 @@ test('dono-do-cliente ?area=eventos', async ({ page }) => {
   await expect(cardCell(encontro, 'Inscritos')).toHaveText('92');
   await expect(cardCell(encontro, 'Vagas')).toHaveText('8');
   await expect(cardCell(encontro, 'Receita')).toHaveText(/^R\$\s?5,5\s?mil$/);
-  await expect(encontro.getByText('12/10, 19h', { exact: true })).toBeVisible();
+  await expect(encontro.getByText('17/10, 19h', { exact: true })).toBeVisible();
   await expect(encontro.getByText('Presencial', { exact: true })).toBeVisible();
   await expect(cardCell(upcoming.filter({ hasText: 'Imersão presencial' }), 'Vagas')).toHaveText(
     'Lotado',

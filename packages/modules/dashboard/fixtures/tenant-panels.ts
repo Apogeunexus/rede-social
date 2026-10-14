@@ -23,9 +23,12 @@ export type TenantAdminAttention =
     }
   | {
       id: string;
-      kind: 'event_today';
+      /** The next event, a few seats left (quick 261014-dwc PD-16: it is no longer today). */
+      kind: 'event_soon';
       severity: Severity;
       event: string;
+      /** ISO date of the event. */
+      date: string;
       startsAtHour: number;
       confirmed: number;
       capacity: number;
@@ -90,9 +93,10 @@ export const tenantAdminPanel: TenantAdminPanel = {
     },
     {
       id: 'a-event',
-      kind: 'event_today',
+      kind: 'event_soon',
       severity: 'warning',
       event: 'Encontro mensal',
+      date: '2026-10-17',
       startsAtHour: 19,
       confirmed: 92,
       capacity: 100,

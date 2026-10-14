@@ -23,9 +23,12 @@ export type TenantOwnerAttention =
     }
   | {
       id: string;
-      kind: 'event_today';
+      /** The next event, a few seats left (quick 261014-dwc PD-16: it is no longer today). */
+      kind: 'event_soon';
       severity: Severity;
       event: string;
+      /** ISO date of the event. */
+      date: string;
       startsAtHour: number;
       confirmed: number;
       capacity: number;
@@ -268,9 +271,10 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     },
     {
       id: 'o-event',
-      kind: 'event_today',
+      kind: 'event_soon',
       severity: 'warning',
       event: 'Encontro mensal',
+      date: '2026-10-17',
       startsAtHour: 19,
       confirmed: 92,
       capacity: 100,
@@ -542,17 +546,6 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     ],
     upcoming: [
       {
-        id: 'u1',
-        name: 'Encontro mensal',
-        format: 'in_person',
-        date: '2026-10-12',
-        startsAtHour: 19,
-        capacity: 100,
-        confirmed: 92,
-        durationMinutes: 180,
-        ticketCents: { example: true, reason: 'needs_event_tickets', value: 6000 },
-      },
-      {
         id: 'u2',
         name: 'Live de dúvidas',
         format: 'online',
@@ -562,6 +555,17 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
         confirmed: 64,
         durationMinutes: 60,
         ticketCents: { example: true, reason: 'needs_event_tickets', value: 0 },
+      },
+      {
+        id: 'u1',
+        name: 'Encontro mensal',
+        format: 'in_person',
+        date: '2026-10-17',
+        startsAtHour: 19,
+        capacity: 100,
+        confirmed: 92,
+        durationMinutes: 180,
+        ticketCents: { example: true, reason: 'needs_event_tickets', value: 6000 },
       },
       {
         id: 'u3',

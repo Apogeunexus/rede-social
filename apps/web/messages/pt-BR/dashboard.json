@@ -350,8 +350,8 @@
           "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
           "detail": "A mais antiga espera há {hours} horas"
         },
-        "event_today": {
-          "tag": "Hoje {hour}h",
+        "event_soon": {
+          "tag": "{date}, {hour}h",
           "title": "{event}: {confirmed} de {capacity} vagas",
           "detail": "{left, plural, one {# vaga restante} other {# vagas restantes}}"
         },
@@ -1128,8 +1128,8 @@
           "title": "{count, plural, one {# conversa aguardando} other {# conversas aguardando}} resposta",
           "detail": "A mais antiga é da {name}, há {hours} horas"
         },
-        "event_today": {
-          "tag": "Hoje {hour}h",
+        "event_soon": {
+          "tag": "{date}, {hour}h",
           "title": "{event}: {confirmed} de {capacity} vagas",
           "detail": "Deixe o código de check-in pronto"
         },

@@ -16,7 +16,10 @@ import { tenantOwnerPanel } from './tenant-owner';
 /** The page size of a band list (the future endpoint's page size). */
 export const OWNER_BAND_LIST_LIMIT = 10;
 
-/** The preview's today: the Encontro mensal day of the owner's event_today alert. */
+/**
+ * The preview's today (a Monday). The Encontro mensal used to be on this day; it moved to the next
+ * Saturday, 17/10, so the bell says when instead of "hoje" (quick 261014-dwc PD-16).
+ */
 export const PREVIEW_TODAY = '2026-10-12';
 
 /**

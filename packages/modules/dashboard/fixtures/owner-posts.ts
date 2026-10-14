@@ -248,7 +248,15 @@ const ROWS: readonly (readonly [string, number, PostType, string, number, number
     gallery(7, 1350),
   ],
   ['c-eventos', 5, 'gallery', 'Aula aberta: a foto da turma no fim da aula', 50, 10, PHOTO],
-  ['c-eventos', 1, 'gallery', 'Encontro mensal: o local preparado para hoje à noite', 18, 4, PHOTO],
+  [
+    'c-eventos',
+    1,
+    'gallery',
+    'Encontro mensal: o local já está reservado para sábado',
+    18,
+    4,
+    PHOTO,
+  ],
 ];
 
 /** The 61 posts, newest first (ties in the communities' order), ids `op-01`..`op-61`. */

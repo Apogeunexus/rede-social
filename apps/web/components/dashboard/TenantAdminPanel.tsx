@@ -37,11 +37,11 @@ function attentionItem(t: DashboardT, item: TenantAdminAttention): AttentionItem
         title: t(`${base}.title`, { count: item.conversations }),
         detail: t(`${base}.detail`, { name: item.oldestName, hours: item.oldestHours }),
       };
-    case 'event_today':
+    case 'event_soon':
       return {
         id: item.id,
         tone: item.severity,
-        tag: t(`${base}.tag`, { hour: item.startsAtHour }),
+        tag: t(`${base}.tag`, { date: formatDayMonth(item.date), hour: item.startsAtHour }),
         title: t(`${base}.title`, {
           event: item.event,
           confirmed: formatCount(item.confirmed),

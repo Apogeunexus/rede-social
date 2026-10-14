@@ -11,7 +11,7 @@ import { OWNER_AREAS, type OwnerArea, ownerAreaHref } from '@/lib/dashboard-prev
 import type { OwnerMembersView } from '@/lib/owner-band-scope';
 import type { OwnerContentView } from '@/lib/owner-content-view';
 import type { OwnerFinanceView } from '@/lib/owner-finance-view';
-import { type DashboardT, formatCount } from './format';
+import { type DashboardT, formatCount, formatDayMonth } from './format';
 import { OwnerContent } from './OwnerContent';
 import { OwnerEvents } from './OwnerEvents';
 import { OwnerFinance } from './OwnerFinance';
@@ -32,11 +32,11 @@ function ownerAttentionItem(t: DashboardT, item: TenantOwnerAttention): Attentio
         title: t(`${base}.title`, { count: item.conversations }),
         detail: t(`${base}.detail`, { hours: item.oldestHours }),
       };
-    case 'event_today':
+    case 'event_soon':
       return {
         id: item.id,
         tone: item.severity,
-        tag: t(`${base}.tag`, { hour: item.startsAtHour }),
+        tag: t(`${base}.tag`, { date: formatDayMonth(item.date), hour: item.startsAtHour }),
         title: t(`${base}.title`, {
           event: item.event,
           confirmed: formatCount(item.confirmed),
