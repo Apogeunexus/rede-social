@@ -67,14 +67,14 @@ Branch da cópia isolada: `worktree-agent-ae323edef0924d34a` (base `3adb3362`, s
 
 | # | Tarefa | Tipo | Commit | Mensagem |
 |---|--------|------|--------|----------|
-| 1 | T1 vermelho | test | `67ac9283` | pin post kinds and the cover thumbnail |
-| 2 | T1 verde | feat | `f8622136` | cover thumbnails on the member's activity lists |
-| 3 | T2 vermelho | test | `ba02db6b` | pin people coverage, unanswered comments and reach by band |
-| 4 | T2 verde | fix | `22d39dee` | every content people list has people, reach skips inactive members |
-| 5 | T3 vermelho | test | `c8b37925` | pin the compact card thumbnail and owner-level list thumbnails |
-| 6 | T3 verde | feat | `7297129e` | compact publication cards and owner-level list thumbnails |
-| 7 | T4 vermelho | test | `c007eb86` | pin the unanswered comments screen and its link |
-| 8 | T4 verde | feat | `505ab315` | reply-pending comments screen and clearer content people lists |
+| 1 | T1 vermelho | test | `ab8a40cc` | pin post kinds and the cover thumbnail |
+| 2 | T1 verde | feat | `322ccadd` | cover thumbnails on the member's activity lists |
+| 3 | T2 vermelho | test | `827298f5` | pin people coverage, unanswered comments and reach by band |
+| 4 | T2 verde | fix | `a1906293` | every content people list has people, reach skips inactive members |
+| 5 | T3 vermelho | test | `69b55568` | pin the compact card thumbnail and owner-level list thumbnails |
+| 6 | T3 verde | feat | `1affef8d` | compact publication cards and owner-level list thumbnails |
+| 7 | T4 vermelho | test | `486c8ea7` | pin the unanswered comments screen and its link |
+| 8 | T4 verde | feat | `952e2284` | reply-pending comments screen and clearer content people lists |
 
 Cada vermelho falhou pelo motivo certo antes do verde (campo/módulo ausente, listas curtas, Inativos > 0, variante/miniatura ausente, parâmetro `responder`/componente ausente).
 
@@ -169,10 +169,28 @@ Sem superfície nova além do registro do plano: `responder` é validado contra 
 ## Self-Check: PASSED
 
 - Arquivos criados existem: `CoverThumb.tsx`, `CoverThumb.test.tsx`, `OwnerMemberList.test.tsx`, `OwnerContentReplies.tsx`, `OwnerContentReplies.test.tsx`.
-- Os 8 commits estão no log da branch: 67ac9283, f8622136, ba02db6b, 22d39dee, c8b37925, 7297129e, c007eb86, 505ab315.
+- Os 8 commits estão no log da branch: ab8a40cc, 322ccadd, 827298f5, a1906293, 69b55568, 1affef8d, 486c8ea7, 952e2284.
 
 **⚠️ NÃO FEITO**
 - Revisões `critic` e `flow-critic` dos 8 commits: este executor não consegue abrir subagentes; falta rodá-las antes de declarar a feature pronta.
 - Concentração de curtidas no dia mais recente no nível 4 (captura 03: várias "curtido hoje 22:40"): efeito da regra de atribuição do plano; não é erro de dado, mas pode parecer artificial; espalhar exige outra regra de escolha do dia (decisão do usuário/planejador).
 - Religar a 3000 não foi necessário: ela respondeu 200 o tempo todo e não foi parada; a cópia isolada não está no checkout que a 3000 serve, então a 3000 só mostra este trabalho depois do merge na `feat/painel-preview`.
 - STATE.md, ROADMAP e REQUIREMENTS não foram atualizados (instrução do orquestrador).
+
+## Integração e revisões (orquestrador)
+
+- **Commits:** entraram na `feat/painel-preview` por cherry-pick, por cima das capas de Eventos. Os SHAs acima já são os da branch principal.
+- **Revisão de comportamento: REPROVADO.**
+  - Insights dos membros alterados, com comentários inflados (41 de 72 membros mudaram).
+  - Rótulos colados no `LineChart` do nível 1.
+  - Espera de op-04 incoerente.
+  - SHAs deste SUMMARY (já corrigidos).
+- **Revisão de fluxo: APROVADO com ressalvas.**
+  - Horário repetido.
+  - Comentários demais.
+  - Cartão compacto em vídeo 16:9.
+  - "Quando" em dois formatos.
+  - Miniatura de story.
+  - Tons pouco variados.
+  - Cabeçalho da tela de respostas sem link.
+- **Encaminhamento:** tudo segue na quick 261013-uoi. Lá a regra do E-03.1 passou a ser "pelo menos 1 pessoa, no máximo 10, com atividade realista".
