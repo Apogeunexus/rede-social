@@ -1,6 +1,7 @@
 import type { ContentKind } from '@rede-social/module-dashboard/fixtures';
 import { cn } from '@rede-social/ui';
 import {
+  CircleDashed,
   GalleryHorizontal,
   Image as ImageIcon,
   Link2,
@@ -23,17 +24,17 @@ export const COVER_ICON: Record<CoverKind, LucideIcon> = {
   carousel: GalleryHorizontal,
   text: Type,
   link: Link2,
-  story: Play,
+  story: CircleDashed,
   event: Ticket,
   order: ShoppingBag,
 };
 
-/** The five positions along the gradient's diagonal: the tones a cover can take (PD-B). */
-export const COVER_TONES = ['0% 0%', '25% 25%', '50% 50%', '75% 75%', '100% 100%'] as const;
+/** The five angles of the brand pair: the tones a cover can take (quick 261013-uoi PD-I). */
+export const COVER_TONES = [0, 72, 144, 216, 288] as const;
 
 /**
  * The cover's tone for a publication: the sum of its id's character codes picks one of the five
- * positions, so the same publication has the same tone everywhere and neighbours rarely match.
+ * angles, so the same publication has the same tone everywhere and neighbours rarely match.
  */
 export function coverTone(seed: string): (typeof COVER_TONES)[number] {
   let sum = 0;
@@ -42,14 +43,12 @@ export function coverTone(seed: string): (typeof COVER_TONES)[number] {
 }
 
 /**
- * The cover's paint: the brand's own `--brand-gradient`, enlarged and shifted to the publication's
- * tone, so the variation never introduces a colour outside the brand tokens.
+ * The cover's paint: the brand's primary and secondary turned by the publication's angle, so the
+ * tones read apart (the shifted shared gradient barely did, F-6) and never leave the brand tokens.
  */
 export function coverStyle(seed: string): CSSProperties {
   return {
-    backgroundImage: 'var(--brand-gradient)',
-    backgroundSize: '300% 300%',
-    backgroundPosition: coverTone(seed),
+    backgroundImage: `linear-gradient(${coverTone(seed)}deg, var(--brand-primary), var(--brand-secondary))`,
     color: 'var(--brand-on-primary)',
   };
 }
@@ -66,16 +65,21 @@ export interface CoverThumbProps {
   ratio?: number | null;
 }
 
-/** The compact card's cover: 7rem high at the feed's ratio, never wider than 8rem (PD-I). */
+/**
+ * The compact card's cover (quick 261013-uoi F-3): a fixed 4.5rem column, so the card's text keeps
+ * the same width on every card; the cover is as wide as 7rem of height allows, never wider than the
+ * column, its height from the ratio.
+ */
+const CARD_COLUMN_REM = 4.5;
 const CARD_HEIGHT_REM = 7;
-const CARD_MAX_WIDTH_REM = 8;
 
 /**
  * The publication's cover as a thumbnail (quick 261013-orf D-02): 56 px at the start of a list row,
- * the "Sua atividade" look, or the compact card's cover at the feed's ratio (E-01). The same brand
- * cover as Conteúdo's detail, with the kind's icon, a video's length and a story's ring. Decorative
- * (D-04): the row's text stays its accessible name. With real data this becomes the post's media
- * (`MediaImage`); the gradient stays for posts without media.
+ * the "Sua atividade" look, or the compact card's cover in its column (E-01, quick 261013-uoi F-3).
+ * The same brand cover as Conteúdo's detail, with the kind's icon and a video's length; a story is a
+ * circle with the brand ring, as on Instagram (F-5). Decorative (D-04): the row's text stays its
+ * accessible name. With real data this becomes the post's media (`MediaImage`); the gradient stays
+ * for posts without media.
  */
 export function CoverThumb({
   t,
@@ -87,25 +91,26 @@ export function CoverThumb({
 }: CoverThumbProps & { t: DashboardT }) {
   const Icon = COVER_ICON[kind];
   const card = variant === 'card';
-  const aspect = ratio ?? 1;
-  return (
+  const story = kind === 'story';
+  const aspect = story ? 1 : (ratio ?? 1);
+  const cover = (
     <span
       aria-hidden="true"
       data-testid="cover-thumb"
       data-kind={kind}
       data-ratio={card ? String(aspect) : undefined}
       className={cn(
-        'relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg',
+        'relative flex shrink-0 items-center justify-center overflow-hidden',
+        story ? 'rounded-full ring-2 ring-brand ring-offset-2 ring-offset-card' : 'rounded-lg',
         !card && 'size-14',
-        kind === 'story' && 'ring-2 ring-brand ring-offset-2 ring-offset-card',
       )}
       style={
         card
           ? {
               ...coverStyle(seed),
               aspectRatio: aspect,
-              width: `${(CARD_HEIGHT_REM * aspect).toFixed(3)}rem`,
-              maxWidth: `${CARD_MAX_WIDTH_REM}rem`,
+              // Computed here: the test DOM drops CSS `min()`.
+              width: `${Math.min(CARD_COLUMN_REM, CARD_HEIGHT_REM * aspect).toFixed(3)}rem`,
             }
           : coverStyle(seed)
       }
@@ -125,4 +130,5 @@ export function CoverThumb({
       ) : null}
     </span>
   );
+  return card ? <span className="flex w-[4.5rem] shrink-0 justify-center">{cover}</span> : cover;
 }

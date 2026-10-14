@@ -18,6 +18,32 @@ export interface LineChartProps {
   ariaLabel: string;
 }
 
+/** Gap, in chart units, the label before the end-anchored last one must keep. */
+const LABEL_GAP = 4;
+
+function labelWidth(label: string): number {
+  return label.length * LABEL_SIZE * 0.6;
+}
+
+/**
+ * The index of the label to skip: the last label ends at the last point, so the label before it
+ * may touch it (the platform level's "set" and "out", quick 261013-uoi C-2). Only that one drops.
+ */
+function crowdedLabel(points: readonly { x: number }[], xLabels: readonly string[]): number | null {
+  const lastIndex = points.length - 1;
+  const lastLabel = xLabels[lastIndex];
+  const lastPoint = points[lastIndex];
+  if (!lastLabel || !lastPoint) return null;
+  for (let i = lastIndex - 1; i >= 0; i -= 1) {
+    const label = xLabels[i];
+    const point = points[i];
+    if (!label || !point) continue;
+    const right = point.x + labelWidth(label) / 2 + LABEL_GAP;
+    return right > lastPoint.x - labelWidth(lastLabel) ? i : null;
+  }
+  return null;
+}
+
 /**
  * A line on one shared y-scale (the bounds come from the union of both series, so the dashed
  * previous period is comparable to the current one by eye), three labelled ticks, a faint area and a
@@ -42,6 +68,7 @@ export function LineChart({
   const last = points.at(-1);
   const baseline = yOf(bounds.lo);
   const ticks = [bounds.lo, (bounds.lo + bounds.hi) / 2, bounds.hi];
+  const hidden = crowdedLabel(points, xLabels);
 
   return (
     <svg
@@ -115,7 +142,7 @@ export function LineChart({
         />
       ) : null}
       {points.map((point, i) =>
-        xLabels[i] ? (
+        xLabels[i] && i !== hidden ? (
           <text
             data-x-label
             // biome-ignore lint/suspicious/noArrayIndexKey: one label per fixed point position

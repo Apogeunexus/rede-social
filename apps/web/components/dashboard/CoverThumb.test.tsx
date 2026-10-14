@@ -128,10 +128,11 @@ describe('CoverThumb (card, quick 261013-uoi F-3)', () => {
   }
 
   it('sits in a fixed 4.5rem column, min(4.5, 7 × ratio) rem wide at its ratio', () => {
-    const cases: [number | null, string, string][] = [
-      [9 / 16, '3.938rem', '0.5625'],
-      [16 / 9, '4.500rem', String(16 / 9)],
-      [null, '4.500rem', '1'],
+    // The DOM normalizes `4.500rem` to `4.5rem`, so the width is read back as a number of rem.
+    const cases: [number | null, number, string][] = [
+      [9 / 16, 3.938, '0.5625'],
+      [16 / 9, 4.5, String(16 / 9)],
+      [null, 4.5, '1'],
     ];
     for (const [ratio, width, dataRatio] of cases) {
       const el = thumb({
@@ -145,7 +146,8 @@ describe('CoverThumb (card, quick 261013-uoi F-3)', () => {
         expect(column(el).classList, `${ratio} ${name}`).toContain(name);
       }
       expect(el.dataset.ratio, String(ratio)).toBe(dataRatio);
-      expect(el.style.width, String(ratio)).toBe(width);
+      expect(el.style.width, String(ratio)).toMatch(/^[\d.]+rem$/);
+      expect(Number.parseFloat(el.style.width), String(ratio)).toBe(width);
       expect(el.style.maxWidth, String(ratio)).toBe('');
       expect(el.getAttribute('style') ?? '', String(ratio)).toContain(`aspect-ratio: ${dataRatio}`);
       expect(el.classList).not.toContain('size-14');
