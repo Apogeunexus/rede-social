@@ -262,11 +262,12 @@ describe('D-02/D-04 (quick 261012-tru): a band opened in Por evento lists event 
     expect(engaged.querySelectorAll('[data-geometry="hero"]')).toHaveLength(7);
     expect(exactly(engaged, 'exemplo')).toHaveLength(1);
     expect((engaged.textContent ?? '').split('Receita: valores de exemplo')).toHaveLength(2);
-    const [u1] = engaged.querySelectorAll('li');
+    const u1 = [...engaged.querySelectorAll('li')].find((item) =>
+      item.textContent?.includes('Encontro mensal'),
+    );
     if (!u1) throw new Error('no u1 card');
-    expect(u1.textContent).toContain('Encontro mensal');
     expect(u1.textContent).toContain('Presencial');
-    expect(cell(u1, 'Data')).toBe('12/10');
+    expect(cell(u1, 'Data')).toBe('17/10');
     expect(cell(u1, 'Duração')).toBe('3h00');
     expect(cell(u1, 'Receita')).toMatch(/^R\$\s?5,5\s?mil$/);
     expect(exactly(u1, '34 nesta faixa').length).toBeGreaterThan(0);

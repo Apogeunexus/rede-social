@@ -55,8 +55,12 @@ describe('OWNER_COMMUNITIES (quick 261012-pkd D-01)', () => {
 
 describe('OWNER_EVENTS (quick 261012-qer B-2)', () => {
   it('lists the panel events, upcoming soonest first, then past most recent first', () => {
-    expect(OWNER_EVENTS.map((row) => row.id)).toEqual(['u1', 'u2', 'u3', 'e4', 'e3', 'e2', 'e1']);
-    expect(OWNER_EVENTS[0]).toEqual({ id: 'u1', name: 'Encontro mensal', date: '2026-10-12' });
+    expect(OWNER_EVENTS.map((row) => row.id)).toEqual(['u2', 'u1', 'u3', 'e4', 'e3', 'e2', 'e1']);
+    expect(OWNER_EVENTS.find((row) => row.id === 'u1')).toEqual({
+      id: 'u1',
+      name: 'Encontro mensal',
+      date: '2026-10-17',
+    });
   });
 });
 

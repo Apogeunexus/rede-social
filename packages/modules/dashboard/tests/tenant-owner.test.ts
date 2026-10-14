@@ -42,10 +42,10 @@ function channel(name: (typeof channels)[number]['channel']): number | undefined
 }
 
 describe('level-4 alerts (the header bell)', () => {
-  it('holds three alerts: support, today’s event and who entered at risk', () => {
+  it('holds three alerts: support, the next event with few seats and who entered at risk', () => {
     expect(attention.map((item) => item.kind)).toEqual([
       'support_waiting',
-      'event_today',
+      'event_soon',
       'entered_at_risk',
     ]);
   });
@@ -62,17 +62,21 @@ describe('level-4 alerts (the header bell)', () => {
     expect(JSON.stringify(attention)).not.toMatch(/\b(Ana|Rui)\b/);
   });
 
-  it('gives today’s event level 5’s numbers', () => {
-    const owner = attention.find((item) => item.kind === 'event_today');
-    const admin = tenantAdminPanel.attention.find((item) => item.kind === 'event_today');
-    expect(admin).toBeDefined();
-    expect(owner).toMatchObject({
-      severity: 'warning',
-      event: admin?.kind === 'event_today' ? admin.event : '',
-      startsAtHour: admin?.kind === 'event_today' ? admin.startsAtHour : -1,
-      confirmed: 92,
-      capacity: 100,
-    });
+  it('gives the Encontro mensal of 17/10 to both levels’ bell, with its own numbers (D-10)', () => {
+    const u1 = events.upcoming.find((row) => row.id === 'u1');
+    const owner = attention.find((item) => item.kind === 'event_soon');
+    const admin = tenantAdminPanel.attention.find((item) => item.kind === 'event_soon');
+    for (const alert of [owner, admin]) {
+      expect(alert).toMatchObject({
+        severity: 'warning',
+        event: u1?.name,
+        date: u1?.date,
+        startsAtHour: u1?.startsAtHour,
+        confirmed: u1?.confirmed,
+        capacity: u1?.capacity,
+      });
+    }
+    expect(u1?.date).toBe('2026-10-17');
   });
 
   it('gives who entered at risk level 5’s count and push reach', () => {
@@ -270,14 +274,32 @@ describe('best day and time to publish', () => {
 });
 
 describe('upcoming events and the waiting list (Eventos)', () => {
-  it('gives today’s Encontro mensal level 5’s and the alert’s 92 of 100', () => {
-    const today = events.upcoming.find((row) => row.name === 'Encontro mensal');
-    const admin = tenantAdminPanel.attention.find((item) => item.kind === 'event_today');
-    expect(today).toMatchObject({
-      confirmed: admin?.kind === 'event_today' ? admin.confirmed : -1,
-      capacity: admin?.kind === 'event_today' ? admin.capacity : -1,
+  it('moves the Encontro mensal to Saturday 17/10, 19h, with the same 92 of 100 (PD-16)', () => {
+    const u1 = events.upcoming.find((row) => row.id === 'u1');
+    expect(u1).toMatchObject({
+      name: 'Encontro mensal',
+      date: '2026-10-17',
       startsAtHour: 19,
+      durationMinutes: 180,
+      confirmed: 92,
+      capacity: 100,
     });
+    expect(new Date('2026-10-17T12:00:00Z').getUTCDay()).toBe(6);
+    expect(tenantOwnerPanel.eventEngagement.find((row) => row.id === 'u1')?.bands.counts).toEqual({
+      new: 14,
+      superfan: 26,
+      engaged: 34,
+      occasional: 12,
+      at_risk: 6,
+      inactive: 0,
+    });
+  });
+
+  it('keeps the next events in date order, all after the preview’s today', () => {
+    expect(events.upcoming.map((row) => row.id)).toEqual(['u2', 'u1', 'u3']);
+    const dates = events.upcoming.map((row) => row.date);
+    expect([...dates].sort()).toEqual(dates);
+    for (const date of dates) expect(date > '2026-10-12').toBe(true);
   });
 
   it('is an example, only for full events, never seating or counting more than waited', () => {

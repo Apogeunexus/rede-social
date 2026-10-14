@@ -115,8 +115,11 @@ describe('the band roster', () => {
     for (const row of ownerBandRoster) expect(taken.has(row.name), row.name).toBe(false);
   });
 
-  it('dates everything from the Encontro mensal day', () => {
-    expect(PREVIEW_TODAY).toBe(tenantOwnerPanel.events.upcoming[0]?.date);
+  it('dates everything from the preview’s today, before every next event (quick 261014-dwc)', () => {
+    expect(PREVIEW_TODAY).toBe('2026-10-12');
+    for (const event of tenantOwnerPanel.events.upcoming) {
+      expect(event.date > PREVIEW_TODAY, event.id).toBe(true);
+    }
   });
 });
 

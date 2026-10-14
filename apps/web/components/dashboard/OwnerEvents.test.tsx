@@ -62,22 +62,22 @@ describe('D-01/D-02 (quick 261013-p31): Próximos eventos são cartões de event
       ).toHaveLength(1);
     }
     expect(items.map((item) => item.querySelector('.text-xl')?.textContent?.trim())).toEqual([
-      'Encontro mensal',
       'Live de dúvidas',
+      'Encontro mensal',
       'Imersão presencial',
     ]);
-    for (const [i, pill] of ['Presencial', 'Online', 'Presencial'].entries()) {
+    for (const [i, pill] of ['Online', 'Presencial', 'Presencial'].entries()) {
       const item = items[i];
       if (!item) throw new Error(`no card ${i}`);
       expect(exactly(item, pill).length, String(i)).toBeGreaterThan(0);
     }
-    for (const [i, when] of ['12/10, 19h', '15/10, 20h', '24/10, 9h'].entries()) {
+    for (const [i, when] of ['15/10, 20h', '17/10, 19h', '24/10, 9h'].entries()) {
       const item = items[i];
       if (!item) throw new Error(`no card ${i}`);
       const line = exactly(item, when)[0];
       expect(line?.classList.contains('text-text-secondary'), String(i)).toBe(true);
     }
-    const [u1, u2, u3] = items;
+    const [u2, u1, u3] = items;
     if (!u1 || !u2 || !u3) throw new Error('missing cards');
     expect(cell(u1, 'Inscritos')).toBe('92');
     expect(cell(u1, 'Vagas')).toBe('8');
