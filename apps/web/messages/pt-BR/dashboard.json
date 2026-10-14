@@ -843,7 +843,8 @@
             "shares": "Ninguém compartilhou esta publicação ainda."
           },
           "unanswered": "Sem resposta",
-          "sample": "Mostrando quem está na amostra de membros."
+          "sample": "Mostrando quem está na amostra de membros.",
+          "emptySample": "Nenhum destes membros está na amostra da prévia."
         },
         "replies": {
           "title": "Comentários sem resposta",
@@ -1107,7 +1108,8 @@
           },
           "expiring": {
             "title": "Acessos que vencem em 7 dias",
-            "count": "{count, plural, one {# acesso} other {# acessos}} da {product} vencem nos próximos 7 dias"
+            "count": "{count, plural, one {# acesso} other {# acessos}} da {product} vencem nos próximos 7 dias",
+            "empty": "Nenhum destes membros está na amostra da prévia. O vencimento ainda não é gravado."
           },
           "band": {
             "more": "e mais {count, plural, one {# comprador} other {# compradores}}"
@@ -1180,10 +1182,13 @@
         "events": {
           "title": "Eventos pagos",
           "note": "Os ingressos ficam fora da receita da loja: ainda não há venda de ingresso registrada.",
+          "exampleNote": "Receita e lista de espera: valores de exemplo",
           "ticket": "Ingresso {value}",
           "date": "Data",
           "confirmed": "Inscritos",
           "revenue": "Receita",
+          "full": "Vagas esgotadas · {count} na espera",
+          "seeWaitlist": "Ver lista de espera",
           "free": "{count, plural, one {# evento gratuito ficou} other {# eventos gratuitos ficaram}} de fora."
         }
       }

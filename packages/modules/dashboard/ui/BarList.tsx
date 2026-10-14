@@ -16,6 +16,8 @@ export interface BarRow {
    * none: with equal-width visuals every track still starts and ends at the same x.
    */
   leading?: ReactNode;
+  /** The row's own id, so a link elsewhere can land on it (an event's waiting-list row). */
+  anchor?: string;
 }
 
 export interface BarListProps {
@@ -58,7 +60,11 @@ export function BarList({ rows, max, className }: BarListProps) {
       <Card className={cn('p-4', className)}>
         <ul className="flex flex-col gap-3">
           {rows.map((row) => (
-            <li key={row.id} className="flex items-center gap-3 text-sm">
+            <li
+              key={row.id}
+              id={row.anchor}
+              className={cn('flex items-center gap-3 text-sm', row.anchor && 'scroll-mt-20')}
+            >
               {row.leading}
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <div className="flex items-start justify-between gap-2">
@@ -84,7 +90,14 @@ export function BarList({ rows, max, className }: BarListProps) {
     <Card className={cn('p-4', className)}>
       <ul className="grid grid-cols-[minmax(min-content,2fr)_minmax(0,3fr)_auto] gap-x-2 gap-y-3">
         {rows.map((row) => (
-          <li key={row.id} className="col-span-3 grid grid-cols-subgrid items-center text-sm">
+          <li
+            key={row.id}
+            id={row.anchor}
+            className={cn(
+              'col-span-3 grid grid-cols-subgrid items-center text-sm',
+              row.anchor && 'scroll-mt-20',
+            )}
+          >
             <span className={labelClass(row)}>{row.label}</span>
             <Track row={row} top={top} />
             <span className="text-right font-bold tabular-nums text-text">

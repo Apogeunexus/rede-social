@@ -39,7 +39,8 @@ const KEY = 'tenantOwner.content.people';
  * (outside a band) their band; then, when the list is shorter than its number, that it shows the
  * members' sample (quick 261013-uoi) and how many more the number holds, in the list's own unit,
  * with a disabled "Ver todos" (the Membros pattern). When a listed daily time is an example, one
- * line on top says so. Each card opens the member one level down.
+ * line on top says so. Each card opens the member one level down. A number with nobody in the sample
+ * says so in one sentence instead: "e mais N" never follows zero cards (quick 261014-ia8 F-2).
  */
 export function PeopleCards<P extends ContentPerson>({
   t,
@@ -50,6 +51,7 @@ export function PeopleCards<P extends ContentPerson>({
   showBand,
   moreText,
   statusOf,
+  emptyText,
 }: {
   t: DashboardT;
   people: readonly P[];
@@ -62,10 +64,17 @@ export function PeopleCards<P extends ContentPerson>({
   /** "e mais N …" in the list's unit. */
   moreText: (more: number) => string;
   statusOf?: (person: P) => ReactNode;
+  /** The sentence when the number has people but none of them is in the sample. */
+  emptyText?: string;
 }) {
   const shown = people.slice(0, OWNER_BAND_LIST_LIMIT);
   const more = total - shown.length;
   const daily = shown.find((person) => person.dailyMinutes.example)?.dailyMinutes;
+  if (shown.length === 0) {
+    return total > 0 ? (
+      <p className="text-sm text-text-secondary">{emptyText ?? t(`${KEY}.emptySample`)}</p>
+    ) : null;
+  }
   return (
     <>
       {daily ? (
@@ -74,23 +83,21 @@ export function PeopleCards<P extends ContentPerson>({
           <ExamplePill text={exampleBadge(t, daily)} />
         </p>
       ) : null}
-      {shown.length > 0 ? (
-        <ul className="flex flex-col gap-3">
-          {shown.map((person) => (
-            <li key={person.id} className="min-w-0">
-              <MemberCard
-                t={t}
-                member={person}
-                band={showBand ? person.band : undefined}
-                lead={leadOf(person)}
-                id={contentMemberAnchor(person.id)}
-                href={hrefOf(person.id)}
-                status={statusOf?.(person)}
-              />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <ul className="flex flex-col gap-3">
+        {shown.map((person) => (
+          <li key={person.id} className="min-w-0">
+            <MemberCard
+              t={t}
+              member={person}
+              band={showBand ? person.band : undefined}
+              lead={leadOf(person)}
+              id={contentMemberAnchor(person.id)}
+              href={hrefOf(person.id)}
+              status={statusOf?.(person)}
+            />
+          </li>
+        ))}
+      </ul>
       {more > 0 ? (
         <>
           <p className="text-xs text-text-secondary">{t(`${KEY}.sample`)}</p>

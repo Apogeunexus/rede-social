@@ -119,10 +119,11 @@ export const tenantAdminPanel: TenantAdminPanel = {
       delta: { amount: 5, kind: 'count', direction: 'up', good: true, basis: 'none' },
     },
     enteredAtRisk: { count: 23, withPush: 9 },
-    // The 7-day orders of the Financeiro's single order list (quick 261014-dwc PD-7).
+    // The 7-day orders of the Financeiro's single order list (quick 261014-dwc PD-7); the change is
+    // that list's week against the week before, 45 - 29 (quick 261014-ia8 C-1, owner-finance.test).
     orders: {
       count: 45,
-      delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
+      delta: { amount: 16, kind: 'count', direction: 'up', good: true, basis: 'none' },
       manualGrants: 3,
     },
   },
@@ -321,9 +322,10 @@ export const tenantStaffPanel: TenantStaffPanel = {
     ],
   },
   store: {
+    // The single order list's 7 days against the 7 before, as level 5's (quick 261014-ia8 C-1).
     orders7d: {
       count: 45,
-      delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
+      delta: { amount: 16, kind: 'count', direction: 'up', good: true, basis: 'none' },
     },
     productsWithoutOrder30d: { count: 1, names: ['Workshop gravado'] },
     expiringAccess7d: { count: 6, products: ['Comunidade VIP'] },

@@ -27,6 +27,7 @@ import {
 import { Card } from '@rede-social/ui';
 import { AlertTriangle, BellRing, ChevronRight, Crown, HeartHandshake } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { ownerWaitlistHref } from '@/lib/owner-band-scope';
 import { contentTabView, ownerContentHref } from '@/lib/owner-content-view';
 import {
   type FinanceAttentionList,
@@ -228,7 +229,7 @@ function AttentionText({ title, note }: { title: string; note: ReactNode }) {
 /**
  * (2) Precisa de atenção (D-07), in a fixed order: the VIP payers fading, the accesses ending in 7
  * days (example), the product unsold for 60 days, the full event with a waiting list (example).
- * Each row opens what it names.
+ * Each row opens what it names: the full event, its waiting list in Eventos (quick 261014-ia8 F-1).
  */
 function Attention({ t }: { t: DashboardT }) {
   const attention = ownerFinanceAttention();
@@ -288,9 +289,7 @@ function Attention({ t }: { t: DashboardT }) {
             const event = ownerEvent(row.eventId);
             return (
               <li key={row.eventId}>
-                <RowLink
-                  href={`${ownerFinanceHref(financeTabView('products'))}#evento-${row.eventId}`}
-                >
+                <RowLink href={ownerWaitlistHref(row.eventId)}>
                   <AttentionText
                     title={t(`${key}.fullEvent`, { event: event.name, count: row.waiting })}
                     note={

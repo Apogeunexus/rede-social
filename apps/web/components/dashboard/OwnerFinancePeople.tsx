@@ -83,6 +83,8 @@ interface ListBody {
   count: ReactNode;
   lead?: (person: FinancePerson) => string;
   more?: (more: number) => string;
+  /** The sentence when nobody of the number is in the sample. */
+  empty?: string;
   body?: ReactNode;
 }
 
@@ -130,7 +132,8 @@ function ShareBody({ t }: { t: DashboardT }) {
  * The list behind an overview number or an attention row (D-07), a deeper step under its "Voltar":
  * its count line repeats the number; the cards are the roster's sample of it, each opening the
  * member. The share of add-ons lists products, not people (PD-11); the accesses ending this week
- * have no member in the sample, so it says how many and offers the disabled action (PD-17).
+ * have no member in the sample, so it says so in one sentence, with the disabled action (PD-17,
+ * quick 261014-ia8 F-2).
  */
 export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
   const back = financeBackHref(view);
@@ -248,6 +251,7 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
         </span>
       ),
       more: members,
+      empty: t(`${LISTS}.expiring.empty`),
       body: (
         <ActionCard
           icon={BellRing}
@@ -287,6 +291,7 @@ export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinan
             leadOf={lead ?? (() => '')}
             showBand
             moreText={more}
+            emptyText={spec.empty}
           />
         ) : null}
         {spec.body}

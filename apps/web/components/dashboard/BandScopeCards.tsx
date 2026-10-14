@@ -148,15 +148,17 @@ export function eventRevenue(
 /**
  * An event as the user drew it (quick 261012-tru D-04): the full-width cover at its original 16:10
  * (the events module's own `hero` box, `--brand-gradient` fallback), the name, a Presencial/Online
- * pill with an optional gray line, a thin line, three columns split by thin lines, then the host's
- * footer. The bands' cards and the Eventos area's next events (quick 261013-p31) share it; only a
- * linked card reacts to hover, so a card with nowhere to go promises no tap.
+ * pill with an optional warning pill (`status`) and gray line, a thin line, three columns split by
+ * thin lines, then the host's footer. The bands' cards and the Eventos area's next events (quick
+ * 261013-p31) share it; only a linked card reacts to hover, so a card with nowhere to go promises no
+ * tap.
  */
 export function EventCard({
   t,
   id,
   href,
   detail,
+  status,
   cells,
   children,
 }: {
@@ -164,6 +166,8 @@ export function EventCard({
   id: string;
   href: string | null;
   detail?: string;
+  /** A warning next to the format ("Vagas esgotadas · 17 na espera"), already worded. */
+  status?: string;
   cells: readonly [CardCell, CardCell, CardCell];
   children?: ReactNode;
 }) {
@@ -186,6 +190,11 @@ export function EventCard({
               <StatusPill tone="brand" className="w-fit">
                 {t(`tenantOwner.formatsCompared.${event.format}`)}
               </StatusPill>
+              {status === undefined ? null : (
+                <StatusPill tone="warning" className="w-fit">
+                  {status}
+                </StatusPill>
+              )}
               {detail === undefined ? null : (
                 <span className="text-sm text-text-secondary">{detail}</span>
               )}

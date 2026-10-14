@@ -1,4 +1,4 @@
-import { formatBrl } from '@rede-social/contracts/money';
+import { formatBrl, formatBrlWhole } from '@rede-social/contracts/money';
 import { CommunityCover } from '@rede-social/module-communities/ui';
 import {
   type EngagementBand,
@@ -104,7 +104,7 @@ function Numbers({ t, product }: { t: DashboardT; product: FinanceProductDetail 
       <KpiGrid>
         <KpiCard
           label={t(`${key}.revenue`)}
-          value={formatBrl(product.month.cents)}
+          value={formatBrlWhole(product.month.cents)}
           delta={delta(product.month.cents, product.before.cents)}
         />
         <KpiCard

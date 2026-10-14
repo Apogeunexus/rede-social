@@ -13,6 +13,7 @@ import {
 } from '@rede-social/module-dashboard/ui';
 import { EventCover } from '@rede-social/module-events/ui';
 import { getTranslations } from 'next-intl/server';
+import { ownerWaitlistAnchor } from '@/lib/owner-band-scope';
 import { EventCard, eventRevenue, RevenueExampleNote } from './BandScopeCards';
 import { ExamplePill } from './ExamplePill';
 import { bandLabel, exampleBadge, formatCount, formatDayMonth, formatPercent } from './format';
@@ -128,6 +129,7 @@ export async function OwnerEvents() {
             rate: t('tenantOwner.waitlist.capacity', { count: formatCount(row.capacity) }),
             highlight: i === 0,
             leading: <EventThumb />,
+            anchor: ownerWaitlistAnchor(row.eventId),
           }))}
         />
         {mostWaited ? (

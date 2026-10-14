@@ -9,14 +9,23 @@ import {
 import type { KpiDelta } from '@rede-social/module-dashboard/ui';
 import { Card, cn, StatusPill } from '@rede-social/ui';
 import { ArrowDown, ArrowUp, ChevronRight, Minus } from 'lucide-react';
+import { ownerWaitlistHref } from '@/lib/owner-band-scope';
 import {
   financeProductAnchor,
   financeTabView,
   type OwnerFinanceView,
   ownerFinanceHref,
 } from '@/lib/owner-finance-view';
-import { Cell, EventCard, eventRevenue, Linked, RevenueExampleNote } from './BandScopeCards';
-import { changeDelta, type DashboardT, formatCount, formatDayMonth, kpiDelta } from './format';
+import { Cell, EventCard, eventRevenue, Linked } from './BandScopeCards';
+import { ExamplePill } from './ExamplePill';
+import {
+  changeDelta,
+  type DashboardT,
+  exampleBadge,
+  formatCount,
+  formatDayMonth,
+  kpiDelta,
+} from './format';
 import { PanelSection } from './PanelSection';
 
 const KEY = 'tenantOwner.finance.products';
@@ -151,34 +160,58 @@ function paidEvents() {
   };
 }
 
+/** The people waiting for a seat of a full event, or null when it is not full or nobody waits. */
+function waitingFor(event: { id: string; confirmed: number; capacity: number | null }) {
+  const row = tenantOwnerPanel.events.waitlist.value.find((entry) => entry.eventId === event.id);
+  const full = event.capacity !== null && event.confirmed >= event.capacity;
+  return full && row && row.waiting > 0 ? row.waiting : null;
+}
+
 /**
- * Eventos pagos (D-04, PD-12): the events with a ticket, each as the events' own 16:10 card with no
- * link — date, registrations and the example revenue (one pill for the whole list), the ticket on the
- * gray line. Their revenue is never part of the store's total; the free events are counted below.
+ * Eventos pagos (D-04, PD-12): the events with a ticket, each as the events' own 16:10 card — date,
+ * registrations and the example revenue (one pill for the whole list, the waiting lists being
+ * examples too), the ticket on the gray line. A full event with people waiting says so and opens its
+ * waiting list in Eventos (quick 261014-ia8 F-1); the others open nothing. Their revenue is never
+ * part of the store's total; the free events are counted below.
  */
 function PaidEvents({ t }: { t: DashboardT }) {
   const { events, free } = paidEvents();
   const key = 'tenantOwner.finance.events';
+  const [first] = events;
   return (
     <PanelSection title={t(`${key}.title`)}>
       <p className="text-sm text-text-secondary">{t(`${key}.note`)}</p>
-      <RevenueExampleNote t={t} />
+      <p className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+        {t(`${key}.exampleNote`)}
+        <ExamplePill text={first ? exampleBadge(t, first.ticketCents) : undefined} />
+      </p>
       <ul className="flex flex-col gap-3">
-        {events.map((event) => (
-          <li key={event.id} id={`evento-${event.id}`} className="scroll-mt-20">
-            <EventCard
-              t={t}
-              id={event.id}
-              href={null}
-              detail={t(`${key}.ticket`, { value: formatBrl(event.ticketCents.value) })}
-              cells={[
-                { label: t(`${key}.date`), value: formatDayMonth(event.date) },
-                { label: t(`${key}.confirmed`), value: formatCount(event.confirmed) },
-                { label: t(`${key}.revenue`), value: eventRevenue(t, event) },
-              ]}
-            />
-          </li>
-        ))}
+        {events.map((event) => {
+          const waiting = waitingFor(event);
+          return (
+            <li key={event.id} id={`evento-${event.id}`} className="scroll-mt-20">
+              <EventCard
+                t={t}
+                id={event.id}
+                href={waiting === null ? null : ownerWaitlistHref(event.id)}
+                status={waiting === null ? undefined : t(`${key}.full`, { count: waiting })}
+                detail={t(`${key}.ticket`, { value: formatBrl(event.ticketCents.value) })}
+                cells={[
+                  { label: t(`${key}.date`), value: formatDayMonth(event.date) },
+                  { label: t(`${key}.confirmed`), value: formatCount(event.confirmed) },
+                  { label: t(`${key}.revenue`), value: eventRevenue(t, event) },
+                ]}
+              >
+                {waiting === null ? null : (
+                  <span className="flex items-center justify-between gap-2 text-sm font-bold text-brand">
+                    {t(`${key}.seeWaitlist`)}
+                    <ChevronRight aria-hidden size={18} className="shrink-0" />
+                  </span>
+                )}
+              </EventCard>
+            </li>
+          );
+        })}
       </ul>
       <p className="text-xs text-text-secondary">{t(`${key}.free`, { count: free })}</p>
     </PanelSection>
