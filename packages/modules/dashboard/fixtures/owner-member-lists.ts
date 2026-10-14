@@ -357,6 +357,16 @@ function postOf(id: string): OwnerPost {
 /** Minutes between two actions of the last day stamped in a row. */
 const STAMP_STEP_MINUTES = 35;
 
+/** The first time an "ontem" action reads when yesterday is not the member's last day. */
+const YESTERDAY_FIRST_STAMP = '21:50';
+
+/** A stable small number from a member id, to spread their clock readings. */
+function idSpread(id: string): number {
+  let sum = 0;
+  for (const char of id) sum = (sum * 31 + char.charCodeAt(0)) % 997;
+  return sum;
+}
+
 function clockMinutes(time: string): number {
   const [hours = 0, minutes = 0] = time.split(':').map(Number);
   return hours * 60 + minutes;
@@ -382,8 +392,25 @@ export function buildOwnerMemberLists(input: OwnerMemberListsInput): OwnerMember
     ),
   );
   let clock = last.time === undefined ? Number.NaN : clockMinutes(last.time);
+  // "ontem" also reads with its time (flow review of uoi): a day before the last that is still
+  // "hoje"/"ontem" gets its own readings from 21:50 down, never a time already fixed that day.
+  const earlierTaken = new Set(
+    [...input.likes, ...input.comments].flatMap((entry) =>
+      entry.daysAgo === 1 && entry.time ? [entry.time] : [],
+    ),
+  );
+  // Each member starts at their own minute, so two people never share the same "ontem às".
+  let earlierClock = clockMinutes(YESTERDAY_FIRST_STAMP) - (idSpread(row.id) % 36) * 5;
   const moment = (daysAgo: number, time?: string): RelativeMoment => {
     if (time !== undefined) return { daysAgo, time };
+    if (daysAgo === 1 && daysAgo !== last.daysAgo) {
+      while (earlierTaken.has(clockText(earlierClock))) earlierClock -= STAMP_STEP_MINUTES;
+      if (earlierClock < 0) throw new Error(`${row.id} has more actions yesterday than its hours`);
+      const stamped = clockText(earlierClock);
+      earlierTaken.add(stamped);
+      earlierClock -= STAMP_STEP_MINUTES;
+      return { daysAgo, time: stamped };
+    }
     if (daysAgo !== last.daysAgo || Number.isNaN(clock)) return { daysAgo };
     while (taken.has(clockText(clock))) clock -= STAMP_STEP_MINUTES;
     if (clock < 0) throw new Error(`${row.id} has more actions on their last day than its hours`);

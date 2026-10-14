@@ -57,7 +57,7 @@ describe('coverStyle (quick 261013-uoi F-6)', () => {
     );
     for (const image of images) {
       expect(image).toMatch(
-        /^linear-gradient\(\d+deg, var\(--brand-primary\), var\(--brand-secondary\)\)$/,
+        /^linear-gradient\(\d+deg, color-mix\(in oklch, var\(--brand-primary\) \d+%, var\(--brand-on-primary-dark\)\), var\(--brand-secondary\)\)$/,
       );
     }
     expect(new Set(images).size).toBe(5);
@@ -78,9 +78,8 @@ describe('CoverThumb (row)', () => {
     for (const name of ['size-14', 'rounded-lg', 'shrink-0']) expect(el.classList).toContain(name);
     expect(el.textContent).toBe('10:12');
     expect(el.querySelectorAll('svg')).toHaveLength(1);
-    const style = el.getAttribute('style') ?? '';
-    expect(style).toContain('var(--brand-primary)');
-    expect(style).toContain('var(--brand-secondary)');
+    // The test DOM drops `color-mix`, so the paint is checked on `coverStyle` and the tone here.
+    expect(el.dataset.tone).toBe(String(coverTone('p01')));
     expect(el.querySelector('svg')?.getAttribute('class')).toContain('lucide-play');
   });
 
@@ -103,9 +102,7 @@ describe('CoverThumb (row)', () => {
       expect(el.className, variant).toContain('ring-2');
       expect(el.classList, variant).toContain('rounded-full');
       expect(el.classList, variant).not.toContain('rounded-lg');
-      expect(el.querySelector('svg')?.getAttribute('class'), variant).toContain(
-        'lucide-circle-dashed',
-      );
+      expect(el.querySelector('svg')?.getAttribute('class'), variant).toContain('lucide-aperture');
       expect(el.textContent, variant).toBe('');
       if (variant === 'card') expect(el.dataset.ratio).toBe('1');
       cleanup();

@@ -275,9 +275,19 @@ describe('each member’s lists (D-07)', () => {
         row.id,
       ).toHaveLength(1);
 
+      // Yesterday, when it is not the last day, every action reads with its own time.
+      if (last.daysAgo !== 1) {
+        const yesterday = actions.filter((entry) => entry.when.daysAgo === 1);
+        const stamps = yesterday.map((entry) => entry.when.time);
+        for (const stamp of stamps) expect(stamp, `${row.id} untimed yesterday`).toBeDefined();
+        expect(new Set(stamps).size, `${row.id} repeated times yesterday`).toBe(stamps.length);
+      }
+
       // On the other days, only the oldest unanswered comment of a post carries a time.
       const elsewhere = (entry: { when: { daysAgo: number; time?: string } }) =>
-        entry.when.daysAgo !== last.daysAgo && entry.when.time !== undefined;
+        entry.when.daysAgo !== last.daysAgo &&
+        entry.when.daysAgo !== 1 &&
+        entry.when.time !== undefined;
       expect(likes.filter(elsewhere), `${row.id} likes timed on another day`).toEqual([]);
       for (const entry of strongActions.filter(elsewhere)) {
         expect(entry.kind, `${row.id} timed on another day`).toBe('comment');

@@ -1,7 +1,7 @@
 import type { ContentKind } from '@rede-social/module-dashboard/fixtures';
 import { cn } from '@rede-social/ui';
 import {
-  CircleDashed,
+  Aperture,
   GalleryHorizontal,
   Image as ImageIcon,
   Link2,
@@ -24,13 +24,16 @@ export const COVER_ICON: Record<CoverKind, LucideIcon> = {
   carousel: GalleryHorizontal,
   text: Type,
   link: Link2,
-  story: CircleDashed,
+  story: Aperture,
   event: Ticket,
   order: ShoppingBag,
 };
 
 /** The five angles of the brand pair: the tones a cover can take (quick 261013-uoi PD-I). */
 export const COVER_TONES = [0, 72, 144, 216, 288] as const;
+
+/** How much of the primary each tone keeps (the rest is the brand's dark ink): light to deep. */
+const COVER_DEPTH = [100, 62, 84, 48, 72] as const;
 
 /**
  * The cover's tone for a publication: the sum of its id's character codes picks one of the five
@@ -47,8 +50,12 @@ export function coverTone(seed: string): (typeof COVER_TONES)[number] {
  * tones read apart (the shifted shared gradient barely did, F-6) and never leave the brand tokens.
  */
 export function coverStyle(seed: string): CSSProperties {
+  // The brand pair can be two close blues, so the angle alone barely shows (flow review of uoi):
+  // each angle also gets its own depth, the primary mixed toward the brand's dark ink.
+  const tone = coverTone(seed);
+  const depth = COVER_DEPTH[COVER_TONES.indexOf(tone)] ?? 100;
   return {
-    backgroundImage: `linear-gradient(${coverTone(seed)}deg, var(--brand-primary), var(--brand-secondary))`,
+    backgroundImage: `linear-gradient(${tone}deg, color-mix(in oklch, var(--brand-primary) ${depth}%, var(--brand-on-primary-dark)), var(--brand-secondary))`,
     color: 'var(--brand-on-primary)',
   };
 }
@@ -100,6 +107,7 @@ export function CoverThumb({
       aria-hidden="true"
       data-testid="cover-thumb"
       data-kind={kind}
+      data-tone={coverTone(seed)}
       data-ratio={card ? String(aspect) : undefined}
       className={cn(
         'relative flex shrink-0 items-center overflow-hidden',

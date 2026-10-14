@@ -88,7 +88,7 @@ describe('OwnerMemberList thumbnails (quick 261013-orf D-01)', () => {
 });
 
 describe('OwnerMemberList moments (quick 261013-uoi F-4)', () => {
-  it('reads "hoje às HH:MM" with a time, and "ontem" without one', () => {
+  it('reads "hoje às HH:MM" and "ontem às HH:MM", always with "às"', () => {
     const { rows } = renderList('om-13', 'curtidas');
     const texts = [...rows].map((row) => row.textContent ?? '');
     const last = insightsOf('om-13').lastActive;
@@ -97,7 +97,7 @@ describe('OwnerMemberList moments (quick 261013-uoi F-4)', () => {
     for (const text of texts) expect(text).not.toMatch(/(hoje|ontem) \d{2}:\d{2}/);
     cleanup();
 
-    // A member with an untimed like yesterday (yesterday is not their last day).
+    // A member with a like yesterday that is not their last day: it reads with its own time too.
     const member = ownerBandRoster.find(
       (row) =>
         row.lastActive.daysAgo !== 1 &&
@@ -106,7 +106,7 @@ describe('OwnerMemberList moments (quick 261013-uoi F-4)', () => {
     if (!member) throw new Error('no member liked yesterday');
     const yesterday = [...renderList(member.id, 'curtidas').rows].map((row) => row.textContent);
     expect(
-      yesterday.some((text) => /curtido ontem$/.test(text ?? '')),
+      yesterday.some((text) => /curtido ontem às \d{2}:\d{2}$/.test(text ?? '')),
       member.id,
     ).toBe(true);
   });
