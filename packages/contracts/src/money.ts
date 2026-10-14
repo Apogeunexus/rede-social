@@ -42,6 +42,21 @@ export function formatBrl(cents: number): string {
   return BRL.format(cents / 100);
 }
 
+const BRL_WHOLE = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+/**
+ * A whole-real KPI for a narrow card: `416200` -> `R$ 4.162` (with centavos it stays `formatBrl`, so
+ * no value is ever rounded away). The gap is U+00A0, as `formatBrl`'s.
+ */
+export function formatBrlWhole(cents: number): string {
+  return cents % 100 === 0 ? BRL_WHOLE.format(cents / 100) : formatBrl(cents);
+}
+
 const BRL_COMPACT = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
   currency: 'BRL',

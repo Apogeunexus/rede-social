@@ -210,14 +210,6 @@ export interface TenantOwnerPanel {
      * order list by `tests/owner-finance.test.ts` (quick 261014-dwc D-02).
      */
     products: { id: string; product: string; orders: number; cents: number }[];
-    /** Orders against the month before. */
-    ordersDelta: Delta;
-    /** Example: time-limited accesses ending in 7 days (`expires_at` is never filled yet). */
-    expiringAccess7d: ReportValue<{ count: number; products: string[] }>;
-    /** Example: accesses that expired in 30 days and how many were bought again. */
-    renewal: ReportValue<{ expired: number; renewed: number }>;
-    /** Example: product page visits against orders (no page views are recorded yet). */
-    conversion: ReportValue<{ id: string; product: string; visits: number; orders: number }[]>;
   };
   /** Support chat conversations (`chat_conversations` of kind support). */
   support: {
@@ -296,7 +288,14 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
     },
     orderValue: {
       cents: 894000,
-      delta: { amount: 12, kind: 'percent', direction: 'up', good: true, basis: 'previous_month' },
+      // The single order list's month against the 30 days before (quick 261014-dwc D-10).
+      delta: {
+        amount: 12,
+        kind: 'percent',
+        direction: 'up',
+        good: true,
+        basis: 'previous_30_days',
+      },
     },
     engaged: {
       delta: { amount: 2, kind: 'points', direction: 'down', good: false, basis: 'none' },
@@ -615,23 +614,6 @@ export const tenantOwnerPanel: TenantOwnerPanel = {
       { id: 's3', product: 'E-book', orders: 102, cents: 190400 },
       { id: 's4', product: 'Workshop gravado', orders: 0, cents: 0 },
     ],
-    ordersDelta: { amount: 9, kind: 'count', direction: 'up', good: true, basis: 'previous_month' },
-    expiringAccess7d: {
-      example: true,
-      reason: 'needs_access_expiry',
-      value: { count: 6, products: ['Comunidade VIP'] },
-    },
-    renewal: { example: true, reason: 'needs_access_expiry', value: { expired: 15, renewed: 11 } },
-    conversion: {
-      example: true,
-      reason: 'needs_product_page_views',
-      value: [
-        { id: 's2', product: 'Comunidade VIP', visits: 610, orders: 18 },
-        { id: 's1', product: 'Mentoria em grupo', visits: 420, orders: 6 },
-        { id: 's3', product: 'E-book', visits: 1150, orders: 102 },
-        { id: 's4', product: 'Workshop gravado', visits: 140, orders: 0 },
-      ],
-    },
   },
   support: {
     awaiting: { count: 2, oldestHours: 26 },

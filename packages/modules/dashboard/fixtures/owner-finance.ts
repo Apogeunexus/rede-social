@@ -1,7 +1,8 @@
 import { ENGAGEMENT_BAND_ORDER } from '../ui/metrics';
 import { daysSince, type OwnerBandMember, ownerBandRoster } from './owner-members';
+import { ownerPostTable } from './owner-posts';
 import type { RelativeMoment } from './platform-panels';
-import type { EngagementBand } from './shared';
+import type { EngagementBand, ExampleValue } from './shared';
 import { tenantOwnerPanel } from './tenant-owner';
 
 /**
@@ -764,27 +765,309 @@ export function ownerFinanceProduct(productId: string): FinanceProductSummary {
   };
 }
 
+/* ------------------------------------------------------------------------ the overview */
+
+const PAID_ORDERS = ownerFinanceOrders.filter((order) => order.status === 'paid');
+const MONTH_DAYS = 30;
+
+/** Each member's paid orders, oldest first (the ledger's order). */
+function paidByMember(orders: readonly FinanceOrder[]): Map<string, FinanceOrder[]> {
+  const byMember = new Map<string, FinanceOrder[]>();
+  for (const order of orders) {
+    byMember.set(order.memberId, [...(byMember.get(order.memberId) ?? []), order]);
+  }
+  return byMember;
+}
+
+const PAID_BY_MEMBER = paidByMember(PAID_ORDERS);
+
+/** The six numbers of Visão geral (D-07), on one day. */
+export interface FinanceSummary {
+  primary: FinanceAmount;
+  secondary: FinanceAmount;
+  total: FinanceAmount;
+  /** Members who had joined by then. */
+  base: number;
+  /** Members with two or more paid orders by then. */
+  rebought: number;
+  /** Average days from the first to the second paid order, of those who bought again. */
+  timeToSecondDays: number;
+  /** Every paid order's value by then: ÷ `base` is the revenue per member for life. */
+  lifetimeCents: number;
+}
+
+/**
+ * The overview's numbers as if today were `asOfDaysAgo` days ago: the base and the orders of then,
+ * the 30 days up to then (D-10: the comparison is that day against today, 30 days before).
+ */
+export function ownerFinanceSummary(asOfDaysAgo: number): FinanceSummary {
+  const paid = PAID_ORDERS.filter((order) => order.daysAgo >= asOfDaysAgo);
+  const kinds = classifyOrders(paid);
+  const window = paid.filter((order) => order.daysAgo < asOfDaysAgo + MONTH_DAYS);
+  const gaps = [...paidByMember(paid).values()]
+    .filter((orders) => orders.length >= 2)
+    .map(([first, second]) => (first?.daysAgo ?? 0) - (second?.daysAgo ?? 0));
+  return {
+    primary: amountOf(window.filter((order) => kinds.get(order.id) === 'primary')),
+    secondary: amountOf(window.filter((order) => kinds.get(order.id) === 'secondary')),
+    total: amountOf(window),
+    base: ownerFinanceMembers.filter((member) => member.joinedDaysAgo >= asOfDaysAgo).length,
+    rebought: gaps.length,
+    timeToSecondDays: gaps.length === 0 ? 0 : gaps.reduce((sum, gap) => sum + gap, 0) / gaps.length,
+    lifetimeCents: paid.reduce((sum, order) => sum + order.cents, 0),
+  };
+}
+
+/** Weekly cents, oldest first: the last 12 weeks and the 12 before them. */
+export interface FinanceWeeks {
+  current: number[];
+  previous: number[];
+}
+
+/** Receita por semana (PD-13): primary and secondary revenue in 7-day blocks back from today. */
+export function ownerFinanceWeekly(): { primary: FinanceWeeks; secondary: FinanceWeeks } {
+  const weeks = (kind: RevenueKind, from: number) =>
+    Array.from({ length: 12 }, (_, i) => {
+      const weeksBack = from + 11 - i;
+      return PAID_ORDERS.filter(
+        (order) =>
+          KINDS.get(order.id) === kind &&
+          order.daysAgo >= 7 * weeksBack &&
+          order.daysAgo <= 7 * weeksBack + 6,
+      ).reduce((sum, order) => sum + order.cents, 0);
+    });
+  return {
+    primary: { current: weeks('primary', 0), previous: weeks('primary', 12) },
+    secondary: { current: weeks('secondary', 0), previous: weeks('secondary', 12) },
+  };
+}
+
+const VIP_PRODUCT = 's2';
+
+/** Members who hold the VIP: a paid VIP order in the last year. */
+function vipOwners(): FinanceMember[] {
+  return ownerFinanceMembers.filter((member) =>
+    (PAID_BY_MEMBER.get(member.id) ?? []).some(
+      (order) => order.productId === VIP_PRODUCT && order.daysAgo < DAYS_A_YEAR,
+    ),
+  );
+}
+
+/** The entries whose year of access ends in the next 7 days (D-03). */
+function endingEntries(): FinanceOrder[] {
+  return PAID_ORDERS.filter(
+    (order) =>
+      KINDS.get(order.id) === 'primary' &&
+      DAYS_A_YEAR - order.daysAgo >= 1 &&
+      DAYS_A_YEAR - order.daysAgo <= 7,
+  );
+}
+
+export interface FinanceAttention {
+  /** VIP holders with no action in 30 days, and of the em risco how many have push on. */
+  vipFading: { atRisk: number; inactive: number; withPush: number };
+  /** Example: the end of an access is not recorded (`expires_at` is never filled). */
+  expiring: ExampleValue<{ count: number; productId: string }>;
+  /** Products unsold for over 60 days, with the days since the last sale. */
+  stalled: { productId: string; days: number }[];
+  /** Example: the full next events and how many wait (no waiting list is recorded). */
+  fullEvents: ExampleValue<{ eventId: string; waiting: number }[]>;
+}
+
+/** Precisa de atenção (D-07): what loses money if nobody acts. */
+export function ownerFinanceAttention(): FinanceAttention {
+  const fading = vipOwners();
+  const vip = communityEngagement.find((row) => row.id === 'c-vip');
+  if (!vip) throw new Error('no VIP community');
+  const ending = endingEntries();
+  const products = new Set(ending.map((order) => order.productId));
+  const [productId] = products;
+  if (products.size !== 1 || productId === undefined) {
+    throw new Error('the accesses ending this week are not of one product');
+  }
+  const { waitlist, upcoming } = tenantOwnerPanel.events;
+  return {
+    vipFading: {
+      atRisk: fading.filter((member) => member.band === 'at_risk').length,
+      inactive: fading.filter((member) => member.band === 'inactive').length,
+      withPush: vip.atRiskWithPush,
+    },
+    expiring: {
+      example: true,
+      reason: 'needs_access_expiry',
+      value: { count: ending.length, productId },
+    },
+    stalled: PRODUCT_IDS.flatMap((id) => {
+      const days = ownerFinanceProduct(id).lastSaleDaysAgo;
+      return days !== null && days > FINANCE_STALLED_DAYS ? [{ productId: id, days }] : [];
+    }),
+    fullEvents: {
+      example: true,
+      reason: 'needs_waitlist',
+      value: waitlist.value
+        .filter((row) => upcoming.some((event) => event.id === row.eventId))
+        .map((row) => ({ eventId: row.eventId, waiting: row.waiting })),
+    },
+  };
+}
+
+/* -------------------------------------------------------------------- the associations */
+
+/**
+ * Paid orders by members who interacted with a publication up to 7 days before (a measured
+ * association, not a cause): per publication, how many of each product. Moved here from Conteúdo's
+ * BUSINESS table so a publication's sales are orders of this list (quick 261014-dwc D-02).
+ */
+const CONTENT_SALES: Readonly<Record<string, readonly (readonly [string, number])[]>> = {
+  'op-11': [
+    ['s3', 4],
+    ['s2', 2],
+  ],
+  'op-15': [['s2', 6]],
+  'op-19': [['s3', 3]],
+  'op-41': [
+    ['s3', 5],
+    ['s2', 3],
+    ['s1', 1],
+  ],
+  'op-55': [['s3', 2]],
+};
+
+/** Paid orders by members who went to a past event, up to 7 days after it. */
+const EVENT_SALES: Readonly<Record<string, number>> = { e1: 2, e2: 3, e3: 6, e4: 4 };
+
+/** The days after an interaction or a check-in an order still counts as associated. */
+const ASSOCIATION_DAYS = 7;
+
+const ROSTER_IDS = new Set(ownerBandRoster.map((row) => row.id));
+
+/**
+ * The month's add-on orders an association can name: anonymous members only, so no roster
+ * member's insights (which posts they liked, which events they went to) are contradicted.
+ */
+const ASSOCIABLE = PAID_ORDERS.filter(
+  (order) =>
+    KINDS.get(order.id) === 'secondary' &&
+    order.daysAgo < MONTH_DAYS &&
+    !ROSTER_IDS.has(order.memberId),
+);
+
+export interface FinanceAssociation {
+  orders: number;
+  cents: number;
+  orderIds: string[];
+}
+
+export interface FinanceContentSales {
+  posts: (FinanceAssociation & {
+    postId: string;
+    products: { productId: string; count: number }[];
+  })[];
+  /** Distinct orders: one order tied to two publications counts once. */
+  total: FinanceAmount;
+}
+
+function distinctTotal(ids: Iterable<string>): FinanceAmount {
+  const set = new Set(ids);
+  return amountOf(PAID_ORDERS.filter((order) => set.has(order.id)));
+}
+
+/**
+ * Sales tied to a publication (what only the app knows): each publication's orders are the most
+ * recent of the product's add-ons paid on or after the day it was published.
+ */
+export function ownerFinanceContentSales(): FinanceContentSales {
+  const posts = Object.entries(CONTENT_SALES).map(([postId, rows]) => {
+    const post = ownerPostTable.find((row) => row.id === postId);
+    if (!post) throw new Error(`no post ${postId}`);
+    const age = daysSince(post.date);
+    const orderIds = rows.flatMap(([productId, count]) => {
+      const picked = ASSOCIABLE.filter(
+        (order) => order.productId === productId && order.daysAgo <= age,
+      )
+        .sort((a, b) => a.daysAgo - b.daysAgo || a.id.localeCompare(b.id))
+        .slice(0, count);
+      if (picked.length < count) throw new Error(`${postId} has too few ${productId} orders`);
+      return picked.map((order) => order.id);
+    });
+    const { orders, cents } = distinctTotal(orderIds);
+    return {
+      postId,
+      orders,
+      cents,
+      orderIds,
+      products: rows.map(([productId, count]) => ({ productId, count })),
+    };
+  });
+  return { posts, total: distinctTotal(posts.flatMap((post) => post.orderIds)) };
+}
+
+export interface FinanceEventSales {
+  events: (FinanceAssociation & { eventId: string })[];
+  total: FinanceAmount;
+}
+
+/** Sales tied to a past event: add-ons paid within 7 days after it, the nearest to it first. */
+export function ownerFinanceEventSales(): FinanceEventSales {
+  const events = tenantOwnerPanel.events.past.map((event) => {
+    const age = daysSince(event.date);
+    const count = EVENT_SALES[event.id] ?? 0;
+    const orderIds = ASSOCIABLE.filter(
+      (order) => order.daysAgo <= age && order.daysAgo >= age - ASSOCIATION_DAYS,
+    )
+      .sort((a, b) => b.daysAgo - a.daysAgo || a.id.localeCompare(b.id))
+      .slice(0, count)
+      .map((order) => order.id);
+    if (orderIds.length < count) throw new Error(`${event.id} has too few orders after it`);
+    return { eventId: event.id, ...distinctTotal(orderIds), orderIds };
+  });
+  return { events, total: distinctTotal(events.flatMap((event) => event.orderIds)) };
+}
+
+/** The VIP's revenue of the month next to its use: active in the week and who holds it. */
+export function ownerFinanceVipUsage(): { cents: number; activeWeek: number; holders: number } {
+  const community = tenantOwnerPanel.byCommunity.find((row) => row.id === 'c-vip');
+  if (!community) throw new Error('no VIP community');
+  return {
+    cents: ownerFinanceWindow(0, MONTH_DAYS - 1).byProduct[VIP_PRODUCT]?.cents ?? 0,
+    activeWeek: community.activeWeek,
+    holders: vipOwners().length,
+  };
+}
+
 /* ---------------------------------------------------------------------------- the people */
 
 /** The lists of named buyers (D-11: level 4 only, read by one web file). */
-export type FinancePeopleList = { kind: 'offer'; offerId: FinanceOfferId };
+export type FinancePeopleList =
+  | { kind: 'offer'; offerId: FinanceOfferId }
+  | {
+      kind:
+        | 'primary'
+        | 'secondary'
+        | 'rebought'
+        | 'timeToSecond'
+        | 'lifetime'
+        | 'vipFading'
+        | 'expiring';
+    };
 
 export interface FinancePerson extends OwnerBandMember {
   band: EngagementBand;
-  /** When they bought. */
+  /** When they bought what the list is about (the last purchase, for the lifetime list). */
   when: RelativeMoment;
+  /** That purchase's value; for the lifetime list, everything they paid. */
   cents: number;
   offerId: FinanceOfferId;
+  /** The time-to-second list only: days from the first to the second purchase. */
+  days?: number;
 }
 
 export interface FinancePeople {
-  /** The roster members in the list, most recent first. */
+  /** The roster members in the list, in the list's order. */
   people: readonly FinancePerson[];
   /** The list's own number (the roster is a sample of it). */
   total: number;
 }
-
-const MONTH_DAYS = 30;
 
 /** Most recent first: fewer days ago, then a later clock reading, then the id. */
 function byRecency(a: FinancePerson, b: FinancePerson): number {
@@ -795,42 +1078,130 @@ function byRecency(a: FinancePerson, b: FinancePerson): number {
   );
 }
 
+type Row = (typeof ownerBandRoster)[number];
+
+function personOf(row: Row, order: FinanceOrder, extra?: Partial<FinancePerson>): FinancePerson {
+  const { id, name, memberSince, lastActive, topCommunityId, dailyMinutes } = row;
+  return {
+    id,
+    name,
+    memberSince,
+    lastActive,
+    topCommunityId,
+    dailyMinutes,
+    band: row.band,
+    when: order.daysAgo === lastActive.daysAgo ? { ...lastActive } : { daysAgo: order.daysAgo },
+    cents: order.cents,
+    offerId: order.offerId,
+    ...extra,
+  };
+}
+
+/** The roster's people of a list and the list's number. */
+function buildPeople(list: FinancePeopleList): FinancePeople {
+  const month = PAID_ORDERS.filter((order) => order.daysAgo < MONTH_DAYS);
+  const paidOf = (row: Row) => PAID_BY_MEMBER.get(row.id) ?? [];
+  const monthOf = (kind: RevenueKind) => month.filter((order) => KINDS.get(order.id) === kind);
+  const rosterOf = (orders: readonly FinanceOrder[]) =>
+    ownerBandRoster
+      .flatMap((row) => {
+        const order = orders.find((entry) => entry.memberId === row.id);
+        return order ? [personOf(row, order)] : [];
+      })
+      .sort(byRecency);
+  switch (list.kind) {
+    case 'offer': {
+      financeOffer(list.offerId);
+      const orders = month.filter((order) => order.offerId === list.offerId);
+      return { people: rosterOf(orders), total: orders.length };
+    }
+    case 'primary':
+    case 'secondary': {
+      const orders = monthOf(list.kind);
+      return { people: rosterOf(orders), total: orders.length };
+    }
+    case 'rebought':
+    case 'timeToSecond': {
+      const people = ownerBandRoster.flatMap((row) => {
+        const [first, second] = paidOf(row);
+        if (!first || !second) return [];
+        return [personOf(row, second, { days: first.daysAgo - second.daysAgo })];
+      });
+      const sorted =
+        list.kind === 'rebought'
+          ? people.sort(byRecency)
+          : people.sort((a, b) => (a.days ?? 0) - (b.days ?? 0) || a.id.localeCompare(b.id));
+      return { people: sorted, total: ownerFinanceSummary(0).rebought };
+    }
+    case 'lifetime': {
+      const people = ownerBandRoster.flatMap((row) => {
+        const orders = paidOf(row);
+        const last = orders.at(-1);
+        if (!last) return [];
+        return [
+          personOf(row, last, { cents: orders.reduce((sum, order) => sum + order.cents, 0) }),
+        ];
+      });
+      return {
+        people: people.sort((a, b) => b.cents - a.cents || a.id.localeCompare(b.id)),
+        total: ownerFinanceMembers.length,
+      };
+    }
+    case 'vipFading': {
+      const fading = vipOwners().filter(
+        (member) => member.band === 'at_risk' || member.band === 'inactive',
+      );
+      const people = ownerBandRoster.flatMap((row) => {
+        if (!fading.some((member) => member.id === row.id)) return [];
+        const vip = paidOf(row).find((order) => order.productId === VIP_PRODUCT);
+        return vip ? [personOf(row, vip)] : [];
+      });
+      return {
+        // The ones who left most recently first: they are the easiest to bring back.
+        people: people.sort(
+          (a, b) => a.lastActive.daysAgo - b.lastActive.daysAgo || a.id.localeCompare(b.id),
+        ),
+        total: fading.length,
+      };
+    }
+    case 'expiring': {
+      const ending = endingEntries();
+      return { people: rosterOf(ending), total: ending.length };
+    }
+  }
+}
+
+const PEOPLE = new Map<string, FinancePeople>();
+
 /**
- * The buyers behind one Financeiro number: who, of the roster, and how many in all. An offer: its
- * paid orders of the last 30 days. An unknown offer throws.
+ * The buyers behind one Financeiro number (memoized: the list is fixed): who, of the roster, and how
+ * many in all. An unknown offer throws.
  */
 export function ownerFinancePeople(list: FinancePeopleList): FinancePeople {
-  financeOffer(list.offerId);
-  const orders = ownerFinanceOrders.filter(
-    (order) =>
-      order.status === 'paid' && order.offerId === list.offerId && order.daysAgo < MONTH_DAYS,
-  );
-  const people = ownerBandRoster
-    .flatMap((row): FinancePerson[] => {
-      const order = orders.find((entry) => entry.memberId === row.id);
-      if (!order) return [];
-      const { id, name, memberSince, lastActive, topCommunityId, dailyMinutes } = row;
-      return [
-        {
-          id,
-          name,
-          memberSince,
-          lastActive,
-          topCommunityId,
-          dailyMinutes,
-          band: row.band,
-          when:
-            order.daysAgo === lastActive.daysAgo ? { ...lastActive } : { daysAgo: order.daysAgo },
-          cents: order.cents,
-          offerId: order.offerId,
-        },
-      ];
-    })
-    .sort(byRecency);
-  return { people, total: orders.length };
+  const key = list.kind === 'offer' ? `offer:${list.offerId}` : list.kind;
+  const cached = PEOPLE.get(key);
+  if (cached) return cached;
+  const people = buildPeople(list);
+  PEOPLE.set(key, people);
+  return people;
 }
 
 /** Whether the member is in the list (the URL parser's membership test; it reads no names). */
 export function ownerFinanceIncludes(list: FinancePeopleList, memberId: string): boolean {
   return ownerFinancePeople(list).people.some((person) => person.id === memberId);
+}
+
+/**
+ * Who to offer the VIP next (Próximos passos): superfãs and engajados who entered through the e-book
+ * and never bought the VIP. A count only: the overview names nobody.
+ */
+export function ownerFinanceVipProspects(): number {
+  return ownerFinanceMembers.filter((member) => {
+    if (member.band !== 'superfan' && member.band !== 'engaged') return false;
+    const orders = PAID_BY_MEMBER.get(member.id) ?? [];
+    return (
+      orders[0]?.offerId === 'ebook-entrada' &&
+      !orders.some((order) => order.productId === VIP_PRODUCT)
+    );
+  }).length;
 }

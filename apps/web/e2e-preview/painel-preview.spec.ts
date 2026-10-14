@@ -460,7 +460,8 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
   { slug: 'conteudo', tab: 'Conteúdo', heading: 'Resumo do mês', pills: 8 },
   // The three of Lista de espera and the receita line of Próximos eventos (quick 261013-p31).
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 4 },
-  { slug: 'financeiro', tab: 'Financeiro', heading: 'Vendas do mês', pills: 3 },
+  // The accesses ending and the full event of Precisa de atenção, and the expiring next step.
+  { slug: 'financeiro', tab: 'Financeiro', heading: 'Números do mês', pills: 3 },
   { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
 ];
 
@@ -625,6 +626,8 @@ test('dono-do-cliente: Visão geral', async ({ page }) => {
     await expect(cards.nth(i)).toContainText(value);
   }
   await expect(cards.nth(0)).toContainText('+96 novos');
+  // The single order list's month against the 30 days before (quick 261014-dwc D-10).
+  await expect(cards.nth(4)).toContainText('12% vs. 30 dias antes');
   await expect(kpiCard(area, 'Engajados')).toContainText('9,3 ações por membro ativo');
   await expect(kpiCard(area, 'Comparecimento em eventos')).toContainText('check-in ÷ inscritos');
   await expect(
@@ -2962,6 +2965,262 @@ test.describe('dono-do-cliente financeiro', () => {
     await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
     await expect(backLink(page)).toHaveAttribute('href', /&oferta=vip-entrada#membro-om-03$/);
   });
+});
+
+const FINANCE_OVERVIEW_TITLES = [
+  'Números do mês',
+  'Precisa de atenção',
+  'Receita por semana',
+  'De onde vem a receita',
+  'O que só o app sabe',
+  'Próximos passos',
+];
+
+/** Each overview number: its slug, value, change, note, and what its list's count line says. */
+const FINANCE_NUMBERS: {
+  slug: string;
+  value: string | RegExp;
+  delta: string;
+  note: string;
+  count: string | RegExp;
+}[] = [
+  {
+    slug: 'primaria',
+    value: /^R\$\s4\.162$/,
+    delta: '13% vs. 30 dias antes',
+    note: '96 entradas · valor médio R$',
+    count: /R\$\s4\.162,00 em 96 entradas nos últimos 30 dias/,
+  },
+  {
+    slug: 'secundaria',
+    value: /^R\$\s4\.778$/,
+    delta: '11% vs. 30 dias antes',
+    note: '30 compras adicionais',
+    count: /R\$\s4\.778,00 em 30 compras adicionais nos últimos 30 dias/,
+  },
+  {
+    slug: 'parte-secundaria',
+    value: '53%',
+    delta: '0 p.p. vs. 30 dias antes',
+    note: 'da receita do mês',
+    count: /^53% da receita do mês veio de compras adicionais/,
+  },
+  {
+    slug: 'recompra',
+    value: '201',
+    delta: '17% vs. 30 dias antes',
+    note: '16% da base',
+    count: /^201 membros · 16% da base/,
+  },
+  {
+    slug: 'tempo-recompra',
+    value: '48 dias',
+    delta: '7% vs. 30 dias antes',
+    note: 'desde a entrada',
+    count: /^Média de 48 dias até a segunda compra, em 201 membros/,
+  },
+  {
+    slug: 'por-membro',
+    value: /^R\$\s73,61$/,
+    delta: '2% vs. 30 dias antes',
+    note: 'primária e secundária',
+    count: /^R\$\s73,61 por membro na vida toda/,
+  },
+];
+
+/** A KPI's value inside its number link ("R$ 4.162" -> 4162). */
+async function reaisIn(link: Locator) {
+  const text = (await link.locator('span.text-2xl').innerText()).trim();
+  return Number(text.replace(/[^\d,]/g, '').replace(',', '.'));
+}
+
+test.describe('dono-do-cliente financeiro: Visão geral', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('the six blocks in order, the six numbers with their change', async ({ page }) => {
+    await page.goto(FINANCE_AREA);
+    const area = ownerArea(page);
+    expect((await area.locator('h3').allTextContents()).map((text) => text.trim())).toEqual(
+      FINANCE_OVERVIEW_TITLES,
+    );
+    for (const row of FINANCE_NUMBERS) {
+      const link = area.locator(`#numero-${row.slug}`);
+      await expect(link.locator('span.text-2xl'), row.slug).toHaveText(row.value);
+      await expect(link, row.slug).toContainText(row.delta);
+      await expect(link, row.slug).toContainText(row.note);
+      await expect(link.getByText('Ver lista'), row.slug).toBeVisible();
+    }
+    await expectNoEnglish(page, 'overview');
+  });
+
+  test('primary + secondary make the total on the screen', async ({ page }) => {
+    await page.goto(FINANCE_AREA);
+    const area = ownerArea(page);
+    const primary = await reaisIn(area.locator('#numero-primaria'));
+    const secondary = await reaisIn(area.locator('#numero-secundaria'));
+    const total = await area.getByText(/^Receita total registrada:/).innerText();
+    const value = Number(
+      (/R\$\s([\d.]+,\d\d)/.exec(total)?.[1] ?? '').replace(/\./g, '').replace(',', '.'),
+    );
+    expect(primary + secondary).toBe(value);
+    expect(value).toBe(8940);
+    await expect(
+      area.getByText(/^Receita total registrada: R\$\s8\.940,00 em 126 pedidos$/),
+    ).toBeVisible();
+    await expect(
+      area.getByText(
+        'Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.',
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const revoked = area.locator('[data-floor-line="revoked"]');
+    await expect(revoked).toContainText('menos de 5 pedidos');
+    await expect(revoked).not.toContainText('R$');
+  });
+
+  test('each number opens its list, whose count repeats it, and Voltar returns', async ({
+    page,
+  }) => {
+    for (const row of FINANCE_NUMBERS) {
+      await page.goto(FINANCE_AREA);
+      await ownerArea(page).locator(`#numero-${row.slug}`).click();
+      await expect(page, row.slug).toHaveURL(new RegExp(`\\?area=financeiro&numero=${row.slug}$`));
+      await expect(financeTabs(page)).toHaveCount(0);
+      await expect(ownerArea(page).getByText(row.count), row.slug).toBeVisible();
+      await expectNoEnglish(page, row.slug);
+      const back = new RegExp(`\\?area=financeiro#numero-${row.slug}$`);
+      expect(await backLink(page).getAttribute('href'), row.slug).toMatch(back);
+      await backLink(page).click();
+      await expect(page).toHaveURL(back);
+    }
+  });
+
+  test('the attention rows open their lists, the product and the event', async ({ page }) => {
+    await page.goto(FINANCE_AREA);
+    const area = ownerArea(page);
+    await expect(area.locator('#atencao-pagantes-sumindo')).toContainText(
+      '40 pagantes da Comunidade VIP sem ação há mais de 30 dias',
+    );
+    await expect(area.locator('#atencao-pagantes-sumindo')).toContainText(
+      '22 em risco · 18 inativos · 11 com notificação ativa',
+    );
+    await expect(
+      area.locator('#atencao-vencendo').getByText('exemplo', { exact: true }),
+    ).toBeVisible();
+
+    await area.locator('#atencao-pagantes-sumindo').click();
+    await expect(page).toHaveURL(/\?area=financeiro&atencao=pagantes-sumindo$/);
+    await expect(area.getByRole('listitem')).toHaveCount(10);
+    await expect(area.getByText('e mais 30 membros', { exact: true })).toBeVisible();
+    await expectNoEnglish(page, 'pagantes');
+    const card = area.getByRole('listitem').first().getByRole('link');
+    const member = /membro=(om-\d\d)$/.exec((await card.getAttribute('href')) ?? '')?.[1];
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`&atencao=pagantes-sumindo&membro=${member}$`));
+    await expect(area.getByRole('heading', { name: 'Últimos 30 dias' })).toBeVisible();
+    await backLink(page).click();
+    await expect(page).toHaveURL(new RegExp(`&atencao=pagantes-sumindo#membro-${member}$`));
+
+    await page.goto(`${FINANCE_AREA}&atencao=vencendo`);
+    await expect(area.getByRole('listitem')).toHaveCount(0);
+    await expect(area.getByText('e mais 6 membros', { exact: true })).toBeVisible();
+    await expect(area.getByText('exemplo', { exact: true })).toHaveCount(1);
+
+    await page.goto(FINANCE_AREA);
+    await area.locator('#produto-s4').first().click();
+    await expect(page).toHaveURL(/\?area=financeiro&produto=s4$/);
+    await expect(area.getByRole('heading', { level: 3, name: 'Workshop gravado' })).toBeVisible();
+    await expect(backLink(page)).toHaveAttribute('href', /\?area=financeiro#produto-s4$/);
+
+    await page.goto(FINANCE_AREA);
+    await area.getByRole('link', { name: /Imersão presencial: vagas esgotadas/ }).click();
+    await expect(page).toHaveURL(/\?area=financeiro&vista=produtos#evento-u3$/);
+    await expect(financeTabs(page).getByRole('link', { name: 'Produtos' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  test('a group under 5 orders shows no value; the VIP line opens the VIP', async ({ page }) => {
+    await page.goto(FINANCE_AREA);
+    const area = ownerArea(page);
+    const app = sectionTitled(area, 'O que só o app sabe');
+    await expect(app).toContainText(/12 pedidos · R\$\s1\.807,00/);
+    for (const post of ['op-19', 'op-55']) {
+      const row = app.locator(`a[href$="post=${post}"]`);
+      await expect(row, post).toContainText('menos de 5 pedidos');
+      await expect(row, post).not.toContainText('R$');
+    }
+    await expect(app.locator('a[href$="post=op-11"]')).toContainText(/6 pedidos · R\$\s502,00/);
+    await expect(app).toContainText('Associação, não causa');
+    await app.locator('#produto-s2').click();
+    await expect(page).toHaveURL(/\?area=financeiro&produto=s2$/);
+    await expect(backLink(page)).toHaveAttribute('href', /\?area=financeiro#produto-s2$/);
+  });
+
+  test('a forged overview URL falls one level up', async ({ page }) => {
+    const toOverview = ['&numero=xyz', '&atencao=xyz', '&produto=xyz', '&numero=PRIMARIA'];
+    for (const query of toOverview) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(financeTabs(page), query).toHaveCount(1);
+      await expect(
+        ownerArea(page).getByRole('heading', { name: 'Números do mês' }),
+        query,
+      ).toBeVisible();
+    }
+    for (const [query, count] of [
+      ['&numero=parte-secundaria&membro=om-13', /^53% da receita do mês/],
+      ['&numero=recompra&membro=om-14', /^201 membros/],
+    ] as const) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(ownerArea(page).getByText(count), query).toBeVisible();
+      await expect(ownerArea(page).getByRole('heading', { name: 'Últimos 30 dias' })).toHaveCount(
+        0,
+      );
+    }
+  });
+});
+
+const FINANCE_OVERVIEW_VIEWS = [
+  '',
+  ...FINANCE_NUMBERS.map((row) => `&numero=${row.slug}`),
+  '&atencao=pagantes-sumindo',
+  '&atencao=vencendo',
+];
+
+for (const width of PHONE_WIDTHS) {
+  test(`dono-do-cliente financeiro: the overview and its lists at ${width}px, no sideways scroll`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const query of FINANCE_OVERVIEW_VIEWS) {
+      await page.goto(`${FINANCE_AREA}${query}`);
+      await expect(ownerArea(page), query).toBeVisible();
+      const overflow = await horizontalOverflow(page);
+      expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+      await expectNoEnglish(page, query);
+    }
+  });
+}
+
+test('dono-do-cliente financeiro: the overview and its lists at 1440x900, inside the phone', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const query of FINANCE_OVERVIEW_VIEWS) {
+    await page.goto(`${FINANCE_AREA}${query}`);
+    await expect(page.getByText('9:41', { exact: true })).toBeVisible();
+    const metrics = await screenMetrics(page);
+    expect(metrics.scrollWidth, query).toBeLessThanOrEqual(metrics.clientWidth);
+    const overflow = await pageOverflow(page);
+    expect(overflow.scrollWidth, query).toBeLessThanOrEqual(overflow.clientWidth);
+    expect(overflow.scrollHeight, query).toBeLessThanOrEqual(overflow.clientHeight + 1);
+    await expect(page.locator('[data-phone-screen]').locator('table:visible'), query).toHaveCount(
+      0,
+    );
+  }
 });
 
 const FINANCE_VIEWS = [

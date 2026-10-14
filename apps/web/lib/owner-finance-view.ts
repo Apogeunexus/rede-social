@@ -1,6 +1,7 @@
 import {
   FINANCE_OFFERS,
   type FinanceOfferId,
+  type FinancePeopleList,
   financeProductOffers,
   ownerFinanceIncludes,
   ownerFinanceWindow,
@@ -23,13 +24,28 @@ type SearchParams = Record<string, string | string[] | undefined>;
 /** The three tabs of the Financeiro area (quick 261014-dwc D-01). */
 export type FinanceTab = 'overview' | 'products' | 'buyers';
 
+/** The six numbers of Visão geral, each opening its list (D-07). */
+export type FinanceNumber =
+  | 'primary'
+  | 'secondary'
+  | 'share'
+  | 'rebought'
+  | 'timeToSecond'
+  | 'lifetime';
+
+/** The rows of "Precisa de atenção" that open a list of members (D-07). */
+export type FinanceAttentionList = 'vipFading' | 'expiring';
+
 /**
- * Where the Financeiro area stands in its cascade (D-01): the tab; under Produtos, the product, one
- * of its offers, a buyer of that offer and the list behind one of the buyer's insight numbers. Each
- * level is only ever set with the levels above it.
+ * Where the Financeiro area stands in its cascade (D-01): the tab; on Visão geral, the number or the
+ * attention row whose list is open; a product (under Produtos, or opened from Visão geral: PD-10),
+ * one of its offers; a member of the open list and the list behind one of their insight numbers.
+ * Each level is only ever set with the levels above it.
  */
 export interface OwnerFinanceView {
   tab: FinanceTab;
+  number: FinanceNumber | null;
+  attention: FinanceAttentionList | null;
   productId: string | null;
   offerId: FinanceOfferId | null;
   memberId: string | null;
@@ -38,6 +54,22 @@ export interface OwnerFinanceView {
 
 /** `?vista=` per tab; Visão geral has none. */
 const TAB_SLUGS = { products: 'produtos', buyers: 'quem-compra' } as const;
+
+/** The `?numero=` slug of each overview number. */
+export const FINANCE_NUMBER_SLUGS: Readonly<Record<FinanceNumber, string>> = {
+  primary: 'primaria',
+  secondary: 'secundaria',
+  share: 'parte-secundaria',
+  rebought: 'recompra',
+  timeToSecond: 'tempo-recompra',
+  lifetime: 'por-membro',
+};
+
+/** The `?atencao=` slug of each attention row that opens members. */
+export const FINANCE_ATTENTION_SLUGS: Readonly<Record<FinanceAttentionList, string>> = {
+  vipFading: 'pagantes-sumindo',
+  expiring: 'vencendo',
+};
 
 const PRODUCT_IDS: readonly string[] = tenantOwnerPanel.store.products.map((row) => row.id);
 const OFFER_IDS: readonly FinanceOfferId[] = FINANCE_OFFERS.map((offer) => offer.id);
@@ -48,7 +80,7 @@ const SOLD_OFFERS: ReadonlySet<FinanceOfferId> = (() => {
   return new Set(OFFER_IDS.filter((id) => byOffer[id].orders > 0));
 })();
 
-/** The id of a product card: Voltar from its detail lands on it. */
+/** The id of a product card (or of its row on Visão geral): Voltar from its detail lands on it. */
 export function financeProductAnchor(productId: string): string {
   return `produto-${productId}`;
 }
@@ -58,9 +90,27 @@ export function financeOfferAnchor(offerId: FinanceOfferId): string {
   return `oferta-${offerId}`;
 }
 
-/** The id of a member card in a buyers list: Voltar from the insights lands on it. */
+/** The id of a member card in a list: Voltar from the insights lands on it. */
 export function financeMemberAnchor(memberId: string): string {
   return `membro-${memberId}`;
+}
+
+/** The id of an overview number: Voltar from its list lands on it. */
+export function financeNumberAnchor(number: FinanceNumber): string {
+  return `numero-${FINANCE_NUMBER_SLUGS[number]}`;
+}
+
+/** The id of an attention row: Voltar from its list lands on it. */
+export function financeAttentionAnchor(attention: FinanceAttentionList): string {
+  return `atencao-${FINANCE_ATTENTION_SLUGS[attention]}`;
+}
+
+/** The people list behind an open number or attention row; null for one that lists no one. */
+export function financePeopleListOf(
+  view: Pick<OwnerFinanceView, 'number' | 'attention'>,
+): FinancePeopleList | null {
+  if (view.number) return view.number === 'share' ? null : { kind: view.number };
+  return view.attention ? { kind: view.attention } : null;
 }
 
 /** A query value only when it is a single string, exactly one of `allowed`. */
@@ -85,36 +135,58 @@ function parseOffer(params: SearchParams, productId: string | null): FinanceOffe
   return financeProductOffers(productId).some((offer) => offer.id === id) ? id : null;
 }
 
-/** The member the query names, when the opened offer's buyers hold them (no names read here). */
-function parseMember(params: SearchParams, offerId: FinanceOfferId | null): string | null {
+/** The member the query names, when the open list holds them (no names read here). */
+function parseMember(params: SearchParams, list: FinancePeopleList | null): string | null {
   const id = typeof params.membro === 'string' ? params.membro : undefined;
-  if (!id || !offerId) return null;
-  return ownerFinanceIncludes({ kind: 'offer', offerId }, id) ? id : null;
+  if (!id || !list) return null;
+  return ownerFinanceIncludes(list, id) ? id : null;
 }
 
 /**
  * The view the query asks for (untrusted), read level by level; an invalid value at any level falls
  * to the level above, never to an error (D-01):
  * 1. `vista` is `produtos` or `quem-compra`, else Visão geral.
- * 2. `produto` (Produtos only) is a store product.
- * 3. `oferta` is one of the opened product's offers with orders in the last 30 days.
- * 4. `membro` must be a buyer of the opened offer (`ownerFinanceIncludes`).
- * 5. `lista` is one of OWNER_MEMBER_LISTS, only with a member.
+ * 2. On Visão geral, `numero` is one of FINANCE_NUMBER_SLUGS; else `atencao` one of
+ *    FINANCE_ATTENTION_SLUGS.
+ * 3. `produto` is a store product, under Produtos or on Visão geral with no number nor attention
+ *    (PD-10: the stalled product's row and the VIP line open it).
+ * 4. `oferta` is one of the opened product's offers with orders in the last 30 days.
+ * 5. `membro` must be in the open list (`ownerFinanceIncludes`): the offer's buyers, or the people
+ *    of the number or attention row (the share of add-ons lists products, not people).
+ * 6. `lista` is one of OWNER_MEMBER_LISTS, only with a member.
  * Only allow-listed constants ever reach markup or URLs.
  */
 export function parseOwnerFinanceView(params: SearchParams): OwnerFinanceView {
   const tab = bySlug(params.vista, TAB_SLUGS) ?? 'overview';
-  const productId = tab === 'products' ? (pick(params.produto, PRODUCT_IDS) ?? null) : null;
+  const number = tab === 'overview' ? (bySlug(params.numero, FINANCE_NUMBER_SLUGS) ?? null) : null;
+  const attention =
+    tab === 'overview' && number === null
+      ? (bySlug(params.atencao, FINANCE_ATTENTION_SLUGS) ?? null)
+      : null;
+  const productId =
+    tab === 'products' || (tab === 'overview' && number === null && attention === null)
+      ? (pick(params.produto, PRODUCT_IDS) ?? null)
+      : null;
   const offerId = parseOffer(params, productId);
-  const memberId = parseMember(params, offerId);
+  const people: FinancePeopleList | null = offerId
+    ? { kind: 'offer', offerId }
+    : productId
+      ? null
+      : financePeopleListOf({ number, attention });
+  const memberId = parseMember(params, people);
   const list = memberId ? (pick(params.lista, OWNER_MEMBER_LISTS) ?? null) : null;
-  return { tab, productId, offerId, memberId, list };
+  return { tab, number, attention, productId, offerId, memberId, list };
 }
 
-/** The link to a cascade view: the area, then `vista`, `produto`, `oferta`, `membro` and `lista`. */
+/**
+ * The link to a cascade view: the area, then `vista`, `numero`, `atencao`, `produto`, `oferta`,
+ * `membro` and `lista` in that order.
+ */
 export function ownerFinanceHref(view: OwnerFinanceView): string {
   let query = '';
   if (view.tab !== 'overview') query += `&vista=${TAB_SLUGS[view.tab]}`;
+  if (view.number) query += `&numero=${FINANCE_NUMBER_SLUGS[view.number]}`;
+  if (view.attention) query += `&atencao=${FINANCE_ATTENTION_SLUGS[view.attention]}`;
   if (view.productId) query += `&produto=${view.productId}`;
   if (view.offerId) query += `&oferta=${view.offerId}`;
   if (view.memberId) query += `&membro=${view.memberId}`;
@@ -124,7 +196,8 @@ export function ownerFinanceHref(view: OwnerFinanceView): string {
 
 /**
  * "Voltar" one level up (D-01): the parent view's link landing on what was closed (the insight
- * number, the member card, the offer card, the product card). Null on a tab screen.
+ * number, the member card, the offer card, the product card or row, the attention row, the overview
+ * number). Null on a tab screen.
  */
 export function financeBackHref(view: OwnerFinanceView): string | null {
   if (view.list) {
@@ -139,10 +212,24 @@ export function financeBackHref(view: OwnerFinanceView): string | null {
   if (view.productId) {
     return `${ownerFinanceHref({ ...view, productId: null })}#${financeProductAnchor(view.productId)}`;
   }
+  if (view.attention) {
+    return `${ownerFinanceHref({ ...view, attention: null })}#${financeAttentionAnchor(view.attention)}`;
+  }
+  if (view.number) {
+    return `${ownerFinanceHref({ ...view, number: null })}#${financeNumberAnchor(view.number)}`;
+  }
   return null;
 }
 
 /** A tab screen with nothing open below it. */
 export function financeTabView(tab: FinanceTab): OwnerFinanceView {
-  return { tab, productId: null, offerId: null, memberId: null, list: null };
+  return {
+    tab,
+    number: null,
+    attention: null,
+    productId: null,
+    offerId: null,
+    memberId: null,
+    list: null,
+  };
 }

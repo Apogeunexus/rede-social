@@ -1,4 +1,4 @@
-import { financeProductOffers } from './owner-finance';
+import { ownerFinanceContentSales } from './owner-finance';
 import { ownerMemberInsights } from './owner-member-insights';
 import {
   daysBefore,
@@ -710,25 +710,19 @@ const REACH_WEIGHT: Record<EngagementBand, number> = {
 interface Business {
   reactivated?: number;
   rsvps?: readonly (readonly [string, number])[];
-  orders?: readonly (readonly [string, number])[];
   vitrine?: number;
 }
 
 /**
  * What only the app knows, per publication (measured associations): members back after 30+ days
- * idle, RSVPs "vou" and paid orders by members who interacted with it, within 7 days after, and the
- * VIP subscriptions while a VIP post was the community's shop window. Every other item has none.
+ * idle, RSVPs "vou" by members who interacted with it, within 7 days after, and the VIP
+ * subscriptions while a VIP post was the community's shop window. Every other item has none. The
+ * paid orders tied to a publication are the Financeiro's single order list's
+ * (`ownerFinanceContentSales`, quick 261014-dwc D-02).
  */
 const BUSINESS: Readonly<Record<string, Business>> = {
   'op-02': { rsvps: [['u2', 31]] },
-  'op-11': {
-    reactivated: 7,
-    rsvps: [['u2', 21]],
-    orders: [
-      ['s3', 4],
-      ['s2', 2],
-    ],
-  },
+  'op-11': { reactivated: 7, rsvps: [['u2', 21]] },
   'op-14': {
     reactivated: 4,
     rsvps: [
@@ -736,19 +730,11 @@ const BUSINESS: Readonly<Record<string, Business>> = {
       ['u3', 6],
     ],
   },
-  'op-15': { reactivated: 3, vitrine: 6, orders: [['s2', 6]] },
-  'op-19': { reactivated: 5, orders: [['s3', 3]] },
+  'op-15': { reactivated: 3, vitrine: 6 },
+  'op-19': { reactivated: 5 },
   'op-22': { reactivated: 2 },
-  'op-41': {
-    reactivated: 14,
-    rsvps: [['e3', 11]],
-    orders: [
-      ['s3', 5],
-      ['s2', 3],
-      ['s1', 1],
-    ],
-  },
-  'op-55': { reactivated: 5, orders: [['s3', 2]] },
+  'op-41': { reactivated: 14, rsvps: [['e3', 11]] },
+  'op-55': { reactivated: 5 },
   'os-02': { rsvps: [['u1', 12]] },
 };
 
@@ -766,16 +752,6 @@ export interface ContentDetail {
   orders: { count: number; cents: number; products: { productId: string; count: number }[] };
   /** VIP posts only, while they were the VIP's shop window. */
   vitrine: { subscriptions: number } | null;
-}
-
-/**
- * A buyer tied to a publication was already a member, so the purchase is secondary: the product's
- * add-on offer price (quick 261014-dwc D-02).
- */
-function unitCents(productId: string): number {
-  const addon = financeProductOffers(productId).find((offer) => offer.kind === 'addon');
-  if (!addon) throw new Error(`no add-on offer for ${productId}`);
-  return addon.priceCents;
 }
 
 /**
@@ -832,7 +808,7 @@ export function ownerContentDetail(itemId: string): ContentDetail {
   const item = ownerContentItem(itemId);
   const index = ownerContentItems.indexOf(item);
   const business = BUSINESS[itemId] ?? {};
-  const products = (business.orders ?? []).map(([productId, count]) => ({ productId, count }));
+  const sales = ownerFinanceContentSales().posts.find((post) => post.postId === itemId);
   const split = splitReach(item.reach.value);
   return {
     velocity48h: curve(item.likes + item.comments, item.kind),
@@ -853,11 +829,9 @@ export function ownerContentDetail(itemId: string): ContentDetail {
         : null,
     reactivated: business.reactivated ?? 0,
     rsvps: (business.rsvps ?? []).map(([eventId, members]) => ({ eventId, members })),
-    orders: {
-      count: products.reduce((sum, row) => sum + row.count, 0),
-      cents: products.reduce((sum, row) => sum + row.count * unitCents(row.productId), 0),
-      products,
-    },
+    orders: sales
+      ? { count: sales.orders, cents: sales.cents, products: sales.products }
+      : { count: 0, cents: 0, products: [] },
     vitrine: business.vitrine === undefined ? null : { subscriptions: business.vitrine },
   };
 }

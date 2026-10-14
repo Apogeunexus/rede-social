@@ -115,8 +115,9 @@ export const tenantAdminPanel: TenantAdminPanel = {
       delta: { amount: 5, kind: 'count', direction: 'up', good: true, basis: 'none' },
     },
     enteredAtRisk: { count: 23, withPush: 9 },
+    // The 7-day orders of the Financeiro's single order list (quick 261014-dwc PD-7).
     orders: {
-      count: 14,
+      count: 45,
       delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
       manualGrants: 3,
     },
@@ -159,10 +160,11 @@ export const tenantAdminPanel: TenantAdminPanel = {
     { id: 'c-iniciantes', name: 'Iniciantes', exclusive: false, interactions: 410 },
     { id: 'c-eventos', name: 'Eventos', exclusive: false, interactions: 220 },
   ],
+  // Entries and add-ons of the last 7 days, from the single order list (quick 261014-dwc PD-7).
   store: [
-    { id: 's1', product: 'Mentoria em grupo', orders: 6 },
-    { id: 's2', product: 'Comunidade VIP', orders: 5 },
-    { id: 's3', product: 'E-book', orders: 3 },
+    { id: 's1', product: 'Mentoria em grupo', orders: 3 },
+    { id: 's2', product: 'Comunidade VIP', orders: 7 },
+    { id: 's3', product: 'E-book', orders: 35 },
     { id: 's4', product: 'Workshop gravado', orders: 0 },
   ],
   moderation: { removedComments: 2, blocks: 1, unblocks: 0, roleChanges: 1 },
@@ -316,7 +318,7 @@ export const tenantStaffPanel: TenantStaffPanel = {
   },
   store: {
     orders7d: {
-      count: 14,
+      count: 45,
       delta: { amount: 2, kind: 'count', direction: 'down', good: false, basis: 'none' },
     },
     productsWithoutOrder30d: { count: 1, names: ['Workshop gravado'] },

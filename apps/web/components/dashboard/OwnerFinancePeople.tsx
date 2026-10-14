@@ -1,14 +1,31 @@
 import { formatBrl } from '@rede-social/contracts/money';
 import {
+  type FinancePerson,
   financeOffer,
+  financeProductOffers,
+  ownerFinanceAttention,
   ownerFinancePeople,
   ownerFinanceProduct,
+  ownerFinanceSummary,
+  ownerFinanceWindow,
 } from '@rede-social/module-dashboard/fixtures';
-import { financeBackHref, type OwnerFinanceView, ownerFinanceHref } from '@/lib/owner-finance-view';
+import { ActionCard, BarList, percentOf } from '@rede-social/module-dashboard/ui';
+import { BellRing, HeartHandshake } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  type FinanceAttentionList,
+  type FinanceNumber,
+  financeBackHref,
+  financePeopleListOf,
+  type OwnerFinanceView,
+  ownerFinanceHref,
+} from '@/lib/owner-finance-view';
 import { BackLink } from './BackLink';
-import { type DashboardT, momentText } from './format';
+import { ExamplePill } from './ExamplePill';
+import { type DashboardT, exampleBadge, formatCount, formatPercent, momentText } from './format';
 import { PeopleCards } from './OwnerContentPeople';
-import { PanelSection } from './PanelSection';
+import { financeProducts } from './OwnerFinanceProducts';
+import { PanelSection, PreviewAction } from './PanelSection';
 
 /*
  * The only web file that reads `ownerFinancePeople`: who bought, what and for how much (D-11) reach
@@ -46,6 +63,225 @@ export function OwnerFinancePeople({ t, view }: { t: DashboardT; view: OwnerFina
           showBand
           moreText={(more) => t(`${KEY}.more`, { count: more })}
         />
+      </PanelSection>
+    </div>
+  );
+}
+
+const LISTS = 'tenantOwner.finance.lists';
+
+interface ListBody {
+  title: string;
+  count: ReactNode;
+  lead?: (person: FinancePerson) => string;
+  more?: (more: number) => string;
+  body?: ReactNode;
+}
+
+/** The share of add-ons by product (PD-11): entry against add-on revenue, nothing below it. */
+function ShareBody({ t }: { t: DashboardT }) {
+  const { byOffer } = ownerFinanceWindow(0, 29);
+  const rows = financeProducts().map((product) => {
+    const cents = (kind: 'entry' | 'addon') =>
+      financeProductOffers(product.id)
+        .filter((offer) => offer.kind === kind)
+        .reduce((sum, offer) => sum + byOffer[offer.id].cents, 0);
+    return { product, entry: cents('entry'), addon: cents('addon') };
+  });
+  const max = Math.max(...rows.flatMap((row) => [row.entry, row.addon]));
+  const bars = (kind: 'entry' | 'addon') => (
+    <BarList
+      max={max}
+      rows={rows.map((row) => ({
+        id: `${kind}-${row.product.id}`,
+        label: row.product.name,
+        value: row[kind],
+        display: formatBrl(row[kind]),
+        rate:
+          row.entry + row.addon === 0
+            ? undefined
+            : t(`${LISTS}.share.rate`, {
+                percent: formatPercent(percentOf(row[kind], row.entry + row.addon)),
+              }),
+        highlight: row[kind] > 0 && row[kind] >= row[kind === 'entry' ? 'addon' : 'entry'],
+      }))}
+    />
+  );
+  return (
+    <>
+      <p className="text-xs font-bold text-text-secondary">{t(`${LISTS}.share.addon`)}</p>
+      {bars('addon')}
+      <p className="text-xs font-bold text-text-secondary">{t(`${LISTS}.share.entry`)}</p>
+      {bars('entry')}
+      <p className="text-xs text-text-secondary">{t(`${LISTS}.share.note`)}</p>
+    </>
+  );
+}
+
+/**
+ * The list behind an overview number or an attention row (D-07), a deeper step under its "Voltar":
+ * its count line repeats the number; the cards are the roster's sample of it, each opening the
+ * member. The share of add-ons lists products, not people (PD-11); the accesses ending this week
+ * have no member in the sample, so it says how many and offers the disabled action (PD-17).
+ */
+export function FinanceNumberList({ t, view }: { t: DashboardT; view: OwnerFinanceView }) {
+  const back = financeBackHref(view);
+  if ((!view.number && !view.attention) || back === null) {
+    throw new Error('a finance list with no number');
+  }
+  const summary = ownerFinanceSummary(0);
+  const { vipFading, expiring } = ownerFinanceAttention();
+  const offerName = (person: FinancePerson) => financeOffer(person.offerId).composition;
+  const when = (person: FinancePerson) => momentText(t, person.when);
+  const members = (more: number) => t('tenantOwner.bandMembers.more', { count: more });
+  const numbers: Record<FinanceNumber, () => ListBody> = {
+    primary: () => ({
+      title: t('tenantOwner.finance.overview.numbers.primary'),
+      count: t(`${LISTS}.primary.count`, {
+        value: formatBrl(summary.primary.cents),
+        count: summary.primary.orders,
+      }),
+      lead: (person) =>
+        t(`${LISTS}.primary.lead`, {
+          offer: offerName(person),
+          value: formatBrl(person.cents),
+          when: when(person),
+        }),
+      more: (more) => t(`${LISTS}.primary.more`, { count: more }),
+    }),
+    secondary: () => ({
+      title: t('tenantOwner.finance.overview.numbers.secondary'),
+      count: t(`${LISTS}.secondary.count`, {
+        value: formatBrl(summary.secondary.cents),
+        count: summary.secondary.orders,
+      }),
+      lead: (person) =>
+        t(`${LISTS}.secondary.lead`, {
+          offer: offerName(person),
+          value: formatBrl(person.cents),
+          when: when(person),
+        }),
+      more: (more) => t(`${KEY}.more`, { count: more }),
+    }),
+    share: () => ({
+      title: t('tenantOwner.finance.overview.numbers.share'),
+      count: t(`${LISTS}.share.count`, {
+        percent: formatPercent(percentOf(summary.secondary.cents, summary.total.cents)),
+        value: formatBrl(summary.secondary.cents),
+        total: formatBrl(summary.total.cents),
+      }),
+      body: <ShareBody t={t} />,
+    }),
+    rebought: () => ({
+      title: t('tenantOwner.finance.overview.numbers.rebought'),
+      count: t(`${LISTS}.rebought.count`, {
+        count: summary.rebought,
+        value: formatCount(summary.rebought),
+        percent: formatPercent(percentOf(summary.rebought, summary.base)),
+      }),
+      lead: (person) =>
+        t(`${LISTS}.rebought.lead`, { offer: offerName(person), when: when(person) }),
+      more: members,
+    }),
+    timeToSecond: () => ({
+      title: t('tenantOwner.finance.overview.numbers.timeToSecond'),
+      count: t(`${LISTS}.timeToSecond.count`, {
+        days: Math.round(summary.timeToSecondDays),
+        count: summary.rebought,
+        value: formatCount(summary.rebought),
+      }),
+      lead: (person) => t(`${LISTS}.timeToSecond.lead`, { days: person.days ?? 0 }),
+      more: members,
+    }),
+    lifetime: () => ({
+      title: t('tenantOwner.finance.overview.numbers.lifetime'),
+      count: t(`${LISTS}.lifetime.count`, {
+        value: formatBrl(Math.round(summary.lifetimeCents / summary.base)),
+        total: formatBrl(summary.lifetimeCents),
+        members: formatCount(summary.base),
+      }),
+      lead: (person) => t(`${LISTS}.lifetime.lead`, { value: formatBrl(person.cents) }),
+      more: members,
+    }),
+  };
+  const attentions: Record<FinanceAttentionList, () => ListBody> = {
+    vipFading: () => ({
+      title: t(`${LISTS}.vipFading.title`),
+      count: t(`${LISTS}.vipFading.count`, {
+        count: vipFading.atRisk + vipFading.inactive,
+        atRisk: vipFading.atRisk,
+        inactive: vipFading.inactive,
+      }),
+      lead: (person) =>
+        t(`${LISTS}.vipFading.lead`, { when: when(person), value: formatBrl(person.cents) }),
+      more: members,
+      body: (
+        <ActionCard
+          icon={HeartHandshake}
+          title={t('tenantOwner.finance.overview.next.fading.title')}
+          detail={t(`${LISTS}.vipFading.action`, { push: vipFading.withPush })}
+          action={
+            <PreviewAction variant="outline">
+              {t('tenantOwner.finance.overview.next.fading.action')}
+            </PreviewAction>
+          }
+        />
+      ),
+    }),
+    expiring: () => ({
+      title: t(`${LISTS}.expiring.title`),
+      count: (
+        <span className="flex flex-wrap items-center gap-2">
+          {t(`${LISTS}.expiring.count`, {
+            count: expiring.value.count,
+            product: ownerFinanceProduct(expiring.value.productId).name,
+          })}
+          <ExamplePill text={exampleBadge(t, expiring)} />
+        </span>
+      ),
+      more: members,
+      body: (
+        <ActionCard
+          icon={BellRing}
+          title={t('tenantOwner.finance.overview.next.expiring.title')}
+          detail={t('tenantOwner.finance.overview.next.expiring.detail', {
+            count: expiring.value.count,
+          })}
+          action={
+            <PreviewAction variant="outline">
+              {t('tenantOwner.finance.overview.next.expiring.action')}
+            </PreviewAction>
+          }
+        />
+      ),
+    }),
+  };
+  const spec = view.number
+    ? numbers[view.number]()
+    : view.attention
+      ? attentions[view.attention]()
+      : null;
+  if (!spec) throw new Error('a finance list with no number');
+  const list = financePeopleListOf(view);
+  const people = list ? ownerFinancePeople(list) : null;
+  const { lead, more } = spec;
+  return (
+    <div className="flex min-w-0 flex-col gap-3">
+      <BackLink href={back} label={t('tenantOwner.memberDetail.back')} />
+      <PanelSection title={spec.title} prominent>
+        <p className="text-sm text-text-secondary">{spec.count}</p>
+        {people && more ? (
+          <PeopleCards
+            t={t}
+            people={people.people}
+            total={people.total}
+            hrefOf={(memberId) => ownerFinanceHref({ ...view, memberId, list: null })}
+            leadOf={lead ?? (() => '')}
+            showBand
+            moreText={more}
+          />
+        ) : null}
+        {spec.body}
       </PanelSection>
     </div>
   );

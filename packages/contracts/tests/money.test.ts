@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatBrl,
   formatBrlCompact,
+  formatBrlWhole,
   parseBrlToCents,
   priceCentsSchema,
   STORE_MAX_PRICE_CENTS,
@@ -22,6 +23,12 @@ describe('money (08.2 P11, STORE-02): integer cents end to end', () => {
     expect(formatBrl(STORE_MAX_PRICE_CENTS)).toBe(`R$${NBSP}100.000,00`);
     // The ASCII-space spelling is NOT what Intl emits.
     expect(formatBrl(1990)).not.toBe('R$ 19,90');
+  });
+
+  it('formatBrlWhole drops only zero centavos, on one line', () => {
+    expect(formatBrlWhole(416200)).toBe(`R$${NBSP}4.162`);
+    expect(formatBrlWhole(7361)).toBe(formatBrl(7361));
+    expect(formatBrlWhole(0)).toBe(`R$${NBSP}0`);
   });
 
   it('formatBrlCompact shortens large totals and keeps them on one line', () => {

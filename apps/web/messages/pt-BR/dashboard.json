@@ -431,28 +431,6 @@
         "sentence": "{presences} das presenças vêm de {members} dos membros (superfãs e engajados).",
         "footnote": "Cada presença conta na faixa de quem foi no dia anterior ao evento."
       },
-      "sales": {
-        "title": "Vendas do mês",
-        "value": "Valor registrado",
-        "orders": "Pedidos",
-        "notice": "Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido."
-      },
-      "revenue": {
-        "title": "Receita por produto",
-        "summary": "{product} lidera: {value}",
-        "orders": "{count, plural, =0 {nenhum pedido} one {# pedido} other {# pedidos}}"
-      },
-      "access": {
-        "title": "Acessos e renovação",
-        "expiring": "Acessos que vencem em 7 dias",
-        "renewal": "Taxa de renovação",
-        "renewalNote": "{renewed} de {expired} renovaram em 30 dias"
-      },
-      "conversion": {
-        "title": "Conversão por produto",
-        "summary": "visitas à página → compra",
-        "rate": "{orders} de {visits} visitas"
-      },
       "queue": {
         "title": "Fila agora",
         "awaiting": "Aguardando resposta",
@@ -1015,6 +993,127 @@
           "count": "{count, plural, =0 {nenhuma compra} one {# compra} other {# compras}} nos últimos 30 dias · mais recentes primeiro",
           "bought": "Comprou {when} · {value}",
           "more": "e mais {count, plural, one {# compra} other {# compras}}"
+        },
+        "overview": {
+          "notice": "Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.",
+          "numbers": {
+            "title": "Números do mês",
+            "primary": "Receita primária",
+            "primaryNote": "{count, plural, one {# entrada} other {# entradas}} · valor médio {average}",
+            "secondary": "Receita secundária",
+            "secondaryNote": "{count, plural, one {# compra adicional} other {# compras adicionais}}",
+            "share": "Parte da secundária no total",
+            "shareNote": "da receita do mês",
+            "rebought": "Membros que já compraram de novo",
+            "reboughtNote": "{percent} da base",
+            "timeToSecond": "Tempo médio até a segunda compra",
+            "timeToSecondNote": "desde a entrada",
+            "days": "{count, plural, one {# dia} other {# dias}}",
+            "lifetime": "Receita por membro na vida toda",
+            "lifetimeNote": "primária e secundária, desde a abertura",
+            "total": "Receita total registrada: {value} em {count, plural, one {# pedido} other {# pedidos}}",
+            "revoked": "Cancelamentos: {count, plural, one {# pedido} other {# pedidos}} · {value}, fora da receita",
+            "revokedFloor": "Cancelamentos: menos de {floor} pedidos, fora da receita"
+          },
+          "attention": {
+            "title": "Precisa de atenção",
+            "vipFading": "{count} pagantes da Comunidade VIP sem ação há mais de 30 dias",
+            "vipFadingNote": "{atRisk} em risco · {inactive} inativos · {push} com notificação ativa",
+            "expiring": "{count, plural, one {# acesso vence} other {# acessos vencem}} nos próximos 7 dias · {product}",
+            "expiringNote": "Um ano depois da compra de entrada",
+            "stalled": "{product}: nenhuma venda há {days} dias",
+            "stalledNote": "Toque para ver o produto e as ofertas",
+            "fullEvent": "{event}: vagas esgotadas e {count} na lista de espera",
+            "fullEventNote": "Evento pago em {date}"
+          },
+          "weekly": {
+            "title": "Receita por semana",
+            "primary": "Receita primária (entradas), em reais",
+            "secondary": "Receita secundária (compras adicionais), em reais",
+            "label": "{title}: as últimas 12 semanas e as 12 anteriores",
+            "thousands": "{value} mil"
+          },
+          "sources": {
+            "title": "De onde vem a receita",
+            "byProduct": "Por produto",
+            "byBand": "Pela faixa de hoje de quem comprou",
+            "rate": "{count, plural, one {# pedido} other {# pedidos}} · {percent}",
+            "noOrders": "nenhum pedido",
+            "floor": "menos de {floor} pedidos",
+            "idle": "Em risco e inativos não aparecem: comprar é uma ação, e eles não agiram nos últimos 30 dias.",
+            "seeProducts": "Ver produtos",
+            "seeBuyers": "Ver quem compra"
+          },
+          "app": {
+            "title": "O que só o app sabe",
+            "content": "Vendas de quem interagiu com uma publicação até 7 dias antes",
+            "events": "Vendas de quem foi a um evento até 7 dias antes",
+            "event": "{name} · {date}: {value}",
+            "value": "{count, plural, one {# pedido} other {# pedidos}} · {value}",
+            "floor": "menos de {floor} pedidos",
+            "ofRevenue": "({percent} da receita)",
+            "vip": "Comunidade VIP: receita e uso",
+            "vipLine": "{value} em 30 dias · {active} ativos na semana de {holders} com acesso",
+            "note": "Associação, não causa: a compra aconteceu depois da interação, o que não prova que uma levou à outra. Cada pedido conta uma vez no total."
+          },
+          "next": {
+            "title": "Próximos passos",
+            "vip": {
+              "title": "Oferecer a VIP a quem entrou pelo E-book",
+              "detail": "{count} superfãs e engajados entraram pelo E-book e ainda não têm a VIP.",
+              "action": "Enviar oferta"
+            },
+            "fading": {
+              "title": "Recuperar pagantes que sumiram",
+              "detail": "{count} pagantes da VIP sem ação há mais de 30 dias, {push} com notificação ativa.",
+              "action": "Avisar sobre o próximo encontro"
+            },
+            "expiring": {
+              "title": "Lembrar quem tem acesso vencendo",
+              "detail": "{count, plural, one {# acesso vence} other {# acessos vencem}} nos próximos 7 dias.",
+              "action": "Enviar lembrete de renovação"
+            }
+          }
+        },
+        "lists": {
+          "primary": {
+            "count": "{value} em {count, plural, one {# entrada} other {# entradas}} nos últimos 30 dias · mais recentes primeiro",
+            "lead": "Entrou por {offer} · {value} · {when}",
+            "more": "e mais {count, plural, one {# entrada} other {# entradas}}"
+          },
+          "secondary": {
+            "count": "{value} em {count, plural, one {# compra adicional} other {# compras adicionais}} nos últimos 30 dias · mais recentes primeiro",
+            "lead": "Comprou {offer} · {value} · {when}"
+          },
+          "share": {
+            "count": "{percent} da receita do mês veio de compras adicionais: {value} de {total}.",
+            "rate": "{percent} do produto",
+            "addon": "Compras adicionais, por produto",
+            "entry": "Entradas, por produto",
+            "note": "O percentual é a parte de cada tipo de compra na receita do produto nos últimos 30 dias."
+          },
+          "rebought": {
+            "count": "{value} {count, plural, one {membro} other {membros}} · {percent} da base · segunda compra mais recente primeiro",
+            "lead": "Segunda compra: {offer} · {when}"
+          },
+          "timeToSecond": {
+            "count": "Média de {days, plural, one {# dia} other {# dias}} até a segunda compra, em {value} {count, plural, one {membro} other {membros}} · mais rápidos primeiro",
+            "lead": "{days, plural, =0 {Comprou de novo no dia da entrada} one {# dia até a segunda compra} other {# dias até a segunda compra}}"
+          },
+          "lifetime": {
+            "count": "{value} por membro na vida toda ({total} em {members} membros) · quem mais pagou primeiro",
+            "lead": "Pagou {value} desde que entrou"
+          },
+          "vipFading": {
+            "title": "Pagantes da VIP que sumiram",
+            "count": "{count} pagantes da Comunidade VIP sem ação há mais de 30 dias: {atRisk} em risco e {inactive} inativos · quem sumiu há menos tempo primeiro",
+            "lead": "Pagou a VIP {when} · {value}",
+            "action": "Convidar para o próximo encontro, {push} deles com notificação ativa."
+          },
+          "expiring": {
+            "title": "Acessos que vencem em 7 dias",
+            "count": "{count, plural, one {# acesso} other {# acessos}} da {product} vencem nos próximos 7 dias"
+          }
         }
       }
     },

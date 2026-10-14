@@ -619,7 +619,8 @@ describe('what only the app knows (D-07)', () => {
       }
     }
     expect(sales.total).toEqual({ orders: distinct.size, cents });
-    expect(sales.total.orders).toBeGreaterThanOrEqual(5);
+    // Pinned once built: 2 / 3 / 6 / 4 per event; an order after two events counts once.
+    expect(sales.total).toEqual({ orders: 13, cents: 208000 });
   });
 
   it('puts the VIP revenue next to the VIP’s use', () => {
