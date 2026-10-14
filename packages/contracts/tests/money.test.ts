@@ -25,16 +25,19 @@ describe('money (08.2 P11, STORE-02): integer cents end to end', () => {
     expect(formatBrl(1990)).not.toBe('R$ 19,90');
   });
 
-  it('formatBrlWhole drops only zero centavos, on one line', () => {
+  it('formatBrlWhole rounds to the nearest real, on one line (quick 261014-ia8 F-8)', () => {
     expect(formatBrlWhole(416200)).toBe(`R$${NBSP}4.162`);
-    expect(formatBrlWhole(7361)).toBe(formatBrl(7361));
+    expect(formatBrlWhole(7361)).toBe(`R$${NBSP}74`);
+    expect(formatBrlWhole(4335)).toBe(`R$${NBSP}43`);
     expect(formatBrlWhole(0)).toBe(`R$${NBSP}0`);
   });
 
-  it('formatBrlCompact shortens large totals and keeps them on one line', () => {
+  it('formatBrlCompact shortens large totals and has no centavos below a thousand', () => {
     expect(formatBrlCompact(1438000)).toBe(`R$${NBSP}14,4${NBSP}mil`);
     expect(formatBrlCompact(150000000)).toBe(`R$${NBSP}1,5${NBSP}mi`);
-    expect(formatBrlCompact(99950)).toBe(formatBrl(99950));
+    expect(formatBrlCompact(33200)).toBe(`R$${NBSP}332`);
+    expect(formatBrlCompact(99950)).toBe(`R$${NBSP}1${NBSP}mil`);
+    expect(formatBrlCompact(0)).toBe(`R$${NBSP}0`);
   });
 
   it.each([

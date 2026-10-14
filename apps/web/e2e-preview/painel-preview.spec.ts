@@ -474,7 +474,7 @@ const OWNER_AREA_CASES: { slug: string; tab: string; heading: string; pills: num
   // The three of Lista de espera and the receita line of Próximos eventos (quick 261013-p31).
   { slug: 'eventos', tab: 'Eventos', heading: 'Próximos eventos', pills: 4 },
   // The accesses ending and the full event of Precisa de atenção, and the expiring next step.
-  { slug: 'financeiro', tab: 'Financeiro', heading: 'Números do mês', pills: 3 },
+  { slug: 'financeiro', tab: 'Financeiro', heading: 'Números', pills: 3 },
   { slug: 'atendimento', tab: 'Atendimento', heading: 'Fila agora', pills: 1 },
 ];
 
@@ -2813,7 +2813,10 @@ function productCards(area: Locator) {
 }
 
 async function expectNoEnglish(page: Page, where: string) {
-  expect(await ownerArea(page).innerText(), where).not.toMatch(ENGLISH_WORDS);
+  const text = await ownerArea(page).innerText();
+  expect(text, where).not.toMatch(ENGLISH_WORDS);
+  // "p.p." is jargon: the Financeiro says "pontos percentuais" (quick 261014-ia8 F-10).
+  expect(text, where).not.toContain('p.p.');
 }
 
 test.describe('dono-do-cliente financeiro', () => {
@@ -2983,7 +2986,7 @@ test.describe('dono-do-cliente financeiro', () => {
 });
 
 const FINANCE_OVERVIEW_TITLES = [
-  'Números do mês',
+  'Números',
   'Precisa de atenção',
   'Receita por semana',
   'De onde vem a receita',
@@ -3003,20 +3006,20 @@ const FINANCE_NUMBERS: {
     slug: 'primaria',
     value: /^R\$\s4\.162$/,
     delta: '13% vs. 30 dias antes',
-    note: '96 entradas · valor médio R$',
-    count: /R\$\s4\.162,00 em 96 entradas nos últimos 30 dias/,
+    note: '96 entradas · valor médio R$\u00a043',
+    count: /R\$\s4\.162 em 96 entradas nos últimos 30 dias/,
   },
   {
     slug: 'secundaria',
     value: /^R\$\s4\.778$/,
     delta: '11% vs. 30 dias antes',
     note: '30 compras adicionais',
-    count: /R\$\s4\.778,00 em 30 compras adicionais nos últimos 30 dias/,
+    count: /R\$\s4\.778 em 30 compras adicionais nos últimos 30 dias/,
   },
   {
     slug: 'parte-secundaria',
     value: '53%',
-    delta: '0 p.p. vs. 30 dias antes',
+    delta: 'igual aos 30 dias antes',
     note: 'da receita do mês',
     count: /^53% da receita do mês veio de compras adicionais/,
   },
@@ -3024,7 +3027,7 @@ const FINANCE_NUMBERS: {
     slug: 'recompra',
     value: '201',
     delta: '17% vs. 30 dias antes',
-    note: '16% da base',
+    note: '16% da base, desde a abertura',
     count: /^201 membros · 16% da base/,
   },
   {
@@ -3036,10 +3039,10 @@ const FINANCE_NUMBERS: {
   },
   {
     slug: 'por-membro',
-    value: /^R\$\s73,61$/,
+    value: /^R\$\s74$/,
     delta: '2% vs. 30 dias antes',
-    note: 'primária e secundária',
-    count: /^R\$\s73,61 por membro na vida toda/,
+    note: 'primária e secundária, desde a abertura',
+    count: /^R\$\s74 por membro na vida toda/,
   },
 ];
 
@@ -3070,29 +3073,88 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     await expectNoEnglish(page, 'overview');
   });
 
-  test('primary + secondary make the total on the screen', async ({ page }) => {
+  test('the definition and the total card open the numbers; primary + secondary make the total', async ({
+    page,
+  }) => {
     await page.goto(FINANCE_AREA);
     const area = ownerArea(page);
+    const numbers = sectionTitled(area, 'Números');
+    await expect(numbers.locator('p').first()).toHaveText(
+      'Primária: a primeira compra de cada membro, a que dá acesso ao app. Secundária: tudo o que ele compra depois, inclusive a renovação.',
+    );
+    const total = area.locator('[data-finance-total]');
+    await expect(total).toHaveCount(1);
+    const order = await area.evaluate((root) => {
+      const card = root.querySelector('[data-finance-total]');
+      const first = root.querySelector('#numero-primaria');
+      return card && first ? card.compareDocumentPosition(first) : 0;
+    });
+    expect(order & 4).toBe(4);
+    await expect(total.locator('[data-finance-total-value]')).toHaveText(/^R\$\s8\.940$/);
+    for (const text of [
+      'Receita total registrada',
+      '12% vs. 30 dias antes',
+      '126 pedidos',
+      'Primária',
+      'Secundária',
+      'Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.',
+    ]) {
+      await expect(total, text).toContainText(text);
+    }
+    await expect(total.locator('[data-finance-total-legend="primary"]')).toContainText(
+      /R\$\s4\.162$/,
+    );
+    await expect(total.locator('[data-finance-total-legend="secondary"]')).toContainText(
+      /R\$\s4\.778$/,
+    );
+    const widths = await total
+      .locator('[data-finance-total-part]')
+      .evaluateAll((parts) => parts.map((el) => el.getBoundingClientRect().width));
+    expect(widths).toHaveLength(2);
+    const [primaryWidth = 0, secondaryWidth = 0] = widths;
+    const sum = primaryWidth + secondaryWidth;
+    expect(Math.abs(primaryWidth - (sum * 4162) / 8940)).toBeLessThanOrEqual(2);
     const primary = await reaisIn(area.locator('#numero-primaria'));
     const secondary = await reaisIn(area.locator('#numero-secundaria'));
-    const total = await area.getByText(/^Receita total registrada:/).innerText();
-    const value = Number(
-      (/R\$\s([\d.]+,\d\d)/.exec(total)?.[1] ?? '').replace(/\./g, '').replace(',', '.'),
-    );
-    expect(primary + secondary).toBe(value);
-    expect(value).toBe(8940);
-    await expect(
-      area.getByText(/^Receita total registrada: R\$\s8\.940,00 em 126 pedidos$/),
-    ).toBeVisible();
-    await expect(
-      area.getByText(
-        'Enquanto não houver pagamento integrado, o valor é registrado, não dinheiro recebido.',
-        { exact: true },
-      ),
-    ).toBeVisible();
-    const revoked = area.locator('[data-floor-line="revoked"]');
+    expect(primary + secondary).toBe(8940);
+    await expect(area.getByText(/^Receita total registrada:/)).toHaveCount(0);
+    const revoked = total.locator('[data-floor-line="revoked"]');
     await expect(revoked).toContainText('menos de 5 pedidos');
     await expect(revoked).not.toContainText('R$');
+  });
+
+  test('dono-do-cliente financeiro at 360px: the leader bars fill at least 40% of their card', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 844 });
+    await page.goto(FINANCE_AREA);
+    const sources = sectionTitled(ownerArea(page), 'De onde vem a receita');
+    const shares = await sources.locator('ul').evaluateAll((lists) =>
+      lists.map((list) => {
+        const card = list.parentElement?.getBoundingClientRect().width ?? 1;
+        const fills = [...list.querySelectorAll('[data-bar-fill]')].map(
+          (el) => el.getBoundingClientRect().width,
+        );
+        return Math.max(...fills) / card;
+      }),
+    );
+    expect(shares).toHaveLength(2);
+    for (const share of shares) expect(share).toBeGreaterThanOrEqual(0.4);
+    const vip = sources.getByRole('listitem').filter({ hasText: 'Comunidade VIP' });
+    await expect(vip).toContainText(/R\$\s4,1\smil/);
+    const rate = vip.getByText('18 pedidos · 46%', { exact: true });
+    const value = vip.getByText(/^R\$\s4,1\smil$/);
+    const rateBox = await rate.boundingBox();
+    const valueBox = await value.boundingBox();
+    expect(rateBox?.y ?? 0).toBeGreaterThanOrEqual(
+      (valueBox?.y ?? 0) + (valueBox?.height ?? 0) - 1,
+    );
+    const hero = ownerArea(page).locator('[data-finance-total-value]');
+    const lines = await hero.evaluate(
+      (el) =>
+        el.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(el).lineHeight),
+    );
+    expect(lines).toBeLessThan(1.5);
   });
 
   test('each number opens its list, whose count repeats it, and Voltar returns', async ({
@@ -3174,13 +3236,13 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     await page.goto(FINANCE_AREA);
     const area = ownerArea(page);
     const app = sectionTitled(area, 'O que só o app sabe');
-    await expect(app).toContainText(/12 pedidos · R\$\s1\.807,00/);
+    await expect(app).toContainText(/12 pedidos · R\$\s1\.807(?!,)/);
     for (const post of ['op-19', 'op-55']) {
       const row = app.locator(`a[href$="post=${post}"]`);
       await expect(row, post).toContainText('menos de 5 pedidos');
       await expect(row, post).not.toContainText('R$');
     }
-    await expect(app.locator('a[href$="post=op-11"]')).toContainText(/6 pedidos · R\$\s502,00/);
+    await expect(app.locator('a[href$="post=op-11"]')).toContainText(/6 pedidos · R\$\s502$/);
     await expect(app).toContainText('Associação, não causa');
     await app.locator('#produto-s2').click();
     await expect(page).toHaveURL(/\?area=financeiro&produto=s2$/);
@@ -3193,7 +3255,7 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
       await page.goto(`${FINANCE_AREA}${query}`);
       await expect(financeTabs(page), query).toHaveCount(1);
       await expect(
-        ownerArea(page).getByRole('heading', { name: 'Números do mês' }),
+        ownerArea(page).getByRole('heading', { name: 'Números', exact: true }),
         query,
       ).toBeVisible();
     }
@@ -3441,9 +3503,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     await expect(page).toHaveURL(/\?area=eventos#espera-e1$/);
     await expect(ownerArea(page).locator('#espera-e1')).toContainText('38 na espera');
     await page.goto(FINANCE_AREA);
-    await expect(
-      ownerArea(page).getByText(/^Receita total registrada: R\$\s8\.940,00 em 126 pedidos$/),
-    ).toBeVisible();
+    await expect(ownerArea(page).locator('[data-finance-total-value]')).toHaveText(/^R\$\s8\.940$/);
   });
 
   test('a forged Quem compra URL falls one level up', async ({ page }) => {

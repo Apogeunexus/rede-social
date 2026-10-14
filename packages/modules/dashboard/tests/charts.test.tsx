@@ -83,6 +83,23 @@ describe('BarList', () => {
     expect(items[1]?.hasAttribute('id')).toBe(false);
   });
 
+  it('stacks value and rate over a full-width bar when asked, without leading (quick 261014-ia8 F-6)', () => {
+    const grid = 'grid-cols-[minmax(min-content,2fr)_minmax(0,3fr)_auto]';
+    const rated = rows.map((row) => ({ ...row, rate: `rate-${row.id}` }));
+    const { container } = render(<BarList rows={rated} stacked />);
+    expect(container.querySelector('ul')).not.toHaveClass(grid);
+    const items = [...container.querySelectorAll('li')];
+    expect(items).toHaveLength(2);
+    for (const item of items) {
+      expect(item.querySelectorAll('[data-bar-fill]')).toHaveLength(1);
+      const rate = [...item.querySelectorAll('span')].find((el) =>
+        el.textContent?.startsWith('rate-'),
+      );
+      expect(rate).toHaveClass('block');
+    }
+    expect(fillWidths(container)).toEqual(['100%', `${barPercent(410, 5230)}%`]);
+  });
+
   it("keeps today's grid without leading", () => {
     const grid = 'grid-cols-[minmax(min-content,2fr)_minmax(0,3fr)_auto]';
     const plain = render(<BarList rows={rows} />);
