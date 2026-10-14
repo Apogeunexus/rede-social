@@ -27,7 +27,7 @@
         "name": "Dono da plataforma"
       },
       "admin-da-plataforma": {
-        "name": "Admin da plataforma"
+        "name": "Administrador da plataforma"
       },
       "suporte-da-plataforma": {
         "name": "Suporte da plataforma"
@@ -36,7 +36,7 @@
         "name": "Dono do cliente"
       },
       "admin-do-cliente": {
-        "name": "Admin do cliente"
+        "name": "Administrador do cliente"
       },
       "equipe-do-cliente": {
         "name": "Equipe do cliente"
@@ -46,13 +46,13 @@
       }
     },
     "delta": {
-      "previous_month": "{amount} vs. mês anterior",
-      "previous_30_days": "{amount} vs. 30 dias antes",
-      "previous_24h": "{amount} vs. 24h anteriores",
-      "yesterday": "{amount} vs. ontem",
+      "previous_month": "{amount} em relação ao mês anterior",
+      "previous_30_days": "{amount} em relação aos 30 dias antes",
+      "previous_24h": "{amount} em relação às 24 h anteriores",
+      "yesterday": "{amount} em relação a ontem",
       "last_7_days": "{amount} em 7 dias",
-      "previous_7_days": "{amount} vs. semana anterior",
-      "average_30_days": "{amount} vs. média de 30 dias",
+      "previous_7_days": "{amount} em relação à semana anterior",
+      "average_30_days": "{amount} em relação à média de 30 dias",
       "none": "{amount}"
     },
     "hint": {
@@ -261,7 +261,7 @@
         "neverActedNote": "de {joined} que entraram",
         "neverActedAllBut": "Todos, exceto menos de {floor}",
         "neverActedJoined": "{joined} entraram",
-        "activity": "Atividade 24h vs. média",
+        "activity": "Atividade em 24 h em relação à média",
         "activityValue": "{count}/h",
         "activityNote": "média: {average}/h"
       },
@@ -270,7 +270,7 @@
         "summary": "{count, plural, one {# módulo ligado} other {# módulos ligados}}",
         "enabled": "Ligados: {list}",
         "disabled": "Desligados: {list}",
-        "admins": "Admins: {count} ({emails})"
+        "admins": "Administradores: {count} ({emails})"
       },
       "engagement": {
         "title": "Engajamento (agregado)",
@@ -365,7 +365,7 @@
         "members": "Membros",
         "membersNote": "+{count} novos",
         "attendance": "Comparecimento em eventos",
-        "attendanceNote": "check-in ÷ inscritos",
+        "attendanceNote": "presenças ÷ inscritos",
         "orderValue": "Vendas do mês",
         "orderValueNote": "valor registrado, sem pagamento real",
         "engaged": "Engajados",
@@ -387,7 +387,7 @@
         "joined": "Entraram",
         "left": "Saíram",
         "note": "nos últimos 30 dias",
-        "balance": "Saldo de {balance} membros em 30 dias ({percent} vs. 30 dias antes).",
+        "balance": "Saldo de {balance} membros em 30 dias ({percent} em relação aos 30 dias antes).",
         "weeklyTitle": "Novos membros por semana",
         "weeklyLabel": "Novos membros por semana: as últimas 12 semanas"
       },
@@ -416,7 +416,7 @@
         "title": "Comparecimento por evento",
         "summary": "comparecimento {percent}",
         "rate": "{checkIns} de {confirmed}",
-        "footnote": "Check-in ÷ inscritos. +{count} pessoas sem inscrição no {event}."
+        "footnote": "Presenças ÷ inscritos. +{count} pessoas sem inscrição no {event}."
       },
       "formatsCompared": {
         "title": "Presencial × online",
@@ -660,7 +660,7 @@
           "pending": "Domínio pendente"
         },
         "domain": "Domínio: {domain}",
-        "team": "Admins: {admins} · Equipe: {staff}",
+        "team": "Administradores: {admins} · Equipe: {staff}",
         "billing": "Cobrança: em breve"
       },
       "adminLink": "Ver operação do dia (painel do admin)",
@@ -1163,7 +1163,7 @@
         },
         "detail": {
           "numbers": {
-            "title": "Números do mês",
+            "title": "Números",
             "revenue": "Receita",
             "orders": "Pedidos",
             "ordersNote": "{entry, plural, =0 {nenhuma entrada} one {# entrada} other {# entradas}} · {addon, plural, =0 {nenhum adicional} one {# adicional} other {# adicionais}}",
@@ -1199,6 +1199,7 @@
           "confirmed": "Inscritos",
           "revenue": "Receita",
           "full": "Vagas esgotadas · {count} na espera",
+          "happened": "Aconteceu em {date}",
           "seeWaitlist": "Ver lista de espera",
           "free": "{count, plural, =0 {nenhum evento gratuito ficou} one {# evento gratuito ficou} other {# eventos gratuitos ficaram}} de fora."
         }
@@ -1218,7 +1219,7 @@
         "event_soon": {
           "tag": "{date}, {hour}h",
           "title": "{event}: {confirmed} de {capacity} vagas",
-          "detail": "Deixe o código de check-in pronto"
+          "detail": "Deixe o código de presença pronto"
         },
         "story_expiring": {
           "tag": "{hours}h",
@@ -1277,7 +1278,7 @@
       "events": {
         "title": "Eventos",
         "summary": "comparecimento {percent}",
-        "footnote": "Check-in ÷ inscritos. +{count} pessoas sem inscrição no {event}."
+        "footnote": "Presenças ÷ inscritos. +{count} pessoas sem inscrição no {event}."
       },
       "communities": {
         "title": "Comunidades",
@@ -1345,7 +1346,7 @@
           "type": "Tipo",
           "likes": "Curtidas",
           "comments": "Coment.",
-          "vsMedian": "vs. mediana"
+          "vsMedian": "em relação à mediana"
         },
         "inProgress": "em andamento",
         "medianNote": "Comparado à mediana de {median} interações por publicação nas primeiras {hours}h."

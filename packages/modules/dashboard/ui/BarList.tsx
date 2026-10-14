@@ -69,7 +69,11 @@ export function BarList({ rows, max, stacked = false, className }: BarListProps)
             <li
               key={row.id}
               id={row.anchor}
-              className={cn('flex items-center gap-3 text-sm', row.anchor && 'scroll-mt-20')}
+              className={cn(
+                'flex items-center gap-3 text-sm',
+                row.anchor &&
+                  'scroll-mt-20 rounded-md target:bg-brand/10 target:ring-2 target:ring-brand/40',
+              )}
             >
               {row.leading}
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -101,7 +105,8 @@ export function BarList({ rows, max, stacked = false, className }: BarListProps)
             id={row.anchor}
             className={cn(
               'col-span-3 grid grid-cols-subgrid items-center text-sm',
-              row.anchor && 'scroll-mt-20',
+              row.anchor &&
+                'scroll-mt-20 rounded-md target:bg-brand/10 target:ring-2 target:ring-brand/40',
             )}
           >
             <span className={labelClass(row)}>{row.label}</span>

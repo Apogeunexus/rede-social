@@ -164,6 +164,7 @@ function paidEvents() {
       ...past.filter(paid).sort((a, b) => b.date.localeCompare(a.date)),
     ],
     free: [...upcoming, ...past].filter((event) => !paid(event)).length,
+    upcomingIds: new Set(upcoming.map((event) => event.id)),
   };
 }
 
@@ -182,7 +183,7 @@ function waitingFor(event: { id: string; confirmed: number; capacity: number | n
  * part of the store's total; the free events are counted below.
  */
 function PaidEvents({ t }: { t: DashboardT }) {
-  const { events, free } = paidEvents();
+  const { events, free, upcomingIds } = paidEvents();
   const key = 'tenantOwner.finance.events';
   const [first] = events;
   return (
@@ -194,14 +195,22 @@ function PaidEvents({ t }: { t: DashboardT }) {
       </p>
       <ul className="flex flex-col gap-3">
         {events.map((event) => {
-          const waiting = waitingFor(event);
+          // Only an event still to come has people waiting; a past one says when it happened.
+          const upcoming = upcomingIds.has(event.id);
+          const waiting = upcoming ? waitingFor(event) : null;
           return (
             <li key={event.id} id={`evento-${event.id}`} className="scroll-mt-20">
               <EventCard
                 t={t}
                 id={event.id}
                 href={waiting === null ? null : ownerWaitlistHref(event.id)}
-                status={waiting === null ? undefined : t(`${key}.full`, { count: waiting })}
+                status={
+                  waiting !== null
+                    ? t(`${key}.full`, { count: waiting })
+                    : upcoming
+                      ? undefined
+                      : t(`${key}.happened`, { date: formatDayMonth(event.date) })
+                }
                 cover={<CoverThumb t={t} kind={event.format} seed={event.id} variant="strip" />}
                 detail={t(`${key}.ticket`, { value: formatBrl(event.ticketCents.value) })}
                 cells={[

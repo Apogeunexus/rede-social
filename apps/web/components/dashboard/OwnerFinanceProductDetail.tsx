@@ -38,7 +38,7 @@ import {
   kpiDelta,
 } from './format';
 import { WeeklyChart } from './OwnerFinanceOverview';
-import { ProductChange, ProductName, productCoverKind } from './OwnerFinanceProducts';
+import { ProductName, productCoverKind } from './OwnerFinanceProducts';
 import { PanelSection } from './PanelSection';
 
 const KEY = 'tenantOwner.finance';
@@ -250,7 +250,6 @@ export function OwnerFinanceProductDetail({ t, view }: { t: DashboardT; view: Ow
           <span className="text-sm text-text-secondary">
             {t(`${KEY}.products.priceLine`, { value: formatBrl(product.priceCents) })}
           </span>
-          <ProductChange t={t} product={product} />
         </div>
       </Card>
 

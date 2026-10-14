@@ -480,7 +480,6 @@ function Sources({ t }: { t: DashboardT }) {
       <p className="text-xs font-bold text-text-secondary">{t(`${key}.byProduct`)}</p>
       <BarList
         stacked
-        max={month.total.cents}
         rows={products.map((product, i) => ({
           id: product.id,
           label: product.name,
@@ -502,7 +501,6 @@ function Sources({ t }: { t: DashboardT }) {
       <p className="text-xs font-bold text-text-secondary">{t(`${key}.byBand`)}</p>
       <BarList
         stacked
-        max={month.total.cents}
         rows={bands.map((band) => {
           const row = month.byBand[band];
           const floored = isBelowPrivacyFloor(row.orders);

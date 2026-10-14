@@ -286,7 +286,7 @@ test('no English word on any level nor any area of level 4 (quick 261014-ia8 E-2
 
 test('the level navigation marks the current level', async ({ page }) => {
   await page.goto('/painel-preview/admin-da-plataforma');
-  const current = page.getByRole('link', { name: /Admin da plataforma/ });
+  const current = page.getByRole('link', { name: /Administrador da plataforma/ });
   await expect(current).toHaveAttribute('aria-current', 'page');
   await page.getByRole('link', { name: /Suporte da plataforma/ }).click();
   await expect(page).toHaveURL(/\/painel-preview\/suporte-da-plataforma$/);
@@ -681,9 +681,9 @@ test('dono-do-cliente: Visão geral', async ({ page }) => {
   }
   await expect(cards.nth(0)).toContainText('+96 novos');
   // The single order list's month against the 30 days before (quick 261014-dwc D-10).
-  await expect(cards.nth(4)).toContainText('12% vs. 30 dias antes');
+  await expect(cards.nth(4)).toContainText('12% em relação aos 30 dias antes');
   await expect(kpiCard(area, 'Engajados')).toContainText('9,3 ações por membro ativo');
-  await expect(kpiCard(area, 'Comparecimento em eventos')).toContainText('check-in ÷ inscritos');
+  await expect(kpiCard(area, 'Comparecimento em eventos')).toContainText('presenças ÷ inscritos');
   await expect(
     area.getByText('38% da base interagiu nos últimos 30 dias (471 de 1.240).', { exact: true }),
   ).toBeVisible();
@@ -705,7 +705,9 @@ test('dono-do-cliente ?area=membros', async ({ page }) => {
   await expect(kpiCard(area, 'Entraram')).toContainText('96');
   await expect(kpiCard(area, 'Saíram')).toContainText('9');
   await expect(
-    area.getByText('Saldo de +87 membros em 30 dias (+8% vs. 30 dias antes).', { exact: true }),
+    area.getByText('Saldo de +87 membros em 30 dias (+8% em relação aos 30 dias antes).', {
+      exact: true,
+    }),
   ).toBeVisible();
 
   const bands = sectionTitled(area, 'Faixas de engajamento');
@@ -1995,42 +1997,42 @@ const CONTENT_NUMBERS: {
     slug: 'publicacoes',
     label: 'Publicações',
     value: '61',
-    delta: '5 vs. 30 dias antes',
+    delta: '5 em relação aos 30 dias antes',
     count: /^61 publicações · mais recentes primeiro$/,
   },
   {
     slug: 'interacoes',
     label: 'Interações',
     value: '3.940',
-    delta: '9% vs. 30 dias antes',
+    delta: '9% em relação aos 30 dias antes',
     count: /^3\.940 interações · mais recentes primeiro$/,
   },
   {
     slug: 'taxa',
     label: 'Taxa de engajamento',
     value: '16,8%',
-    delta: '1 p.p. vs. 30 dias antes',
+    delta: '1 p.p. em relação aos 30 dias antes',
     count: /^Taxa de engajamento de 16,8% · maior taxa primeiro$/,
   },
   {
     slug: 'membros',
     label: 'Membros que interagiram',
     value: '428',
-    delta: '4% vs. 30 dias antes',
+    delta: '4% em relação aos 30 dias antes',
     count: /^428 membros · mais recentes primeiro$/,
   },
   {
     slug: 'visualizacoes',
     label: 'Visualizações',
     value: '39.727',
-    delta: '6% vs. 30 dias antes',
+    delta: '6% em relação aos 30 dias antes',
     count: /^39\.727 visualizações · mais vistas primeiro$/,
   },
   {
     slug: 'alcance',
     label: 'Alcance por publicação',
     value: '385',
-    delta: '6% vs. 30 dias antes',
+    delta: '6% em relação aos 30 dias antes',
     count: /^385 membros alcançados por publicação, em média · maior alcance primeiro$/,
   },
 ];
@@ -2951,7 +2953,7 @@ test.describe('dono-do-cliente financeiro', () => {
     await expect(cardCell(vip, 'Entrada')).toHaveText('11');
     await expect(cardCell(vip, 'Adicional')).toHaveText('7');
     await expect(cardCell(vip, 'Receita')).toHaveText(/R\$\s4,1\smil/);
-    await expect(vip).toContainText('6% vs. 30 dias antes');
+    await expect(vip).toContainText('6% em relação aos 30 dias antes');
     await expect(ownerArea(page).getByText('Parado', { exact: true })).toHaveCount(1);
     await expect(cards.nth(3).getByText('Parado', { exact: true })).toBeVisible();
     await expect(cards.nth(3)).toContainText('Sem venda nos últimos 30 dias nem nos 30 anteriores');
@@ -3072,14 +3074,14 @@ const FINANCE_NUMBERS: {
   {
     slug: 'primaria',
     value: /^R\$\s4\.162$/,
-    delta: '13% vs. 30 dias antes',
+    delta: '13% em relação aos 30 dias antes',
     note: '96 entradas · valor médio R$\u00a043',
     count: /R\$\s4\.162 em 96 entradas nos últimos 30 dias/,
   },
   {
     slug: 'secundaria',
     value: /^R\$\s4\.778$/,
-    delta: '11% vs. 30 dias antes',
+    delta: '11% em relação aos 30 dias antes',
     note: '30 compras adicionais',
     count: /R\$\s4\.778 em 30 compras adicionais nos últimos 30 dias/,
   },
@@ -3093,21 +3095,21 @@ const FINANCE_NUMBERS: {
   {
     slug: 'recompra',
     value: '201',
-    delta: '17% vs. 30 dias antes',
+    delta: '17% em relação aos 30 dias antes',
     note: '16% da base, desde a abertura',
     count: /^201 membros · 16% da base/,
   },
   {
     slug: 'tempo-recompra',
     value: '48 dias',
-    delta: '7% vs. 30 dias antes',
+    delta: '7% em relação aos 30 dias antes',
     note: 'desde a entrada',
     count: /^Média de 48 dias até a segunda compra, em 201 membros/,
   },
   {
     slug: 'por-membro',
     value: /^R\$\s74$/,
-    delta: '2% vs. 30 dias antes',
+    delta: '2% em relação aos 30 dias antes',
     note: 'primária e secundária, desde a abertura',
     count: /^R\$\s74 por membro na vida toda/,
   },
@@ -3160,7 +3162,7 @@ test.describe('dono-do-cliente financeiro: Visão geral', () => {
     await expect(total.locator('[data-finance-total-value]')).toHaveText(/^R\$\s8\.940$/);
     for (const text of [
       'Receita total registrada',
-      '12% vs. 30 dias antes',
+      '12% em relação aos 30 dias antes',
       '126 pedidos',
       'Primária',
       'Secundária',
@@ -3496,7 +3498,7 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
       ),
     ).toBeVisible();
     for (const label of ['Receita', 'Pedidos', 'Compradores', 'Cancelamentos']) {
-      await expect(kpiCard(sectionTitled(area, 'Números do mês'), label), label).toBeVisible();
+      await expect(kpiCard(sectionTitled(area, 'Números'), label), label).toBeVisible();
     }
     await expect(kpiCard(area, 'Receita').locator('span.text-2xl')).toHaveText(/^R\$\s4\.096$/);
     await expect(kpiCard(area, 'Pedidos')).toContainText('11 entradas · 7 adicionais');
@@ -3562,12 +3564,9 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
     for (const cover of covers) expect(cover.share, cover.kind).toBeLessThanOrEqual(0.3);
     await expect(section.getByText('exemplo', { exact: true })).toHaveCount(1);
     await expect(section.getByText('3 eventos gratuitos ficaram de fora.')).toBeVisible();
-    // A full paid event with a waiting list says so and opens it in Eventos (quick 261014-ia8 F-1).
-    for (const [id, waiting] of [
-      ['u3', 17],
-      ['e1', 38],
-      ['e3', 12],
-    ] as const) {
+    // A full upcoming paid event with a waiting list says so and opens it in Eventos (quick
+    // 261014-ia8 F-1); a past one only says when it happened, with no link (final flow review).
+    for (const [id, waiting] of [['u3', 17]] as const) {
       const card = section.locator(`#evento-${id}`);
       await expect(
         card.getByText(`Vagas esgotadas · ${waiting} na espera`, { exact: true }),
@@ -3578,13 +3577,22 @@ test.describe('dono-do-cliente financeiro: Quem compra and the product detail', 
         new RegExp(`\\?area=eventos#espera-${id}$`),
       );
     }
+    for (const [id, date] of [
+      ['e1', '19/09'],
+      ['e3', '01/10'],
+    ] as const) {
+      const past = section.locator(`#evento-${id}`);
+      await expect(past.getByText(`Aconteceu em ${date}`, { exact: true }), id).toBeVisible();
+      await expect(past.getByText(/Vagas esgotadas/), id).toHaveCount(0);
+      await expect(past.getByRole('link'), id).toHaveCount(0);
+    }
     const monthly = section.locator('#evento-u1');
-    await expect(monthly.getByText(/Vagas esgotadas/)).toHaveCount(0);
+    await expect(monthly.getByText(/Vagas esgotadas|Aconteceu/)).toHaveCount(0);
     await expect(monthly.getByRole('link')).toHaveCount(0);
-    await expect(section.getByRole('link')).toHaveCount(3);
-    await section.locator('#evento-e1').getByRole('link').click();
-    await expect(page).toHaveURL(/\?area=eventos#espera-e1$/);
-    await expect(ownerArea(page).locator('#espera-e1')).toContainText('38 na espera');
+    await expect(section.getByRole('link')).toHaveCount(1);
+    await section.locator('#evento-u3').getByRole('link').click();
+    await expect(page).toHaveURL(/\?area=eventos#espera-u3$/);
+    await expect(ownerArea(page).locator('#espera-u3')).toContainText('17 na espera');
     await page.goto(FINANCE_AREA);
     await expect(ownerArea(page).locator('[data-finance-total-value]')).toHaveText(/^R\$\s8\.940$/);
   });
@@ -3934,10 +3942,10 @@ test('suporte-da-plataforma: aggregates only, small bands merged, no count under
   await expect(neverActed).toContainText('14 entraram');
   await expect(neverActed).not.toContainText('13');
   await expect(neverActed).not.toContainText('que entraram');
-  const activity = kpiCard(page, 'Atividade 24h vs. média');
+  const activity = kpiCard(page, 'Atividade em 24 h em relação à média');
   await expect(activity).toContainText('2/h');
   await expect(activity).toContainText('média: 6/h');
-  await expect(activity).toContainText('67% vs. média de 30 dias');
+  await expect(activity).toContainText('67% em relação à média de 30 dias');
   await expect(page.getByText('/ menos de 5 bloq.', { exact: true })).toBeVisible();
 
   const summaries = (await page.locator('summary').allTextContents()).map((text) => text.trim());
@@ -4037,7 +4045,7 @@ test('equipe-do-cliente: per-function metrics', async ({ page }) => {
 
   await visit('conteudo');
   const recent = sectionTitled(page, 'Últimas publicações (48h)').getByRole('listitem');
-  await expect(recent.first()).toContainText('vs. mediana');
+  await expect(recent.first()).toContainText('em relação à mediana');
   for (const change of ['+144%', '+15%', 'em andamento']) {
     await expect(recent.getByText(change, { exact: true })).toBeVisible();
   }
@@ -4114,7 +4122,7 @@ test('membro: Sua atividade report', async ({ page }) => {
   }
   const likes = kpiCard(page, 'Curtidas');
   await expect(likes).toContainText('46');
-  await expect(likes).toContainText('8 vs. semana anterior');
+  await expect(likes).toContainText('8 em relação à semana anterior');
   const engagement = sectionTitled(page, 'Seu engajamento');
   await expect(engagement.getByText(/melhorou|piorou/)).toHaveCount(0);
 
@@ -4127,7 +4135,7 @@ test('membro: Sua atividade report', async ({ page }) => {
   ]);
 
   const average = kpiCard(page, 'Média por dia');
-  for (const text of ['38', '4 h 26 min na semana', '6 min vs. semana anterior']) {
+  for (const text of ['38', '4 h 26 min na semana', '6 min em relação à semana anterior']) {
     await expect(average).toContainText(text);
   }
   await expect(average.getByText(/melhorou|piorou/)).toHaveCount(0);
